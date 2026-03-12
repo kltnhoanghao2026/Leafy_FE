@@ -27,7 +27,7 @@ export function LoginHero () {
         </div>
 
         <blockquote className="mb-6 lg:mb-10 text-base lg:text-[1.1rem] font-medium leading-relaxed italic text-green-50/95 max-w-sm">
-          "Công nghệ nâng tầm hương vị cà phê Việt"
+          "Nâng cao giá trị nông sản Việt"
         </blockquote>
 
         <div className="flex items-center gap-8 pt-2">
