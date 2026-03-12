@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { User, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react'
 import { useLogin } from '../hooks/useLogin'
 import { useAuthStore } from '../../../store/authStore'
@@ -156,9 +157,9 @@ export function LoginForm () {
       {/* Sign Up Link */}
       <p className="mt-8 text-sm font-medium text-center text-slate-500">
         Chưa có tài khoản?{' '}
-        <a href="#" className="font-bold text-[#245A34] hover:text-[#1b432a] transition-colors">
+        <Link to="/register" className="font-bold text-[#245A34] hover:text-[#1b432a] transition-colors">
           Đăng ký ngay
-        </a>
+        </Link>
       </p>
     </div>
   )

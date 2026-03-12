@@ -15,3 +15,17 @@ export interface AuthResponse {
   user: User
   token: string
 }
+
+export interface RegisterFormInputs {
+  fullName: string
+  phone: string
+  email: string
+  password: string
+  confirmPassword: string
+  agreedToTerms: boolean
+}
+
+export interface RegisterResponse {
+  user: User
+  token: string
+}
