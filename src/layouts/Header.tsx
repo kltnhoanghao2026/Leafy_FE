@@ -9,10 +9,10 @@ export function Header({ onMenuClick }: HeaderProps) {
   const activeTab = 'Khu vực'
 
   return (
-    <header className="sticky top-0 z-10 bg-transparent py-4">
+    <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
       <div className="flex flex-col w-full h-full">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-6 lg:px-10 h-16 shrink-0 bg-white/60 backdrop-blur-md lg:bg-transparent lg:backdrop-blur-none">
+        <div className="flex items-center justify-between px-6 lg:px-8 h-16 shrink-0">
           <div className="flex items-center">
             <button
               onClick={onMenuClick}

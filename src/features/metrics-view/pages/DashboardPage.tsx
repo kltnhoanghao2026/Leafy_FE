@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { Droplet, Thermometer, Wind, CheckCircle2, AlertTriangle, Plus, Minus, Target } from 'lucide-react'
 
 // Mock Data
@@ -44,6 +45,8 @@ const AREAS = [
 ]
 
 export function DashboardPage() {
+  const navigate = useNavigate()
+
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       
@@ -80,7 +83,8 @@ export function DashboardPage() {
           {AREAS.map((area) => (
             <div 
               key={area.id} 
-              className={`relative flex flex-col justify-between h-[240px] ${area.bgColor} border-2 ${area.borderColor} rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group`}
+              onClick={() => navigate(`/dashboard/metrics/${area.id}`)}
+              className={`relative flex flex-col justify-between h-[240px] ${area.bgColor} border-2 ${area.borderColor} rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all cursor-pointer group hover:-translate-y-1`}
             >
               {/* Dot indicator */}
               <div className="absolute top-5 right-5 flex h-3 w-3">

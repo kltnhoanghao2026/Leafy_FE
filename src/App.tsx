@@ -3,6 +3,7 @@ import { LoginPage } from './features/auth/pages/LoginPage'
 import { RegisterPage } from './features/auth/pages/RegisterPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './features/metrics-view/pages/DashboardPage'
+import { ZoneDetailMetricsPage } from './features/metrics-view/pages/ZoneDetailMetricsPage'
 
 function App() {
   return (
@@ -14,7 +15,7 @@ function App() {
         {/* Dashboard Routes */}
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
-          {/* Add other nested routes here later */}
+          <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

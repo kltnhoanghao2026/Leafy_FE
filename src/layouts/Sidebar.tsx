@@ -1,7 +1,9 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Home, Search, Activity, Bell, UserSquare, Users, Settings } from 'lucide-react'
 
 export function Sidebar() {
+  const location = useLocation()
+
   const navItems = [
     { name: 'Trang chủ', path: '/dashboard', icon: Home },
     { name: 'Tra cứu bệnh', path: '/dashboard/search', icon: Search },
@@ -33,14 +35,18 @@ export function Sidebar() {
           <NavLink
             key={item.name}
             to={item.path}
-            end={item.path === '/dashboard'}
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
-                isActive
+            className={() => {
+              const isHome = item.path === '/dashboard'
+              const isCurrentlyActive = isHome 
+                ? (location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/metrics'))
+                : location.pathname.startsWith(item.path)
+
+              return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
+                isCurrentlyActive
                   ? 'bg-[#245A34] text-white'
                   : 'text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]'
               }`
-            }
+            }}
           >
             <item.icon className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0" strokeWidth={2.5} />
             {item.name}
