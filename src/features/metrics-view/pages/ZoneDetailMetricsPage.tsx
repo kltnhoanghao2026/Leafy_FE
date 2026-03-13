@@ -1,5 +1,7 @@
 import { useParams, Navigate } from 'react-router-dom'
 import { MOCK_ZONES_DATA } from '../mockData'
+import type { ZoneMetrics } from '../mockData'
+import { useManagementStore } from '../../../store/useManagementStore'
 import { ZoneTabSwitcher } from '../components/ZoneTabSwitcher'
 import { HealthGaugesRow } from '../components/HealthGaugesRow'
 import { IoTMetricCard } from '../components/IoTMetricCard'
@@ -10,13 +12,31 @@ import { Thermometer, Wind, Droplet, Sun } from 'lucide-react'
 
 export function ZoneDetailMetricsPage() {
   const { zoneId } = useParams()
+  const storeZones = useManagementStore(state => state.zones)
 
-  // Validate route parameter
-  if (!zoneId || !MOCK_ZONES_DATA[zoneId]) {
-    return <Navigate to="/dashboard" replace />
+  // Find zone in store
+  const storeZone = storeZones.find(z => z.id === zoneId)
+
+  // Validate route parameter against store
+  if (!zoneId || !storeZone) {
+    return <Navigate to="/dashboard/metrics" replace />
   }
 
-  const zoneData = MOCK_ZONES_DATA[zoneId]
+  // Use mock metrics if available, otherwise generate default
+  let zoneData = MOCK_ZONES_DATA[zoneId]
+  if (!zoneData) {
+    zoneData = {
+      id: zoneId,
+      name: storeZone.name,
+      health: { healthy: 100, warning: 0, danger: 0 },
+      sensors: {
+        temperature: { value: 25.0, unit: '°C', change: 0, status: 'good' as const, trend: [{ time: '12:00', value: 25 }] },
+        humidity: { value: 65, unit: '%', change: 0, status: 'good' as const, trend: [{ time: '12:00', value: 65 }] },
+        soil: { value: 50, unit: '%', change: 0, status: 'good' as const, trend: [{ time: '12:00', value: 50 }] },
+        light: { value: 15000, unit: 'Lux', change: 0, status: 'good' as const, trend: [{ time: '12:00', value: 15000 }] }
+      }
+    } as ZoneMetrics
+  }
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">

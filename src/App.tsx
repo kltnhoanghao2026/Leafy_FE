@@ -4,6 +4,8 @@ import { RegisterPage } from './features/auth/pages/RegisterPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './features/metrics-view/pages/DashboardPage'
 import { ZoneDetailMetricsPage } from './features/metrics-view/pages/ZoneDetailMetricsPage'
+import { DeviceManagementPage } from './features/device-management/pages/DeviceManagementPage'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
   return (
@@ -16,10 +18,26 @@ function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
+          <Route path="devices" element={<DeviceManagementPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#111827',
+            borderRadius: '16px',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+            padding: '16px',
+            fontWeight: 'bold',
+            fontSize: '14px'
+          },
+        }} 
+      />
     </BrowserRouter>
   )
 }
