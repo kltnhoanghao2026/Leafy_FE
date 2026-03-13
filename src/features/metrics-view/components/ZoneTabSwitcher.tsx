@@ -1,0 +1,48 @@
+import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useDashboardStore } from '../../../store/dashboardStore'
+
+const ZONES = [
+  { id: 'A', name: 'Khu A' },
+  { id: 'B', name: 'Khu B' },
+  { id: 'C', name: 'Khu C' },
+]
+
+export function ZoneTabSwitcher() {
+  const navigate = useNavigate()
+  const { zoneId } = useParams()
+  const { selectedZoneId, setSelectedZoneId } = useDashboardStore()
+
+  useEffect(() => {
+    if (zoneId && zoneId !== selectedZoneId) {
+      if (ZONES.find(z => z.id === zoneId)) {
+        setSelectedZoneId(zoneId)
+      } else {
+        navigate('/dashboard/metrics/A', { replace: true })
+      }
+    }
+  }, [zoneId, selectedZoneId, setSelectedZoneId, navigate])
+
+  const handleTabClick = (id: string) => {
+    setSelectedZoneId(id)
+    navigate(`/dashboard/metrics/${id}`)
+  }
+
+  return (
+    <div className="inline-flex items-center bg-white rounded-full p-1 border border-slate-200 shadow-sm shrink-0">
+      {ZONES.map((zone) => (
+        <button
+          key={zone.id}
+          onClick={() => handleTabClick(zone.id)}
+          className={`px-8 py-2.5 rounded-full text-[14px] font-bold transition-all duration-200 whitespace-nowrap ${
+            selectedZoneId === zone.id
+              ? 'bg-[#245A34] text-white shadow-md'
+              : 'text-slate-500 hover:text-[#245A34] hover:bg-slate-50'
+          }`}
+        >
+          {zone.name}
+        </button>
+      ))}
+    </div>
+  )
+}
