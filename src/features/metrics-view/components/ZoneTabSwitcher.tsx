@@ -1,27 +1,25 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useDashboardStore } from '../../../store/dashboardStore'
-
-const ZONES = [
-  { id: 'A', name: 'Khu A' },
-  { id: 'B', name: 'Khu B' },
-  { id: 'C', name: 'Khu C' },
-]
+import { useManagementStore } from '../../../store/useManagementStore'
 
 export function ZoneTabSwitcher() {
   const navigate = useNavigate()
   const { zoneId } = useParams()
   const { selectedZoneId, setSelectedZoneId } = useDashboardStore()
+  const zones = useManagementStore(state => state.zones)
 
   useEffect(() => {
     if (zoneId && zoneId !== selectedZoneId) {
-      if (ZONES.find(z => z.id === zoneId)) {
+      if (zones.find(z => z.id === zoneId)) {
         setSelectedZoneId(zoneId)
+      } else if (zones.length > 0) {
+        navigate(`/dashboard/metrics/${zones[0].id}`, { replace: true })
       } else {
-        navigate('/dashboard/metrics/A', { replace: true })
+        navigate('/dashboard', { replace: true })
       }
     }
-  }, [zoneId, selectedZoneId, setSelectedZoneId, navigate])
+  }, [zoneId, selectedZoneId, setSelectedZoneId, navigate, zones])
 
   const handleTabClick = (id: string) => {
     setSelectedZoneId(id)
@@ -30,7 +28,7 @@ export function ZoneTabSwitcher() {
 
   return (
     <div className="inline-flex items-center bg-white rounded-full p-1 border border-slate-200 shadow-sm shrink-0">
-      {ZONES.map((zone) => (
+      {zones.map((zone) => (
         <button
           key={zone.id}
           onClick={() => handleTabClick(zone.id)}

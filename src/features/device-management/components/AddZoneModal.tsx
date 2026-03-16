@@ -1,0 +1,114 @@
+import { useState } from 'react'
+import { X } from 'lucide-react'
+
+interface AddZoneModalProps {
+  isOpen: boolean
+  onClose: () => void
+  onAdd: (zone: { name: string; variety: string; area: string; status: 'ĐANG TRỒNG' | 'ĐANG CẢI TẠO' }) => void
+}
+
+export function AddZoneModal({ isOpen, onClose, onAdd }: AddZoneModalProps) {
+  const [formData, setFormData] = useState<{
+    name: string
+    variety: string
+    area: string
+    status: 'ĐANG TRỒNG' | 'ĐANG CẢI TẠO'
+  }>({ 
+    name: '', 
+    variety: '', 
+    area: '',
+    status: 'ĐANG TRỒNG'
+  })
+
+  if (!isOpen) return null
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onAdd(formData)
+    setFormData({ name: '', variety: '', area: '', status: 'ĐANG TRỒNG' }) // Reset
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="bg-white rounded-[2rem] p-6 lg:p-8 w-full max-w-md relative z-10 shadow-2xl">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">Thêm Lô vườn mới</h2>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-50 text-slate-500 hover:bg-slate-200 flex flex-col items-center justify-center transition-colors shadow-sm"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold text-slate-700 ml-1">Tên Lô (VD: Khu D)</label>
+            <input
+              required
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Nhập tên lô..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[15px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#245A34]/20 focus:border-[#245A34] transition-all"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold text-slate-700 ml-1">Giống cây trồng</label>
+            <input
+              required
+              type="text"
+              value={formData.variety}
+              onChange={(e) => setFormData(prev => ({ ...prev, variety: e.target.value }))}
+              placeholder="VD: Arabica..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[15px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#245A34]/20 focus:border-[#245A34] transition-all"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold text-slate-700 ml-1">Diện tích (ha)</label>
+            <input
+              required
+              type="text"
+              value={formData.area}
+              onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+              placeholder="0.0 ha"
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[15px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#245A34]/20 focus:border-[#245A34] transition-all"
+            />
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <label className="text-[13px] font-bold text-slate-700 ml-1">Trạng thái</label>
+            <select
+              required
+              value={formData.status}
+              onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'ĐANG TRỒNG' | 'ĐANG CẢI TẠO' }))}
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[15px] font-bold text-gray-900 outline-none focus:ring-2 focus:ring-[#245A34]/20 focus:border-[#245A34] transition-all appearance-none cursor-pointer"
+            >
+              <option value="ĐANG TRỒNG">ĐANG TRỒNG</option>
+              <option value="ĐANG CẢI TẠO">ĐANG CẢI TẠO</option>
+            </select>
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="w-full py-4 bg-[#245A34] text-white rounded-2xl font-bold hover:bg-green-800 transition-colors shadow-md text-[15px]"
+            >
+              Thêm lô vườn
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}

@@ -1,12 +1,24 @@
 import { MapPin, Sun, Menu } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
 
 interface HeaderProps {
   onMenuClick: () => void
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const tabs = ['Khu vực', 'Cảm biến', 'Báo cáo']
-  const activeTab = 'Khu vực'
+  const location = useLocation()
+  
+  const tabs = [
+    { name: 'Khu vực', path: '/dashboard' },
+    { name: 'Cảm biến', path: '/dashboard/devices' },
+    { name: 'Báo cáo', path: '/dashboard/reports' }
+  ]
+
+  const activeTabName = location.pathname.includes('/devices')
+    ? 'Cảm biến'
+    : location.pathname.includes('/reports')
+      ? 'Báo cáo'
+      : 'Khu vực'
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
@@ -30,16 +42,17 @@ export function Header({ onMenuClick }: HeaderProps) {
             {/* Tab Navigation */}
             <nav className="flex space-x-8 mr-12 px-6">
               {tabs.map((tab) => (
-                <button
-                  key={tab}
+                <Link
+                  key={tab.name}
+                  to={tab.path}
                   className={`py-5 text-[15px] font-bold border-b-[3px] transition-colors whitespace-nowrap ${
-                    activeTab === tab
+                    activeTabName === tab.name
                       ? 'border-[#245A34] text-[#245A34]'
                       : 'border-transparent text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  {tab}
-                </button>
+                  {tab.name}
+                </Link>
               ))}
             </nav>
 
