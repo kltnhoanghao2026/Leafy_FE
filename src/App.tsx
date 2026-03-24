@@ -5,6 +5,7 @@ import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './features/metrics-view/pages/DashboardPage'
 import { ZoneDetailMetricsPage } from './features/metrics-view/pages/ZoneDetailMetricsPage'
 import { DeviceManagementPage } from './features/device-management/pages/DeviceManagementPage'
+import { CommunityView } from './features/community/pages/CommunityView'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route index element={<DashboardPage />} />
           <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
           <Route path="devices" element={<DeviceManagementPage />} />
+          <Route path="community" element={<CommunityView />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
