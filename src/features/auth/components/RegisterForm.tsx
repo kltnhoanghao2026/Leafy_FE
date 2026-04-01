@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Mail, Lock, Eye, EyeOff, User, Phone, CheckSquare, Square, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Phone, CheckSquare, Square, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useRegisterLogic } from '../hooks/useRegisterLogic'
 
 export function RegisterForm () {
@@ -41,26 +41,6 @@ export function RegisterForm () {
             <p className="text-sm text-green-800">{success}</p>
           </div>
         )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="fullName">
-            Họ và tên
-          </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              id="fullName"
-              name="fullName"
-              type="text"
-              value={formData.fullName}
-              onChange={handleChange}
-              className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#245A34] focus:border-[#245A34] sm:text-sm transition-colors"
-              placeholder="Nhập họ và tên"
-            />
-          </div>
-        </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="phone">

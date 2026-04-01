@@ -1,27 +1,24 @@
 import { useState } from 'react'
 import { z } from 'zod'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
-import type { LoginCredentials } from '../types.ts'
+import { apiLogin } from '../services/authApi'
+import { mapAuthError } from '../services/authErrorMapper'
+import type { LoginCredentials } from '../types'
 
-// Zod schema for Vietnamese Phone (e.g., 0xxxxxxxxx) or Email
 const loginSchema = z.object({
-  identifier: z.string().refine((val) => {
-    const isEmail = z.string().email().safeParse(val).success
-    const isPhone = /^(0[2-9]|84[2-9])(\d{8})$/.test(val)
-    return isEmail || isPhone
-  }, {
-    message: 'Vui lòng nhập email hoặc số điện thoại hợp lệ'
-  }),
+  email: z.string().email('Vui lòng nhập email hợp lệ'),
   password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự')
 })
 
 export function useLogin () {
-  const { setIsLoading, setUser, setRememberMe } = useAuthStore()
+  const { setIsLoading, setTokens, setRememberMe } = useAuthStore()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
   const login = async (credentials: LoginCredentials, rememberMe: boolean) => {
     setError(null)
-    
+
     // Validate inputs
     const result = loginSchema.safeParse(credentials)
     if (!result.success) {
@@ -32,23 +29,20 @@ export function useLogin () {
     setIsLoading(true)
 
     try {
-      // Simulate API call with 1-second delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const response = await apiLogin(credentials.email, credentials.password)
 
-      // Hardcoded mock user for demonstration
-      const mockUser = {
-        id: 'user_123',
-        name: 'Nguyen Van A',
-        email: credentials.identifier.includes('@') ? credentials.identifier : undefined,
-        phone: credentials.identifier.includes('@') ? undefined : credentials.identifier
+      if (response.data) {
+        setTokens(response.data.accessToken, response.data.refreshToken)
+        setRememberMe(rememberMe)
+        navigate('/dashboard')
+        return { success: true }
       }
 
-      setUser(mockUser)
-      setRememberMe(rememberMe)
-      return { success: true }
+      setError('Đã xảy ra lỗi khi đăng nhập')
+      return { success: false }
     } catch (err) {
       console.error('Login error:', err)
-      setError('Đã xảy ra lỗi khi đăng nhập')
+      setError(mapAuthError(err))
       return { success: false }
     } finally {
       setIsLoading(false)

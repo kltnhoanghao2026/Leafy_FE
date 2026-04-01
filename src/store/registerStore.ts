@@ -1,6 +1,22 @@
 import { create } from 'zustand'
 import type { RegisterFormInputs } from '../features/auth/types'
 
+const PENDING_EMAIL_KEY = 'pending-verify-email'
+
+// --- sessionStorage helpers for pendingEmail ---
+export function getPendingEmail (): string | null {
+  return sessionStorage.getItem(PENDING_EMAIL_KEY)
+}
+
+export function setPendingEmailSession (email: string): void {
+  sessionStorage.setItem(PENDING_EMAIL_KEY, email)
+}
+
+export function clearPendingEmail (): void {
+  sessionStorage.removeItem(PENDING_EMAIL_KEY)
+}
+
+// --- Zustand store for register form state ---
 interface RegisterState {
   formData: Partial<RegisterFormInputs>
   isLoading: boolean
@@ -15,7 +31,6 @@ interface RegisterState {
 
 const initialState = {
   formData: {
-    fullName: '',
     phone: '',
     email: '',
     password: '',

@@ -1,26 +1,35 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { RegisterPage } from './features/auth/pages/RegisterPage'
+import { VerifyEmailPage } from './features/auth/pages/VerifyEmailPage'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { DashboardPage } from './features/metrics-view/pages/DashboardPage'
 import { ZoneDetailMetricsPage } from './features/metrics-view/pages/ZoneDetailMetricsPage'
 import { DeviceManagementPage } from './features/device-management/pages/DeviceManagementPage'
 import { CommunityView } from './features/community/pages/CommunityView'
+import { ProtectedRoute } from './components/ProtectedRoute'
+import { GuestOnlyRoute } from './components/GuestOnlyRoute'
 import { Toaster } from 'react-hot-toast'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        
-        {/* Dashboard Routes */}
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
-          <Route path="devices" element={<DeviceManagementPage />} />
-          <Route path="community" element={<CommunityView />} />
+        {/* Guest-only routes */}
+        <Route element={<GuestOnlyRoute />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+        </Route>
+
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
+            <Route path="devices" element={<DeviceManagementPage />} />
+            <Route path="community" element={<CommunityView />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />

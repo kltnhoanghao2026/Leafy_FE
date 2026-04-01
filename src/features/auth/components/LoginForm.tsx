@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { User, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react'
 import { useLogin } from '../hooks/useLogin'
 import { useAuthStore } from '../../../store/authStore'
 
@@ -18,7 +18,7 @@ function GoogleIcon () {
 
 export function LoginForm () {
   const [showPassword, setShowPassword] = useState(false)
-  const [identifier, setIdentifier] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
 
@@ -29,7 +29,7 @@ export function LoginForm () {
     e.preventDefault()
     if (isLoading) return
     
-    await login({ identifier, password }, rememberMe)
+    await login({ email, password }, rememberMe)
   }
 
   return (
@@ -42,20 +42,20 @@ export function LoginForm () {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email / Phone Input */}
         <div className="space-y-2">
-          <label htmlFor="identifier" className="block text-sm font-semibold text-slate-700">
-            Email hoặc Số điện thoại
+          <label htmlFor="email" className="block text-sm font-semibold text-slate-700">
+            Email
           </label>
           <div className="relative text-slate-400 focus-within:text-[#245A34]">
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <User className="w-5 h-5" />
+              <Mail className="w-5 h-5" />
             </div>
             <input
-              id="identifier"
-              type="text"
+              id="email"
+              type="email"
               className="w-full py-3.5 pl-11 pr-4 text-sm border-2 border-slate-100 rounded-2xl outline-none transition-colors focus:border-[#245A34] focus:ring-4 focus:ring-[#245A34]/10 text-slate-800 placeholder:text-slate-400 font-medium"
-              placeholder="Nhập email hoặc số điện thoại của bác"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="Nhập email của bác"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
             />
