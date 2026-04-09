@@ -1,8 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, Search, Activity, Bell, UserSquare, Users, Settings } from 'lucide-react'
+import { Home, Search, Activity, Bell, UserSquare, Users, Settings, LogOut } from 'lucide-react'
+import { useSettingsStore } from '../features/settings/store/useSettingsStore'
+import { useLogout } from '../features/auth/hooks/useLogout'
+import { ROLE_LABELS } from '../features/settings/types'
 
-export function Sidebar() {
+export function Sidebar () {
   const location = useLocation()
+  const profile = useSettingsStore((state) => state.profile)
+  const logout = useLogout()
+
+  const displayName = profile?.fullName || 'Đang tải...'
+  const displayRole = profile?.role ? (ROLE_LABELS[profile.role] || profile.role) : ''
+  const avatarSrc = profile?.avatar || profile?.profilePicture || 'https://i.pravatar.cc/150?img=11'
 
   const navItems = [
     { name: 'Trang chủ', path: '/dashboard', icon: Home },
@@ -11,6 +20,7 @@ export function Sidebar() {
     { name: 'Cảnh báo', path: '/dashboard/alerts', icon: Bell },
     { name: 'Chuyên gia', path: '/dashboard/experts', icon: UserSquare },
     { name: 'Cộng đồng', path: '/dashboard/community', icon: Users },
+    { name: 'Cài đặt', path: '/dashboard/settings', icon: Settings },
   ]
 
   return (
@@ -54,20 +64,31 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* User Profile */}
-      <div className="p-5 pb-8 shrink-0">
-        <div className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100">
+      {/* User Profile & Logout */}
+      <div className="p-5 pb-8 shrink-0 space-y-2">
+        <NavLink
+          to="/dashboard/settings"
+          className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100"
+        >
           <img 
-            src="https://i.pravatar.cc/150?img=11" 
-            alt="Lê Văn Tám"
+            src={avatarSrc}
+            alt={displayName}
             className="w-10 h-10 rounded-full border border-slate-200 shrink-0 object-cover"
           />
           <div className="ml-3 flex-1 min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">Lê Văn Tám</p>
-            <p className="text-[10px] font-semibold text-slate-500 truncate">Chủ vườn Khu A</p>
+            <p className="text-xs font-bold text-gray-900 truncate">{displayName}</p>
+            <p className="text-[10px] font-semibold text-slate-500 truncate">{displayRole}</p>
           </div>
           <Settings className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2.5} />
-        </div>
+        </NavLink>
+
+        <button
+          onClick={() => void logout()}
+          className="flex items-center w-full px-4 py-2.5 rounded-full text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+        >
+          <LogOut className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0" strokeWidth={2.5} />
+          Đăng xuất
+        </button>
       </div>
     </aside>
   )

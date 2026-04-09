@@ -7,6 +7,7 @@ import type {
   ResendOTPRequest,
   RefreshTokenRequest
 } from '../types'
+import { getOrCreateDeviceId } from '../../../lib/clientDevice'
 
 // In development, Vite proxies /api → http://localhost:8060/api (see vite.config.ts)
 // In production, set VITE_API_BASE_URL to the real backend URL
@@ -14,12 +15,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 const APP_VERSION = '1.0.0'
 
 function getDeviceId () {
-  let deviceId = localStorage.getItem('x-device-id')
-  if (!deviceId) {
-    deviceId = `web-${crypto.randomUUID()}`
-    localStorage.setItem('x-device-id', deviceId)
-  }
-  return deviceId
+  return getOrCreateDeviceId()
 }
 
 function getHeaders (): HeadersInit {
