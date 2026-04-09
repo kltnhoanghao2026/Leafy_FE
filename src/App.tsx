@@ -7,6 +7,7 @@ import { DashboardPage } from './features/metrics-view/pages/DashboardPage'
 import { ZoneDetailMetricsPage } from './features/metrics-view/pages/ZoneDetailMetricsPage'
 import { DeviceManagementPage } from './features/device-management/pages/DeviceManagementPage'
 import { CommunityView } from './features/community/pages/CommunityView'
+import { SettingsView } from './features/settings/pages/SettingsView'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { GuestOnlyRoute } from './components/GuestOnlyRoute'
 import { Toaster } from 'react-hot-toast'
@@ -29,6 +30,7 @@ function App() {
             <Route path="metrics/:zoneId" element={<ZoneDetailMetricsPage />} />
             <Route path="devices" element={<DeviceManagementPage />} />
             <Route path="community" element={<CommunityView />} />
+            <Route path="settings" element={<SettingsView />} />
           </Route>
         </Route>
 
