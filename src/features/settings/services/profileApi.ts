@@ -1,67 +1,39 @@
-import type { ApiEnvelope, ProfileResponse, ProfileUpdateRequest } from '../types'
-import { useAuthStore } from '../../../store/authStore'
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
-
-function getAuthHeaders (): HeadersInit {
-  const token = useAuthStore.getState().accessToken
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  }
-}
-
-async function handleResponse<T> (res: Response): Promise<ApiEnvelope<T>> {
-  const text = await res.text()
-
-  let body: ApiEnvelope<T>
-  try {
-    body = JSON.parse(text)
-  } catch {
-    throw new Error(text || `Request failed with status ${res.status}`)
-  }
-
-  if (!res.ok) {
-    throw new Error(body.message || `Request failed with status ${res.status}`)
-  }
-
-  return body
-}
+import type { ApiEnvelope } from "../../../shared/types/api";
+import type { ProfileResponse, ProfileUpdateRequest } from "../types";
+import apiClient from "../../../lib/apiClient";
+import { API_ENDPOINTS } from "../../../lib/routes";
+import { useAuthStore } from "../../../store/authStore";
 
 // --- Get My Profile ---
-export async function apiGetMyProfile (): Promise<ApiEnvelope<ProfileResponse>> {
-  const userId = useAuthStore.getState().user?.id
-  const res = await fetch(`${BASE_URL}/profiles/me`, {
-    method: 'GET',
-    headers: {
-      ...getAuthHeaders(),
-      ...(userId ? { 'X-User-Id': userId } : {})
-    }
-  })
-
-  return handleResponse<ProfileResponse>(res)
+export async function apiGetMyProfile(): Promise<ApiEnvelope<ProfileResponse>> {
+  const userId = useAuthStore.getState().user?.id;
+  const res = await apiClient.get<ApiEnvelope<ProfileResponse>>(
+    API_ENDPOINTS.PROFILES.ME,
+    {
+      headers: userId ? { "X-User-Id": userId } : {},
+    },
+  );
+  return res.data;
 }
 
 // --- Get Profile by User ID ---
-export async function apiGetProfileByUserId (userId: string): Promise<ApiEnvelope<ProfileResponse>> {
-  const res = await fetch(`${BASE_URL}/profiles/user/${userId}`, {
-    method: 'GET',
-    headers: getAuthHeaders()
-  })
-
-  return handleResponse<ProfileResponse>(res)
+export async function apiGetProfileByUserId(
+  userId: string,
+): Promise<ApiEnvelope<ProfileResponse>> {
+  const res = await apiClient.get<ApiEnvelope<ProfileResponse>>(
+    API_ENDPOINTS.PROFILES.GET_BY_USER(userId),
+  );
+  return res.data;
 }
 
 // --- Update Profile by User ID ---
-export async function apiUpdateProfileByUserId (
+export async function apiUpdateProfileByUserId(
   userId: string,
-  data: ProfileUpdateRequest
+  data: ProfileUpdateRequest,
 ): Promise<ApiEnvelope<ProfileResponse>> {
-  const res = await fetch(`${BASE_URL}/profiles/user/${userId}`, {
-    method: 'PUT',
-    headers: getAuthHeaders(),
-    body: JSON.stringify(data)
-  })
-
-  return handleResponse<ProfileResponse>(res)
+  const res = await apiClient.put<ApiEnvelope<ProfileResponse>>(
+    API_ENDPOINTS.PROFILES.GET_BY_USER(userId),
+    data,
+  );
+  return res.data;
 }
