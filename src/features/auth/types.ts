@@ -1,64 +1,38 @@
-// --- API Envelope ---
-export interface ApiEnvelope<T> {
-  code: number
-  message: string
-  data: T | null
-}
+// Re-export schema types for backward compatibility
+export type { ApiEnvelope } from "../../shared/types/api";
+export type {
+  LoginRequest,
+  InitialRegisterRequest,
+  VerifyOtpRequest,
+  ResendOtpRequest,
+  RefreshTokenRequest,
+  LogoutDeviceRequest,
+} from "./schema/requests";
+export type {
+  AuthResponse,
+  RegistrationInitResponse,
+} from "./schema/responses";
 
 // --- Login ---
 export interface LoginCredentials {
-  email: string
-  password: string
-}
-
-export interface LoginRequest {
-  email: string
-  password: string
-  appVersion: string
-}
-
-// --- Auth Token Response ---
-export interface AuthTokenData {
-  accessToken: string
-  refreshToken: string
-  tokenType: string
-  expiresIn: number
+  email: string;
+  password: string;
 }
 
 // --- Register ---
-export interface RegisterInitRequest {
-  email: string
-  phoneNumber: string
-  password: string
-  appVersion: string
-}
-
 export interface RegisterFormInputs {
-  phone: string
-  email: string
-  password: string
-  confirmPassword: string
-  agreedToTerms: boolean
-}
-
-export interface VerifyOTPRequest {
-  email: string
-  otp: string
-}
-
-export interface ResendOTPRequest {
-  email: string
-}
-
-export interface RefreshTokenRequest {
-  refreshToken: string
+  phone: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  agreedToTerms: boolean;
 }
 
 // --- User ---
 export interface User {
-  id: string
-  name: string
-  email?: string
-  phone?: string
-  avatar?: string
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
 }

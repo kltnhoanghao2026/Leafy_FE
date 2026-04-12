@@ -1,53 +1,52 @@
-import { useState } from 'react'
-import { z } from 'zod'
-import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../../store/authStore'
-import { apiLogin } from '../services/authApi'
-import { mapAuthError } from '../services/authErrorMapper'
-import type { LoginCredentials } from '../types'
+import { z } from "zod";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../../../store/authStore";
+import { useLoginMutation } from "../queries";
+import { mapAuthError } from "../services/authErrorMapper";
+import type { LoginCredentials } from "../types";
+import { ROUTES } from "../../../lib/routes";
 
 const loginSchema = z.object({
-  email: z.string().email('Vui lòng nhập email hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự')
-})
+  email: z.string().email("Vui lòng nhập email hợp lệ"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+});
 
-export function useLogin () {
-  const { setIsLoading, setTokens, setRememberMe } = useAuthStore()
-  const navigate = useNavigate()
-  const [error, setError] = useState<string | null>(null)
+export function useLogin() {
+  const { setTokens, setRememberMe } = useAuthStore();
+  const navigate = useNavigate();
+  const mutation = useLoginMutation();
 
   const login = async (credentials: LoginCredentials, rememberMe: boolean) => {
-    setError(null)
-
     // Validate inputs
-    const result = loginSchema.safeParse(credentials)
+    const result = loginSchema.safeParse(credentials);
     if (!result.success) {
-      setError(result.error.issues[0].message)
-      return { success: false }
+      return { success: false, error: result.error.issues[0].message };
     }
-
-    setIsLoading(true)
 
     try {
-      const response = await apiLogin(credentials.email, credentials.password)
+      const response = await mutation.mutateAsync({
+        email: credentials.email,
+        password: credentials.password,
+      });
 
-      if (response.data) {
-        setTokens(response.data.accessToken, response.data.refreshToken)
-        setRememberMe(rememberMe)
-        navigate('/dashboard')
-        return { success: true }
+      const envelope = response.data;
+      if (envelope.data) {
+        setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+        setRememberMe(rememberMe);
+        navigate(ROUTES.DASHBOARD.ROOT);
+        return { success: true };
       }
 
-      setError('Đã xảy ra lỗi khi đăng nhập')
-      return { success: false }
+      return { success: false, error: "Đã xảy ra lỗi khi đăng nhập" };
     } catch (err) {
-      console.error('Login error:', err)
-      setError(mapAuthError(err))
-      return { success: false }
-    } finally {
-      setIsLoading(false)
+      console.error("Login error:", err);
+      return { success: false, error: mapAuthError(err) };
     }
-  }
+  };
 
-  return { login, error }
+  return {
+    login,
+    error: mutation.error ? mapAuthError(mutation.error) : null,
+    isPending: mutation.isPending,
+  };
 }

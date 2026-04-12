@@ -1,24 +1,25 @@
-import { MapPin, Sun, Menu } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { MapPin, Sun, Menu } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { ROUTES } from "../lib/routes";
 
 interface HeaderProps {
-  onMenuClick: () => void
+  onMenuClick: () => void;
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const location = useLocation()
-  
-  const tabs = [
-    { name: 'Khu vực', path: '/dashboard' },
-    { name: 'Cảm biến', path: '/dashboard/devices' },
-    { name: 'Báo cáo', path: '/dashboard/reports' }
-  ]
+  const location = useLocation();
 
-  const activeTabName = location.pathname.includes('/devices')
-    ? 'Cảm biến'
-    : location.pathname.includes('/reports')
-      ? 'Báo cáo'
-      : 'Khu vực'
+  const tabs = [
+    { name: "Khu vực", path: ROUTES.DASHBOARD.ROOT },
+    { name: "Cảm biến", path: ROUTES.DASHBOARD.DEVICES },
+    { name: "Báo cáo", path: ROUTES.DASHBOARD.REPORTS },
+  ];
+
+  const activeTabName = location.pathname.includes("/devices")
+    ? "Cảm biến"
+    : location.pathname.includes("/reports")
+      ? "Báo cáo"
+      : "Khu vực";
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
@@ -33,8 +34,13 @@ export function Header({ onMenuClick }: HeaderProps) {
               <Menu className="w-6 h-6" />
             </button>
             <div className="flex items-center text-gray-900">
-              <MapPin className="w-5 h-5 text-[#245A34] mr-2" strokeWidth={2.5} />
-              <h1 className="text-lg font-bold tracking-tight">Nông trại Cầu Đất</h1>
+              <MapPin
+                className="w-5 h-5 text-[#245A34] mr-2"
+                strokeWidth={2.5}
+              />
+              <h1 className="text-lg font-bold tracking-tight">
+                Nông trại Cầu Đất
+              </h1>
             </div>
           </div>
 
@@ -47,8 +53,8 @@ export function Header({ onMenuClick }: HeaderProps) {
                   to={tab.path}
                   className={`py-5 text-[15px] font-bold border-b-[3px] transition-colors whitespace-nowrap ${
                     activeTabName === tab.name
-                      ? 'border-[#245A34] text-[#245A34]'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                      ? "border-[#245A34] text-[#245A34]"
+                      : "border-transparent text-slate-400 hover:text-slate-600"
                   }`}
                 >
                   {tab.name}
@@ -61,11 +67,13 @@ export function Header({ onMenuClick }: HeaderProps) {
             {/* Weather Widget */}
             <div className="flex items-center px-4 py-2 bg-[#F1F9F3] rounded-full">
               <Sun className="w-4 h-4 text-[#245A34] mr-2" strokeWidth={3} />
-              <span className="text-[13px] font-bold text-[#245A34]">28°C | Nắng nhẹ</span>
+              <span className="text-[13px] font-bold text-[#245A34]">
+                28°C | Nắng nhẹ
+              </span>
             </div>
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }
