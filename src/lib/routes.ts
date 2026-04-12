@@ -32,6 +32,18 @@ export const ROUTES = {
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
   },
+
+  // Admin routes (JWT required, ADMIN role required)
+  ADMIN: {
+    ROOT: "/admin",
+    OVERVIEW: "/admin/overview",
+    USERS: "/admin/users",
+    FARMS: "/admin/farms",
+    CONTENT: "/admin/content",
+    HEALTH: "/admin/health",
+    ANALYTICS: "/admin/analytics",
+    PLANTS: "/admin/plants",
+  },
 } as const;
 
 // ============================================================================
@@ -59,7 +71,9 @@ export const isProtectedRoute = (pathname?: string): boolean => {
 
   return (
     normalizedPath === ROUTES.DASHBOARD.ROOT ||
-    normalizedPath.startsWith(`${ROUTES.DASHBOARD.ROOT}/`)
+    normalizedPath.startsWith(`${ROUTES.DASHBOARD.ROOT}/`) ||
+    normalizedPath === ROUTES.ADMIN.ROOT ||
+    normalizedPath.startsWith(`${ROUTES.ADMIN.ROOT}/`)
   );
 };
 

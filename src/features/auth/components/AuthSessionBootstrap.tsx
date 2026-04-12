@@ -1,18 +1,22 @@
 import { useEffect } from "react";
 import { useMyProfile } from "../../settings/queries";
+import { useMyAccount } from "../../settings/queries/useMyAccount";
 import { useAuthStore } from "../../../store/authStore";
 
 export function AuthSessionBootstrap() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const setAccountRole = useAuthStore((state) => state.setAccountRole);
   const { data: profile } = useMyProfile(!!accessToken);
+  const { data: account } = useMyAccount(!!accessToken);
 
   useEffect(() => {
     if (!accessToken) {
       if (user !== null) {
         setUser(null);
       }
+      setAccountRole(null);
       return;
     }
 
@@ -38,7 +42,13 @@ export function AuthSessionBootstrap() {
     if (!isSameUser) {
       setUser(nextUser);
     }
-  }, [accessToken, profile, setUser, user]);
+  }, [accessToken, profile, setUser, setAccountRole, user]);
+
+  useEffect(() => {
+    if (account?.role) {
+      setAccountRole(account.role);
+    }
+  }, [account, setAccountRole]);
 
   return null;
 }

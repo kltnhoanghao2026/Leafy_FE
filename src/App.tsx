@@ -6,13 +6,22 @@ import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "./features/auth/pages/VerifyEmailPage";
 import { DashboardLayout } from "./layouts/DashboardLayout";
+import { AdminLayout } from "./layouts/AdminLayout";
 import { DashboardPage } from "./features/metrics-view/pages/DashboardPage";
 import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailMetricsPage";
 import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
 import { SettingsView } from "./features/settings/pages/SettingsView";
+import { AdminOverviewPage } from "./features/admin/pages/AdminOverviewPage";
+import { UserManagementPage } from "./features/admin/pages/UserManagementPage";
+import { FarmOverviewPage } from "./features/admin/pages/FarmOverviewPage";
+import { ContentModerationPage } from "./features/admin/pages/ContentModerationPage";
+import { SystemHealthPage } from "./features/admin/pages/SystemHealthPage";
+import { AnalyticsDashboardPage } from "./features/admin/pages/AnalyticsDashboardPage";
+import { PlantDiseaseDBPage } from "./features/admin/pages/PlantDiseaseDBPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
+import { AdminRoute } from "./components/AdminRoute";
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
@@ -48,6 +57,23 @@ function App() {
               <Route path="devices" element={<DeviceManagementPage />} />
               <Route path="community" element={<CommunityView />} />
               <Route path="settings" element={<SettingsView />} />
+            </Route>
+          </Route>
+
+          {/* Admin routes */}
+          <Route element={<AdminRoute />}>
+            <Route path={ROUTES.ADMIN.ROOT} element={<AdminLayout />}>
+              <Route
+                index
+                element={<Navigate to={ROUTES.ADMIN.OVERVIEW} replace />}
+              />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="farms" element={<FarmOverviewPage />} />
+              <Route path="content" element={<ContentModerationPage />} />
+              <Route path="health" element={<SystemHealthPage />} />
+              <Route path="analytics" element={<AnalyticsDashboardPage />} />
+              <Route path="plants" element={<PlantDiseaseDBPage />} />
             </Route>
           </Route>
 
