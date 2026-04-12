@@ -249,6 +249,10 @@ export const API_ENDPOINTS = {
       `/messages/conversation/${conversationId}`,
     SEND: "/messages",
   },
+
+  ADMIN: {
+    HEALTH: "/admin/health",
+  },
 } as const;
 
 // ============================================================================
