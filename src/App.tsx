@@ -22,6 +22,7 @@ import { PlantDiseaseDBPage } from "./features/admin/pages/PlantDiseaseDBPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
 import { AdminRoute } from "./components/AdminRoute";
+import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBootstrap";
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
@@ -35,6 +36,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        {/* Runs before route guards: attempts silent refresh on page load */}
+        <AuthSessionBootstrap />
         <Routes>
           {/* Guest-only routes */}
           <Route element={<GuestOnlyRoute />}>

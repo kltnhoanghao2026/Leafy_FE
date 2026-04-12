@@ -4,13 +4,18 @@ import { ROUTES } from "../lib/routes";
 
 /**
  * Protects admin routes.
+ * - Initializing → wait
  * - No accessToken → redirect to /login
- * - accountRole is not "ADMIN" (including null/loading) → redirect to /dashboard
- * - accountRole === "ADMIN" → render nested routes
+ * - accountRole !== "ADMIN" → redirect to /dashboard
  */
 export function AdminRoute() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const accountRole = useAuthStore((state) => state.accountRole);
+  const isInitializing = useAuthStore((state) => state.isInitializing);
+
+  if (isInitializing) {
+    return null;
+  }
 
   if (!accessToken) {
     return <Navigate to={ROUTES.AUTH.LOGIN} replace />;

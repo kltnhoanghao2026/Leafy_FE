@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from "./routes";
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
   headers: { "Content-Type": "application/json" },
+  withCredentials: true, // Send/receive HttpOnly refresh-token cookie
 });
 
 // ---------------------------------------------------------------------------
@@ -76,35 +77,29 @@ apiClient.interceptors.request.use((config) => {
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const { refreshToken, setTokens, logout } = useAuthStore.getState();
-
-  if (!refreshToken) {
-    logout();
-    throw new Error("No refresh token available");
-  }
+  const { setTokens, logout } = useAuthStore.getState();
 
   try {
-    // Call refresh endpoint directly with axios to avoid interceptor loop.
-    // Use a plain axios instance so the 401 interceptor doesn't recurse.
-    const res = await axios.post<
-      ApiEnvelope<{ accessToken: string; refreshToken: string }>
-    >(
+    // Use a plain axios instance to avoid interceptor recursion.
+    // The HttpOnly refreshToken cookie is sent automatically via withCredentials.
+    const res = await axios.post<ApiEnvelope<{ accessToken: string }>>(
       `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.REFRESH}`,
-      { refreshToken },
+      {},
       {
         headers: {
           "Content-Type": "application/json",
           "X-Device-ID": getOrCreateDeviceId(),
         },
+        withCredentials: true,
       },
     );
 
     const envelope = res.data;
-    if (!envelope.data) {
+    if (!envelope.data?.accessToken) {
       throw new Error(envelope.message || "Token refresh failed");
     }
 
-    setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+    setTokens(envelope.data.accessToken);
     return envelope.data.accessToken;
   } catch {
     logout();

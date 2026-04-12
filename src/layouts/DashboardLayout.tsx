@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
-import { AuthSessionBootstrap } from '../features/auth/components/AuthSessionBootstrap'
 import { PushNotificationsBootstrap } from '../features/notifications/components/PushNotificationsBootstrap'
 
 export function DashboardLayout() {
@@ -10,8 +9,6 @@ export function DashboardLayout() {
 
   return (
     <div className="flex bg-[#F8FAF9] min-h-screen font-sans">
-      <AuthSessionBootstrap />
-
       {/* Sidebar - Desktop is handled by CSS, Mobile needs state */}
       <Sidebar />
       
