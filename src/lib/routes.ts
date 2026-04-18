@@ -247,6 +247,11 @@ export const API_ENDPOINTS = {
     FARM_ZONE_CHARTS: (zoneId: string) =>
       `/iot/farm-zones/${zoneId}/charts`,
     ALERT_EVENTS: "/iot/alert-events",
+    ALERT_EVENT: (alertEventId: string) => `/iot/alert-events/${alertEventId}`,
+    ALERT_EVENT_ACKNOWLEDGE: (alertEventId: string) =>
+      `/iot/alert-events/${alertEventId}/acknowledge`,
+    ALERT_EVENT_RESOLVE: (alertEventId: string) =>
+      `/iot/alert-events/${alertEventId}/resolve`,
     ALERT_RULES: "/iot/alert-rules",
     ALERT_RULE: (ruleId: string) => `/iot/alert-rules/${ruleId}`,
     ALERT_RULE_ENABLED: (ruleId: string) =>

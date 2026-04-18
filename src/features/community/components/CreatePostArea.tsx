@@ -29,15 +29,17 @@ export function CreatePostArea() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4" onClick={(e) => e.stopPropagation()}>
           
           <div className="flex items-center gap-6 pl-2">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="flex items-center gap-2 text-[14px] font-bold text-[#245A34] hover:opacity-80 transition-opacity"
-            >
+          <button
+            aria-label="Open create post"
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 text-[14px] font-bold text-[#245A34] hover:opacity-80 transition-opacity"
+          >
               <ImageIcon className="w-[18px] h-[18px]" strokeWidth={2.5} />
               Ảnh/Video
             </button>
             
             <button
+              aria-label="Open create post"
               onClick={() => setIsModalOpen(true)}
               className="flex items-center gap-2 text-[14px] font-bold text-[#245A34] hover:opacity-80 transition-opacity"
             >
@@ -47,6 +49,7 @@ export function CreatePostArea() {
           </div>
 
           <button
+            aria-label="Open create post"
             onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto px-8 py-3 bg-[#245A34] text-white text-[15px] font-bold rounded-full hover:bg-green-800 transition-colors shadow-sm"
           >

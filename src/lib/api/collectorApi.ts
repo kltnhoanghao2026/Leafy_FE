@@ -68,6 +68,21 @@ export const collectorApi = {
       },
     ),
 
+  getAlertEvent: (alertEventId: string) =>
+    apiClient.get<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT(alertEventId),
+    ),
+
+  acknowledgeAlert: (alertEventId: string) =>
+    apiClient.post<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT_ACKNOWLEDGE(alertEventId),
+    ),
+
+  resolveAlert: (alertEventId: string) =>
+    apiClient.post<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT_RESOLVE(alertEventId),
+    ),
+
   getDeviceDetail: (deviceId: string) =>
     apiClient.get<DeviceDetailResponse>(
       API_ENDPOINTS.IOT.DEVICE_DETAIL(deviceId),

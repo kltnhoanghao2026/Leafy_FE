@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Heart, MessageSquare, Share2, MoreHorizontal } from 'lucide-react'
 import type { Post } from '../types'
-import { useCommunityStore } from '../../../store/useCommunityStore'
+import { useVotePost } from '../queries'
 import { CommentSection } from './CommentSection'
 import { ShareModal } from './ShareModal'
 import { SharedPostEmbed } from './SharedPostEmbed'
@@ -13,10 +13,10 @@ interface PostCardProps {
 export function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
-  const likePost = useCommunityStore(state => state.likePost)
+  const votePost = useVotePost()
 
   const handleLike = () => {
-    likePost(post.id)
+    votePost.mutate(post.id)
   }
 
   return (
@@ -81,6 +81,8 @@ export function PostCard({ post }: PostCardProps) {
         <div className="flex items-center gap-6">
           <button 
             onClick={handleLike}
+            disabled={votePost.isPending && votePost.variables === post.id}
+            aria-label={`Like post ${post.id}`}
             className={`flex items-center gap-2 transition-colors group ${post.isLikedByMe ? 'text-[#e41e3f]' : 'text-slate-500 hover:text-[#245A34]'}`}
           >
             <Heart className={`w-[18px] h-[18px] ${post.isLikedByMe ? 'fill-[#e41e3f]' : 'group-hover:fill-[#245A34]'}`} strokeWidth={2.5} />
@@ -89,6 +91,7 @@ export function PostCard({ post }: PostCardProps) {
           
           <button 
             onClick={() => setShowComments(!showComments)}
+            aria-label={`Toggle comments for post ${post.id}`}
             className={`flex items-center gap-2 transition-colors ${showComments ? 'text-[#245A34]' : 'text-slate-500 hover:text-[#245A34]'}`}
           >
             <MessageSquare className="w-[18px] h-[18px]" strokeWidth={2.5} />
@@ -97,6 +100,7 @@ export function PostCard({ post }: PostCardProps) {
 
           <button
             onClick={() => setShowShareModal(true)}
+            aria-label={`Share post ${post.id}`}
             className="flex items-center gap-2 text-slate-500 hover:text-[#245A34] transition-colors"
           >
             <Share2 className="w-[18px] h-[18px]" strokeWidth={2.5} />

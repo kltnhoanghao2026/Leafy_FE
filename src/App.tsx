@@ -8,8 +8,8 @@ import { VerifyEmailPage } from "./features/auth/pages/VerifyEmailPage";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { DashboardPage } from "./features/metrics-view/pages/DashboardPage";
 import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailMetricsPage";
-import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
 import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
+import { DeviceIndexRedirect } from "./features/device-onboarding/pages/DeviceIndexRedirect";
 import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
 import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
@@ -51,7 +51,7 @@ function App() {
               />
               <Route path="alerts" element={<AlertsPage />} />
               <Route path="alert-rules" element={<AlertRulesPage />} />
-              <Route path="devices" element={<DeviceManagementPage />} />
+              <Route path="devices" element={<DeviceIndexRedirect />} />
               <Route
                 path="devices/onboarding"
                 element={<DeviceOnboardingPage />}

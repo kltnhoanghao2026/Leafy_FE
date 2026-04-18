@@ -11,7 +11,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const tabs = [
     { name: "Khu vực", path: ROUTES.DASHBOARD.ROOT },
-    { name: "Cảm biến", path: ROUTES.DASHBOARD.DEVICES },
+    { name: "Cảm biến", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING },
     { name: "Báo cáo", path: ROUTES.DASHBOARD.REPORTS },
   ];
 

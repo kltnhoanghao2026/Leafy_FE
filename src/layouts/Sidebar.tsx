@@ -36,7 +36,12 @@ export function Sidebar() {
     { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, icon: Cpu },
+    {
+      name: "Thiết bị",
+      path: ROUTES.DASHBOARD.DEVICE_ONBOARDING,
+      activePath: ROUTES.DASHBOARD.DEVICES,
+      icon: Cpu,
+    },
     { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
@@ -79,10 +84,14 @@ export function Sidebar() {
             to={item.path}
             className={() => {
               const isHome = item.path === ROUTES.DASHBOARD.ROOT;
+              const activePath =
+                "activePath" in item && item.activePath
+                  ? item.activePath
+                  : item.path;
               const isCurrentlyActive = isHome
                 ? location.pathname === ROUTES.DASHBOARD.ROOT ||
                   location.pathname.startsWith("/dashboard/metrics")
-                : location.pathname.startsWith(item.path);
+                : location.pathname.startsWith(activePath);
 
               return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
                 isCurrentlyActive
