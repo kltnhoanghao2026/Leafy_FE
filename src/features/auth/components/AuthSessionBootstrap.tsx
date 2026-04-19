@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { useMyProfile } from "../../settings/queries";
+import { useFilePreviewUrl, useMyProfile } from "../../settings/queries";
+import { isFileServiceReference } from "../../../lib/api/fileApi";
 import { useAuthStore } from "../../../store/authStore";
 
 export function AuthSessionBootstrap() {
@@ -7,6 +8,7 @@ export function AuthSessionBootstrap() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const { data: profile } = useMyProfile(!!accessToken);
+  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
 
   useEffect(() => {
     if (!accessToken) {
@@ -20,12 +22,20 @@ export function AuthSessionBootstrap() {
       return;
     }
 
+    const avatar =
+      avatarUrl ||
+      (profile.avatar && !isFileServiceReference(profile.avatar)
+        ? profile.avatar
+        : undefined) ||
+      profile.profilePicture ||
+      undefined;
+
     const nextUser = {
       id: profile.userId,
       name: profile.fullName,
       email: profile.email ?? undefined,
       phone: profile.phoneNumber ?? undefined,
-      avatar: profile.avatar ?? profile.profilePicture ?? undefined,
+      avatar,
     };
 
     const isSameUser =
@@ -38,7 +48,7 @@ export function AuthSessionBootstrap() {
     if (!isSameUser) {
       setUser(nextUser);
     }
-  }, [accessToken, profile, setUser, user]);
+  }, [accessToken, avatarUrl, profile, setUser, user]);
 
   return null;
 }

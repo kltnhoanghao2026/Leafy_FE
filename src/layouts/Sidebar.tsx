@@ -2,16 +2,16 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   Search,
-  Activity,
   Bell,
   BellRing,
   Cpu,
-  UserSquare,
   Users,
   Settings,
   LogOut,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
+import { useFilePreviewUrl } from "../features/settings/queries";
+import { isFileServiceReference } from "../lib/api/fileApi";
 import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
@@ -20,20 +20,23 @@ export function Sidebar() {
   const location = useLocation();
   const { data: profile } = useMyProfile();
   const logout = useLogout();
+  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
 
   const displayName = profile?.fullName || "Đang tải...";
   const displayRole = profile?.role
     ? ROLE_LABELS[profile.role] || profile.role
     : "";
   const avatarSrc =
-    profile?.avatar ||
+    avatarUrl ||
+    (profile?.avatar && !isFileServiceReference(profile.avatar)
+      ? profile.avatar
+      : null) ||
     profile?.profilePicture ||
     "https://i.pravatar.cc/150?img=11";
 
   const navItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
     {
@@ -42,7 +45,6 @@ export function Sidebar() {
       activePath: ROUTES.DASHBOARD.DEVICES,
       icon: Cpu,
     },
-    { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];

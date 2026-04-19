@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiDeactivatePushToken } from "../../notifications/services/pushApi";
+import { useDeactivatePushTokenMutation } from "../../notifications/queries";
 import { usePushNotificationsStore } from "../../notifications/store/usePushNotificationsStore";
 import { useSettingsStore } from "../../settings/store/useSettingsStore";
 import { useAuthStore } from "../../../store/authStore";
@@ -11,13 +11,14 @@ export function useLogout() {
   const logout = useAuthStore((state) => state.logout);
   const resetProfile = useSettingsStore((state) => state.resetProfile);
   const resetPushState = usePushNotificationsStore((state) => state.resetState);
+  const deactivatePushToken = useDeactivatePushTokenMutation();
 
   return async function handleLogout() {
     const { currentToken } = usePushNotificationsStore.getState();
 
     if (currentToken) {
       try {
-        await apiDeactivatePushToken(currentToken);
+        await deactivatePushToken.mutateAsync(currentToken);
       } catch (error) {
         console.error("Deactivate push token failed:", error);
       }

@@ -1,5 +1,6 @@
 import { Heart, MessageSquare, Share2, MapPin } from 'lucide-react'
 import type { SharedPostSnapshot } from '../types'
+import { MediaImage } from './MediaImage'
 
 interface SharedPostEmbedProps {
   post: SharedPostSnapshot
@@ -50,8 +51,8 @@ export function SharedPostEmbed({ post }: SharedPostEmbedProps) {
       {/* Embedded Image */}
       {post.images && post.images.length > 0 && (
         <div className="border-t border-slate-200/60">
-          <img
-            src={post.images[0]}
+          <MediaImage
+            source={post.images[0]}
             alt="Shared post attachment"
             className="w-full h-auto object-cover max-h-[300px]"
           />

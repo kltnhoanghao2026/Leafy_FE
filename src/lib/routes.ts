@@ -25,13 +25,10 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
-    MONITOR: "/dashboard/monitor",
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
-    EXPERTS: "/dashboard/experts",
     DEVICES: "/dashboard/devices",
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
-    REPORTS: "/dashboard/reports",
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
   },
@@ -121,6 +118,11 @@ export const API_ENDPOINTS = {
   FILES: {
     UPLOAD: "/files/upload",
     PRESIGNED_URL: (fileId: string) => `/files/presigned-url/${fileId}`,
+  },
+
+  PREFERENCES: {
+    ME: "/preferences/me",
+    APPEARANCE: "/preferences/appearance",
   },
 
   USERS: {
@@ -219,10 +221,9 @@ export const API_ENDPOINTS = {
       `/diseases/diagnose/results/by-request/${requestId}`,
   },
 
-  NOTIFICATIONS: {
-    LIST: "/notifications",
-    MARK_READ: (id: string) => `/notifications/${id}/read`,
-    MARK_ALL_READ: "/notifications/read-all",
+  PUSH_TOKENS: {
+    REGISTER: "/push-tokens",
+    DEACTIVATE: "/push-tokens/deactivate",
   },
 
   IOT: {

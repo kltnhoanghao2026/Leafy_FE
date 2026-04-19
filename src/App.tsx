@@ -14,6 +14,7 @@ import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceO
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
 import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
+import { SearchPage } from "./features/search/pages/SearchPage";
 import { SettingsView } from "./features/settings/pages/SettingsView";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
@@ -57,6 +58,7 @@ function App() {
                 element={<DeviceOnboardingPage />}
               />
               <Route path="devices/:deviceId" element={<DeviceDetailPage />} />
+              <Route path="search" element={<SearchPage />} />
               <Route path="community" element={<CommunityView />} />
               <Route path="settings" element={<SettingsView />} />
             </Route>

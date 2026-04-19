@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { AlertCircle, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
 import { useCreateCommunityPost } from "../queries";
+import { useUploadFileMutation } from "../../settings/queries";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -18,20 +19,35 @@ const LOCATIONS = [
 
 export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const createPost = useCreateCommunityPost();
+  const uploadFile = useUploadFileMutation();
   const [content, setContent] = useState("");
   const [location, setLocation] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewImage) URL.revokeObjectURL(previewImage);
+    };
+  }, [previewImage]);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (previewImage) URL.revokeObjectURL(previewImage);
+    setMediaError(null);
+    setSelectedFile(file);
     setPreviewImage(URL.createObjectURL(file));
   };
 
   const handleRemoveImage = () => {
+    if (previewImage) URL.revokeObjectURL(previewImage);
+    setSelectedFile(null);
     setPreviewImage(null);
+    setMediaError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -39,27 +55,44 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
     setContent("");
     setLocation("");
     setIsUrgent(false);
+    setSelectedFile(null);
+    if (previewImage) URL.revokeObjectURL(previewImage);
     setPreviewImage(null);
+    setMediaError(null);
+    uploadFile.reset();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleClose = () => {
-    if (createPost.isPending) return;
+    if (createPost.isPending || uploadFile.isPending) return;
     createPost.reset();
+    uploadFile.reset();
     onClose();
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!content.trim()) return;
+    setMediaError(null);
 
     try {
+      const uploadedMedia = selectedFile
+        ? await uploadFile.mutateAsync(selectedFile)
+        : null;
+
       await createPost.mutateAsync({
         content: {
           caption: content.trim(),
           hashtags: isUrgent ? ["urgent"] : [],
         },
-        media: [],
+        media: uploadedMedia
+          ? [
+              {
+                url: uploadedMedia.id,
+                type: uploadedMedia.contentType || selectedFile?.type || "image",
+              },
+            ]
+          : [],
         postType: "FEED",
         location:
           location && location !== "PICKING" ? { name: location } : null,
@@ -68,8 +101,12 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
 
       resetForm();
       onClose();
-    } catch {
-      // Mutation error state is rendered in the modal.
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Post could not be created. Please try again.";
+      setMediaError(message);
     }
   };
 
@@ -140,8 +177,8 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                   <X className="w-3.5 h-3.5" strokeWidth={3} />
                 </button>
                 <p className="bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700">
-                  Image preview only. Media upload is not connected in this
-                  phase.
+                  Image will be uploaded to file-service before the post is
+                  created.
                 </p>
               </div>
             ) : null}
@@ -190,9 +227,10 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
               ) : null}
             </div>
 
-            {createPost.isError ? (
+            {mediaError || createPost.isError || uploadFile.isError ? (
               <p role="alert" className="mt-4 text-sm font-bold text-red-600">
-                Post could not be created. Check the content and try again.
+                {mediaError ||
+                  "Post could not be created. Check the content and try again."}
               </p>
             ) : null}
           </div>
@@ -234,16 +272,17 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              aria-label="Post image file"
               className="hidden"
               onChange={handleFileChange}
             />
 
             <button
               type="submit"
-              disabled={!content.trim() || createPost.isPending}
+              disabled={!content.trim() || createPost.isPending || uploadFile.isPending}
               className="w-full py-3 bg-[#245A34] text-white text-[15px] font-bold rounded-full hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {createPost.isPending ? (
+              {createPost.isPending || uploadFile.isPending ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
@@ -251,6 +290,8 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                   Post
                 </>
               )}
+              {uploadFile.isPending ? "Uploading media..." : null}
+              {!uploadFile.isPending && createPost.isPending ? "Creating post..." : null}
             </button>
           </div>
         </form>

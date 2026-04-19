@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommunityView } from "./CommunityView";
@@ -100,6 +100,33 @@ const envelope = <T,>(data: T) => ({
   code: 1000,
   message: "success",
   data,
+});
+
+const uploadedFile = {
+  id: "file-1",
+  s3Key: "community/file-1.png",
+  originalFileName: "leaf.png",
+  contentType: "image/png",
+  fileSize: 42,
+  uploadedBy: "profile-1",
+  active: true,
+  createdAt: "2026-04-16T03:00:00Z",
+  lastModifiedAt: "2026-04-16T03:00:00Z",
+};
+
+beforeEach(() => {
+  Object.defineProperty(URL, "createObjectURL", {
+    configurable: true,
+    value: vi.fn(() => "blob:local-preview"),
+  });
+  Object.defineProperty(URL, "revokeObjectURL", {
+    configurable: true,
+    value: vi.fn(),
+  });
+});
+
+afterEach(() => {
+  vi.clearAllMocks();
 });
 
 const useFeed = (posts: CommunityPostResponse[] = [postOne()]) => {
@@ -225,6 +252,210 @@ describe("CommunityView", () => {
       });
     });
     expect(await screen.findByText("New backend post")).toBeInTheDocument();
+  });
+
+  it("shows a local image preview before submit", async () => {
+    useFeed();
+
+    renderWithClient(<CommunityView />);
+
+    await screen.findByText("Backend coffee leaf question");
+    await userEvent.click(screen.getAllByRole("button", { name: /open create post/i })[0]);
+    await userEvent.upload(
+      screen.getByLabelText("Post image file"),
+      new File(["leaf"], "leaf.png", { type: "image/png" }),
+    );
+
+    expect(screen.getByAltText("Preview")).toHaveAttribute(
+      "src",
+      "blob:local-preview",
+    );
+    expect(
+      screen.getByText(/uploaded to file-service before the post is created/i),
+    ).toBeInTheDocument();
+  });
+
+  it("uploads media before creating the backend post", async () => {
+    let posts = [postOne()];
+    let uploadHadFilePart = false;
+    let submittedBody: unknown;
+
+    server.use(
+      http.get("*/api/posts/feed", () => {
+        return HttpResponse.json(envelope(springPage(posts)));
+      }),
+      http.post("*/api/files/upload", async ({ request }) => {
+        const formData = await request.formData();
+        uploadHadFilePart = formData.has("file");
+        return HttpResponse.json(envelope(uploadedFile), { status: 201 });
+      }),
+      http.post("*/api/posts", async ({ request }) => {
+        submittedBody = await request.json();
+        posts = [
+          postOne({
+            id: "post-with-media",
+            content: {
+              caption: "Post with persisted media",
+              description: null,
+              title: null,
+              hashtags: [],
+            },
+            media: [{ url: "file-1", type: "image/png" }],
+          }),
+          ...posts,
+        ];
+        return HttpResponse.json(envelope(posts[0]));
+      }),
+      http.get("*/api/files/presigned-url/:fileId", ({ params }) => {
+        return HttpResponse.json(
+          envelope(`https://files.example.test/${String(params.fileId)}.png`),
+        );
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    await screen.findByText("Backend coffee leaf question");
+    await userEvent.click(screen.getAllByRole("button", { name: /open create post/i })[0]);
+    await userEvent.type(
+      screen.getByPlaceholderText(/share a garden update/i),
+      "Post with persisted media",
+    );
+    await userEvent.upload(
+      screen.getByLabelText("Post image file"),
+      new File(["leaf"], "leaf.png", { type: "image/png" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Post" }));
+
+    await waitFor(() => {
+      expect(uploadHadFilePart).toBe(true);
+      expect(submittedBody).toMatchObject({
+        content: { caption: "Post with persisted media" },
+        media: [{ url: "file-1", type: "image/png" }],
+      });
+    });
+    expect(await screen.findByText("Post with persisted media")).toBeInTheDocument();
+    expect(await screen.findByAltText("Post attachment")).toHaveAttribute(
+      "src",
+      "https://files.example.test/file-1.png",
+    );
+  });
+
+  it("handles media upload failure without creating a post", async () => {
+    let createPostCalled = false;
+
+    server.use(
+      http.get("*/api/posts/feed", () => {
+        return HttpResponse.json(envelope(springPage([postOne()])));
+      }),
+      http.post("*/api/files/upload", () => {
+        return HttpResponse.json({ message: "Upload failed" }, { status: 500 });
+      }),
+      http.post("*/api/posts", () => {
+        createPostCalled = true;
+        return HttpResponse.json(envelope(postOne()));
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    await screen.findByText("Backend coffee leaf question");
+    await userEvent.click(screen.getAllByRole("button", { name: /open create post/i })[0]);
+    await userEvent.type(
+      screen.getByPlaceholderText(/share a garden update/i),
+      "Post with failed media",
+    );
+    await userEvent.upload(
+      screen.getByLabelText("Post image file"),
+      new File(["leaf"], "leaf.png", { type: "image/png" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Post" }));
+
+    expect(await screen.findByText("Upload failed")).toBeInTheDocument();
+    expect(createPostCalled).toBe(false);
+  });
+
+  it("handles post create failure after a successful upload", async () => {
+    let uploadCalled = false;
+
+    server.use(
+      http.get("*/api/posts/feed", () => {
+        return HttpResponse.json(envelope(springPage([postOne()])));
+      }),
+      http.post("*/api/files/upload", () => {
+        uploadCalled = true;
+        return HttpResponse.json(envelope(uploadedFile), { status: 201 });
+      }),
+      http.post("*/api/posts", () => {
+        return HttpResponse.json(
+          { message: "Post create failed" },
+          { status: 500 },
+        );
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    await screen.findByText("Backend coffee leaf question");
+    await userEvent.click(screen.getAllByRole("button", { name: /open create post/i })[0]);
+    await userEvent.type(
+      screen.getByPlaceholderText(/share a garden update/i),
+      "Post create failure",
+    );
+    await userEvent.upload(
+      screen.getByLabelText("Post image file"),
+      new File(["leaf"], "leaf.png", { type: "image/png" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Post" }));
+
+    expect(await screen.findByText("Post create failed")).toBeInTheDocument();
+    expect(uploadCalled).toBe(true);
+  });
+
+  it("renders persisted media from the backend feed and ignores local media state", async () => {
+    window.localStorage.setItem(
+      "community-storage",
+      JSON.stringify({
+        state: {
+          posts: [
+            {
+              id: "local-post",
+              content: "Local media post must not render",
+              images: ["blob:local-only"],
+            },
+          ],
+        },
+        version: 0,
+      }),
+    );
+
+    useFeed([
+      postOne({
+        content: {
+          caption: "Backend media post",
+          description: null,
+          title: null,
+          hashtags: [],
+        },
+        media: [{ url: "file-1", type: "image/png" }],
+      }),
+    ]);
+    server.use(
+      http.get("*/api/files/presigned-url/:fileId", ({ params }) => {
+        return HttpResponse.json(
+          envelope(`https://files.example.test/${String(params.fileId)}.png`),
+        );
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    expect(await screen.findByText("Backend media post")).toBeInTheDocument();
+    expect(screen.queryByText("Local media post must not render")).not.toBeInTheDocument();
+    expect(await screen.findByAltText("Post attachment")).toHaveAttribute(
+      "src",
+      "https://files.example.test/file-1.png",
+    );
   });
 
   it("loads comments from backend and posts a new backend comment", async () => {
@@ -413,5 +644,55 @@ describe("CommunityView", () => {
         content: { caption: "Sharing this" },
       });
     });
+  });
+
+  it("renders shared post media when the backend share response includes it", async () => {
+    useFeed([
+      postOne({
+        id: "share-1",
+        postType: "SHARE",
+        content: {
+          caption: "Sharing this media post",
+          description: null,
+          title: null,
+          hashtags: [],
+        },
+        sharedPostId: "post-1",
+        originalAuthorId: "profile-1",
+        sharedPostInfo: postOne({
+          content: {
+            caption: "Original post with media",
+            description: null,
+            title: null,
+            hashtags: [],
+          },
+          media: [{ url: "file-1", type: "image/png" }],
+        }),
+      }),
+    ]);
+    server.use(
+      http.get("*/api/files/presigned-url/:fileId", ({ params }) => {
+        return HttpResponse.json(
+          envelope(`https://files.example.test/${String(params.fileId)}.png`),
+        );
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    expect(await screen.findByText("Sharing this media post")).toBeInTheDocument();
+    expect(await screen.findByAltText("Shared post attachment")).toHaveAttribute(
+      "src",
+      "https://files.example.test/file-1.png",
+    );
+  });
+
+  it("keeps mock widgets separate from backend feed rendering", async () => {
+    useFeed();
+
+    renderWithClient(<CommunityView />);
+
+    expect(await screen.findByText("Backend coffee leaf question")).toBeInTheDocument();
+    expect(screen.getByText(/hot/i)).toBeInTheDocument();
   });
 });

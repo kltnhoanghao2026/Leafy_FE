@@ -1,5 +1,10 @@
 import type { ApiEnvelope } from "../../../shared/types/api";
-import type { ProfileResponse, ProfileUpdateRequest } from "../types";
+import type {
+  AppearanceSettingsUpdateRequest,
+  ProfileResponse,
+  ProfileUpdateRequest,
+  UserPreferenceResponse,
+} from "../types";
 import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import { useAuthStore } from "../../../store/authStore";
@@ -23,6 +28,17 @@ export const profileApi = {
   updateByUserId: (userId: string, data: ProfileUpdateRequest) =>
     apiClient.put<ApiEnvelope<ProfileResponse>>(
       API_ENDPOINTS.PROFILES.GET_BY_USER(userId),
+      data,
+    ),
+
+  getMyPreferences: () =>
+    apiClient.get<ApiEnvelope<UserPreferenceResponse>>(
+      API_ENDPOINTS.PREFERENCES.ME,
+    ),
+
+  updateAppearancePreferences: (data: AppearanceSettingsUpdateRequest) =>
+    apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
+      API_ENDPOINTS.PREFERENCES.APPEARANCE,
       data,
     ),
 };

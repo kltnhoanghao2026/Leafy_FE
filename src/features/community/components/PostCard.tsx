@@ -5,6 +5,7 @@ import { useVotePost } from '../queries'
 import { CommentSection } from './CommentSection'
 import { ShareModal } from './ShareModal'
 import { SharedPostEmbed } from './SharedPostEmbed'
+import { MediaImage } from './MediaImage'
 
 interface PostCardProps {
   post: Post
@@ -67,9 +68,9 @@ export function PostCard({ post }: PostCardProps) {
         {/* Own attached image (only if not a reshare) */}
         {!post.sharedPost && post.images && post.images.length > 0 && (
           <div className="rounded-2xl overflow-hidden bg-slate-100 mt-3 border border-slate-200">
-            <img 
-              src={post.images[0]} 
-              alt="Post attachment" 
+            <MediaImage
+              source={post.images[0]}
+              alt="Post attachment"
               className="w-full h-auto object-cover max-h-[400px]"
             />
           </div>
