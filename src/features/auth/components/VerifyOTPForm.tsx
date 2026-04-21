@@ -46,7 +46,7 @@ export function VerifyOTPForm() {
 
       const envelope = response.data;
       if (envelope.data) {
-        setTokens(envelope.data.accessToken, envelope.data.refreshToken);
+        setTokens(envelope.data.accessToken);
         clearPendingEmail();
         toast.success("Xác thực thành công!");
         navigate(ROUTES.DASHBOARD.ROOT);
