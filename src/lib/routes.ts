@@ -23,11 +23,14 @@ export const ROUTES = {
   DASHBOARD: {
     ROOT: "/dashboard",
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
+    DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
     MONITOR: "/dashboard/monitor",
     ALERTS: "/dashboard/alerts",
+    ALERT_RULES: "/dashboard/alert-rules",
     EXPERTS: "/dashboard/experts",
     DEVICES: "/dashboard/devices",
+    DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     REPORTS: "/dashboard/reports",
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
@@ -276,6 +279,28 @@ export const API_ENDPOINTS = {
     METRICS: "/iot/metrics",
     DEVICES: "/iot/devices",
     DEVICE: (id: string) => `/iot/devices/${id}`,
+    MY_DEVICES: "/iot/devices/me",
+    DEVICE_PROVISION: "/iot/devices/provision",
+    DEVICE_CLAIM: "/iot/devices/claim",
+    DEVICE_CLAIM_CODE: (deviceId: string) =>
+      `/iot/devices/${deviceId}/claim-code`,
+    DEVICE_DETAIL: (deviceId: string) => `/iot/devices/${deviceId}/detail`,
+    DEVICE_LATEST_READINGS: (deviceId: string) =>
+      `/iot/devices/${deviceId}/latest-readings`,
+    DEVICE_CHARTS: (deviceId: string) => `/iot/devices/${deviceId}/charts`,
+    DEVICE_CONFIG: (deviceId: string) => `/iot/devices/${deviceId}/config`,
+    DEVICE_CONFIG_PUSH: (deviceId: string) =>
+      `/iot/devices/${deviceId}/config/push`,
+    DASHBOARD_OVERVIEW: "/iot/dashboard/overview",
+    FARM_ZONE_OVERVIEW: (zoneId: string) =>
+      `/iot/farm-zones/${zoneId}/overview`,
+    FARM_ZONE_CHARTS: (zoneId: string) =>
+      `/iot/farm-zones/${zoneId}/charts`,
+    ALERT_EVENTS: "/iot/alert-events",
+    ALERT_RULES: "/iot/alert-rules",
+    ALERT_RULE: (ruleId: string) => `/iot/alert-rules/${ruleId}`,
+    ALERT_RULE_ENABLED: (ruleId: string) =>
+      `/iot/alert-rules/${ruleId}/enabled`,
   },
 
   MESSAGES: {

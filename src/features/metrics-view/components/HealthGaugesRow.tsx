@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react'
 import { Check, AlertTriangle } from 'lucide-react'
 import type { ZoneHealth } from '../mockData'
 
@@ -14,7 +15,7 @@ function ProgressCard({
 }: { 
   title: string, 
   value: number, 
-  icon: any, 
+  icon: ComponentType<{ className?: string; strokeWidth?: number }>, 
   colorClass: string,
   iconBgClass: string
 }) {

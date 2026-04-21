@@ -10,6 +10,10 @@ import { AdminLayout } from "./layouts/AdminLayout";
 import { DashboardPage } from "./features/metrics-view/pages/DashboardPage";
 import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailMetricsPage";
 import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
+import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
+import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
+import { AlertsPage } from "./features/alerts/pages/AlertsPage";
+import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
 import { SettingsView } from "./features/settings/pages/SettingsView";
 import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
@@ -73,7 +77,14 @@ function App() {
                 path="metrics/:zoneId"
                 element={<ZoneDetailMetricsPage />}
               />
+              <Route path="alerts" element={<AlertsPage />} />
+              <Route path="alert-rules" element={<AlertRulesPage />} />
               <Route path="devices" element={<DeviceManagementPage />} />
+              <Route
+                path="devices/onboarding"
+                element={<DeviceOnboardingPage />}
+              />
+              <Route path="devices/:deviceId" element={<DeviceDetailPage />} />
               <Route path="community" element={<CommunityView />} />
               <Route path="settings" element={<SettingsView />} />
             </Route>
