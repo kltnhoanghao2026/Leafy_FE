@@ -58,6 +58,9 @@ export function AuthSessionBootstrap() {
 
   useEffect(() => {
     if (!accessToken) {
+      console.log(
+        "[AuthSessionBootstrap] no accessToken → clearing user & accountRole",
+      );
       if (user !== null) {
         setUser(null);
       }
@@ -66,6 +69,9 @@ export function AuthSessionBootstrap() {
     }
 
     if (!profile) {
+      console.log(
+        "[AuthSessionBootstrap] accessToken present but profile not yet loaded",
+      );
       return;
     }
 
@@ -90,7 +96,13 @@ export function AuthSessionBootstrap() {
   }, [accessToken, profile, setUser, setAccountRole, user]);
 
   useEffect(() => {
+    console.log(
+      `[AuthSessionBootstrap] account effect — role=${account?.role ?? "(no account yet)"}`,
+    );
     if (account?.role) {
+      console.log(
+        `[AuthSessionBootstrap] setting accountRole → ${account.role}`,
+      );
       setAccountRole(account.role);
     }
   }, [account, setAccountRole]);

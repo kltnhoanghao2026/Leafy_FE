@@ -11,8 +11,7 @@ export const authKeys = {
 
   resendOtp: () => [...authKeys.all(), "resendOtp"] as const,
 
-  refreshAccessToken: () =>
-    ([...authKeys.all(), "refresh"] as const),
+  refreshAccessToken: () => [...authKeys.all(), "refresh"] as const,
 
   logout: () => [...authKeys.all(), "logout"] as const,
 

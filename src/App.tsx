@@ -12,13 +12,29 @@ import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailM
 import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
 import { SettingsView } from "./features/settings/pages/SettingsView";
-import { AdminOverviewPage } from "./features/admin/pages/AdminOverviewPage";
-import { UserManagementPage } from "./features/admin/pages/UserManagementPage";
-import { FarmOverviewPage } from "./features/admin/pages/FarmOverviewPage";
-import { ContentModerationPage } from "./features/admin/pages/ContentModerationPage";
-import { SystemHealthPage } from "./features/admin/pages/SystemHealthPage";
-import { AnalyticsDashboardPage } from "./features/admin/pages/AnalyticsDashboardPage";
-import { PlantDiseaseDBPage } from "./features/admin/pages/PlantDiseaseDBPage";
+import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
+import { UserManagementPage } from "./features/admin/users/UserManagementPage";
+import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
+import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
+import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
+import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
+import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
+import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
+import {
+  PlantDiseaseDBPage,
+  SpeciesPage,
+  PlantsPage,
+  PlantEventsPage,
+} from "./features/admin/plant-disease/PlantDiseaseDBPage";
+import { PlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
+import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
+import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
+import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
+import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
+import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
+import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
+import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
+import DataSyncPage from "./features/admin/sync/DataSyncPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -73,10 +89,35 @@ function App() {
               <Route path="overview" element={<AdminOverviewPage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="farms" element={<FarmOverviewPage />} />
+              <Route path="farms/:plotId" element={<FarmPlotDetailPage />} />
+              <Route
+                path="farms/zones/:zoneId"
+                element={<FarmZoneDetailPage />}
+              />
               <Route path="content" element={<ContentModerationPage />} />
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
-              <Route path="plants" element={<PlantDiseaseDBPage />} />
+              <Route path="plants" element={<PlantsPage />} />
+              <Route path="plants/:id" element={<PlantDetailPage />} />
+              <Route path="species" element={<SpeciesPage />} />
+              <Route path="species/:id" element={<SpeciesDetailPage />} />
+              <Route path="plant-events" element={<PlantEventsPage />} />
+              <Route
+                path="plant-events/:id"
+                element={<PlantEventDetailPage />}
+              />
+              <Route path="diseases" element={<DiseasePage />} />
+              <Route path="profiles" element={<ProfileManagementPage />} />
+              <Route
+                path="profiles/:profileId"
+                element={<ProfileDetailPage />}
+              />
+              <Route
+                path="certificates"
+                element={<CertificateApprovalPage />}
+              />
+              <Route path="seeding" element={<DataSeedingPage />} />
+              <Route path="sync" element={<DataSyncPage />} />
             </Route>
           </Route>
 

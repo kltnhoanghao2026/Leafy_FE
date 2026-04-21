@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { healthApi } from "../api/health.api";
+import { healthApi } from "./health.api";
 import { healthKeys } from "./healthKeys";
 
 export const useSystemHealth = () =>

@@ -39,10 +39,23 @@ export const ROUTES = {
     OVERVIEW: "/admin/overview",
     USERS: "/admin/users",
     FARMS: "/admin/farms",
+    FARM_DETAIL: (plotId: string) => `/admin/farms/${plotId}`,
+    FARM_ZONE_DETAIL: (zoneId: string) => `/admin/farms/zones/${zoneId}`,
     CONTENT: "/admin/content",
     HEALTH: "/admin/health",
     ANALYTICS: "/admin/analytics",
     PLANTS: "/admin/plants",
+    PLANT_DETAIL: (id: string) => `/admin/plants/${id}`,
+    SPECIES: "/admin/species",
+    SPECIES_DETAIL: (id: string) => `/admin/species/${id}`,
+    PLANT_EVENTS: "/admin/plant-events",
+    PLANT_EVENT_DETAIL: (id: string) => `/admin/plant-events/${id}`,
+    DISEASES: "/admin/diseases",
+    PROFILES: "/admin/profiles",
+    PROFILE_DETAIL: (profileId: string) => `/admin/profiles/${profileId}`,
+    CERTIFICATES: "/admin/certificates",
+    SEEDING: "/admin/seeding",
+    SYNC: "/admin/sync",
   },
 } as const;
 
@@ -127,6 +140,20 @@ export const API_ENDPOINTS = {
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
+    PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
+    PROCESSED_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/processed`,
+    UPDATE_APPROVAL_STATUS: (profileId: string, requestId: string) =>
+      `/profiles/${profileId}/approval-requests/${requestId}/status`,
+    REVOKE_APPROVAL: (profileId: string, requestId: string) =>
+      `/profiles/${profileId}/approval-requests/${requestId}/revoke`,
+    // Admin-only endpoints
+    LIST: "/profiles",
+    SEARCH: "/profiles/search",
+    DETAILS: (profileId: string) => `/profiles/${profileId}/details`,
+    ACTIVATE: (profileId: string) => `/profiles/${profileId}/activate`,
+    DEACTIVATE: (profileId: string) => `/profiles/${profileId}/deactivate`,
+    VERIFY: (profileId: string) => `/profiles/${profileId}/verify`,
+    DELETE: (profileId: string) => `/profiles/${profileId}`,
   },
 
   FILES: {
@@ -168,6 +195,8 @@ export const API_ENDPOINTS = {
     PLOT: (id: string) => `/farms/plots/${id}`,
     PLOT_ZONES: (plotId: string) => `/farms/plots/${plotId}/zones`,
     ZONE: (id: string) => `/farms/zones/${id}`,
+    ADMIN_PLOTS: "/farms/plots/admin",
+    ADMIN_ZONES: "/farms/admin/zones",
   },
 
   PLANTS: {
@@ -180,9 +209,14 @@ export const API_ENDPOINTS = {
   SPECIES: {
     LIST: "/species",
     ITEM: (id: string) => `/species/${id}`,
+    CREATE: "/species",
+    UPDATE: (id: string) => `/species/${id}`,
+    DELETE: (id: string) => `/species/${id}`,
+    SEED_PERENUAL: "/species/seed/perenual",
   },
 
   PLANT_EVENTS: {
+    LIST_ALL: "/plant-events",
     CREATE: "/plant-events",
     BULK_CREATE: "/plant-events/bulk",
     ITEM: (eventId: string) => `/plant-events/${eventId}`,
@@ -200,8 +234,10 @@ export const API_ENDPOINTS = {
   },
 
   TREATMENT_PLANS: {
+    LIST: "/treatment-plans",
     CREATE: "/treatment-plans",
     ITEM: (planId: string) => `/treatment-plans/${planId}`,
+    UPDATE_STATUS: (planId: string) => `/treatment-plans/${planId}/status`,
     MY: "/treatment-plans/me",
     BY_PLANT: (plantId: string) => `/treatment-plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
@@ -252,6 +288,30 @@ export const API_ENDPOINTS = {
 
   ADMIN: {
     HEALTH: "/admin/health",
+    SYNC: {
+      // Profile sync — profile-service /profiles/sync/*
+      PROFILES_START: "/profiles/sync/start",
+      PROFILES_RESUME: (taskId: string) => `/profiles/sync/resume/${taskId}`,
+      PROFILES_STATUS: (taskId: string) => `/profiles/sync/status/${taskId}`,
+      // Post sync — search-service /sync/posts/* (via /api/search/sync/**)
+      POSTS_REINDEX: "/search/sync/posts",
+      POSTS_RESET: "/search/sync/posts/reset",
+      // Failed events DLQ — search-service /failed-events/* (via /api/search/failed-events/**)
+      FAILED_EVENTS_LIST: "/search/failed-events",
+      FAILED_EVENTS_COUNT: "/search/failed-events/count",
+      FAILED_EVENTS_RESOLVE: (id: string) =>
+        `/search/failed-events/${id}/resolved`,
+      FAILED_EVENTS_RETRY: (id: string) => `/search/failed-events/${id}/retry`,
+      FAILED_EVENTS_RETRY_ALL: "/search/failed-events/retry/all",
+    },
+    SEED: {
+      ACCOUNTS: "/admin/seed/accounts",
+      FARMS: "/admin/seed/farms",
+      PLANTS: "/admin/seed/plants",
+      SPECIES_PERENUAL: "/admin/seed/species/perenual",
+      COMMUNITY: "/admin/seed/community",
+      CERTIFICATES: "/admin/seed/certificates",
+    },
   },
 } as const;
 

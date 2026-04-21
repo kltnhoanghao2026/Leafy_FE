@@ -41,7 +41,7 @@ export function AnalyticsDashboardPage() {
         {chartPlaceholders.map((chart) => (
           <div
             key={chart.title}
-            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6"
+            className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4"
           >
             <div className="flex items-center gap-2 mb-4">
               <chart.icon className="w-5 h-5 text-[#245A34]" strokeWidth={2} />

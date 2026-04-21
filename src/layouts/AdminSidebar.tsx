@@ -1,4 +1,4 @@
-import { NavLink, useLocation, Link } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -7,45 +7,100 @@ import {
   HeartPulse,
   BarChart3,
   Leaf,
-  LogOut,
-  ArrowLeft,
+  FlaskConical,
   ShieldCheck,
-  ChevronLeft,
-  ChevronRight,
+  ChevronDown,
+  UserCircle,
+  BadgeCheck,
+  Database,
+  RefreshCw,
+  CalendarDays,
+  MapPinned,
 } from "lucide-react";
-import { useMyProfile } from "../features/settings/queries";
-import { useLogout } from "../features/auth/hooks/useLogout";
+import { useState } from "react";
 import { ROUTES } from "../lib/routes";
 
 interface AdminSidebarProps {
   collapsed: boolean;
-  onToggle: () => void;
 }
 
-export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
+export function AdminSidebar({ collapsed }: AdminSidebarProps) {
   const location = useLocation();
-  const { data: profile } = useMyProfile();
-  const logout = useLogout();
 
-  const displayName = profile?.fullName || "Đang tải...";
-  const avatarSrc =
-    profile?.avatar ||
-    profile?.profilePicture ||
-    "https://i.pravatar.cc/150?img=11";
-
-  const navItems = [
+  const navGroups = [
     {
-      name: "Tổng quan",
-      path: ROUTES.ADMIN.OVERVIEW,
-      icon: LayoutDashboard,
+      label: "Tổng quan",
+      items: [
+        {
+          name: "Tổng quan",
+          path: ROUTES.ADMIN.OVERVIEW,
+          icon: LayoutDashboard,
+        },
+        { name: "Phân tích", path: ROUTES.ADMIN.ANALYTICS, icon: BarChart3 },
+        {
+          name: "Sức khỏe hệ thống",
+          path: ROUTES.ADMIN.HEALTH,
+          icon: HeartPulse,
+        },
+      ],
     },
-    { name: "Người dùng", path: ROUTES.ADMIN.USERS, icon: Users },
-    { name: "Nông trại", path: ROUTES.ADMIN.FARMS, icon: Sprout },
-    { name: "Nội dung", path: ROUTES.ADMIN.CONTENT, icon: MessageSquare },
-    { name: "Sức khỏe hệ thống", path: ROUTES.ADMIN.HEALTH, icon: HeartPulse },
-    { name: "Phân tích", path: ROUTES.ADMIN.ANALYTICS, icon: BarChart3 },
-    { name: "Cây & bệnh", path: ROUTES.ADMIN.PLANTS, icon: Leaf },
+    {
+      label: "Quản lý người dùng",
+      items: [
+        { name: "Người dùng", path: ROUTES.ADMIN.USERS, icon: Users },
+        { name: "Hồ sơ", path: ROUTES.ADMIN.PROFILES, icon: UserCircle },
+        {
+          name: "Chứng chỉ",
+          path: ROUTES.ADMIN.CERTIFICATES,
+          icon: BadgeCheck,
+        },
+      ],
+    },
+    {
+      label: "Nông nghiệp",
+      items: [
+        { name: "Nông trại", path: ROUTES.ADMIN.FARMS, icon: MapPinned },
+        { name: "Loài cây", path: ROUTES.ADMIN.SPECIES, icon: Leaf },
+        { name: "Cây trồng", path: ROUTES.ADMIN.PLANTS, icon: Sprout },
+        {
+          name: "Sự kiện cây",
+          path: ROUTES.ADMIN.PLANT_EVENTS,
+          icon: CalendarDays,
+        },
+        {
+          name: "Bệnh & Điều trị",
+          path: ROUTES.ADMIN.DISEASES,
+          icon: FlaskConical,
+        },
+      ],
+    },
+    {
+      label: "Nội dung & Cộng đồng",
+      items: [
+        { name: "Nội dung", path: ROUTES.ADMIN.CONTENT, icon: MessageSquare },
+      ],
+    },
+    {
+      label: "Hệ thống",
+      items: [
+        {
+          name: "Khởi tạo dữ liệu",
+          path: ROUTES.ADMIN.SEEDING,
+          icon: Database,
+        },
+        { name: "Đồng bộ dữ liệu", path: ROUTES.ADMIN.SYNC, icon: RefreshCw },
+      ],
+    },
   ];
+
+  // All groups open by default
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(navGroups.map((g) => [g.label, true])),
+  );
+
+  function toggleGroup(label: string) {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  }
 
   return (
     <aside
@@ -53,10 +108,10 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
         collapsed ? "w-16" : "w-64"
       }`}
     >
-      {/* Logo + toggle */}
+      {/* Logo */}
       <div
         className={`flex items-center h-20 shrink-0 mt-1 ${
-          collapsed ? "justify-between px-2" : "justify-between px-5"
+          collapsed ? "justify-center px-2" : "px-5"
         }`}
       >
         <div className="flex items-center gap-3 min-w-0">
@@ -92,112 +147,83 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
             </div>
           )}
         </div>
-
-        {/* Collapse toggle */}
-        <button
-          onClick={onToggle}
-          title={collapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
-          className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-700 hover:text-slate-100 transition-colors shrink-0"
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-          ) : (
-            <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-          )}
-        </button>
       </div>
 
       {/* Navigation */}
       <nav
-        className={`flex-1 py-4 overflow-y-auto space-y-1 ${collapsed ? "px-1.5" : "px-3"}`}
+        className={`flex-1 py-4 overflow-y-auto sidebar-scroll ${collapsed ? "px-1.5" : "px-3"}`}
       >
-        {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path);
+        {navGroups.map((group, gi) => {
+          const isOpen = openGroups[group.label] ?? true;
+          // If any item in this group is active, keep it visually indicated
+          const hasActive = group.items.some((item) =>
+            location.pathname.startsWith(item.path),
+          );
+
           return (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              title={collapsed ? item.name : undefined}
-              className={`flex items-center py-3 text-sm font-bold rounded-full transition-colors ${
-                collapsed ? "justify-center px-0" : "px-4"
-              } ${
-                isActive
-                  ? "bg-[#245A34] text-white"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-              }`}
-            >
-              <item.icon
-                className={`w-4.5 h-4.5 shrink-0 ${!collapsed ? "mr-3.5" : ""}`}
-                strokeWidth={2.5}
-              />
-              {!collapsed && (
-                <span className="whitespace-nowrap">{item.name}</span>
+            <div key={group.label} className={gi > 0 ? "mt-3" : ""}>
+              {/* Category header */}
+              {!collapsed ? (
+                <button
+                  onClick={() => toggleGroup(group.label)}
+                  className="w-full flex items-center justify-between px-3 mb-1 group"
+                >
+                  <p
+                    className={`text-[10px] font-extrabold uppercase tracking-widest select-none transition-colors ${
+                      hasActive
+                        ? "text-slate-300"
+                        : "text-slate-500 group-hover:text-slate-400"
+                    }`}
+                  >
+                    {group.label}
+                  </p>
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-500 group-hover:text-slate-400 transition-transform duration-200 ${
+                      isOpen ? "rotate-0" : "-rotate-90"
+                    }`}
+                    strokeWidth={2.5}
+                  />
+                </button>
+              ) : (
+                gi > 0 && (
+                  <div className="mx-auto my-2 w-6 border-t border-slate-700" />
+                )
               )}
-            </NavLink>
+
+              {/* Items — collapse when closed (skip when sidebar itself is collapsed) */}
+              {(collapsed || isOpen) && (
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const isActive = location.pathname.startsWith(item.path);
+                    return (
+                      <NavLink
+                        key={item.name}
+                        to={item.path}
+                        title={collapsed ? item.name : undefined}
+                        className={`flex items-center py-2.5 text-sm font-bold rounded-full transition-colors ${
+                          collapsed ? "justify-center px-0" : "px-4"
+                        } ${
+                          isActive
+                            ? "bg-[#245A34] text-white"
+                            : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                        }`}
+                      >
+                        <item.icon
+                          className={`w-4.5 h-4.5 shrink-0 ${!collapsed ? "mr-3.5" : ""}`}
+                          strokeWidth={2.5}
+                        />
+                        {!collapsed && (
+                          <span className="whitespace-nowrap">{item.name}</span>
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
-
-      {/* Bottom section */}
-      <div
-        className={`shrink-0 space-y-1 border-t border-slate-800 ${collapsed ? "p-2 pb-6" : "p-4 pb-7"}`}
-      >
-        {/* Admin user card */}
-        <div
-          className={`flex items-center rounded-full bg-slate-800 ${
-            collapsed ? "justify-center p-2" : "px-4 py-3"
-          }`}
-        >
-          <img
-            src={avatarSrc}
-            alt={displayName}
-            title={collapsed ? displayName : undefined}
-            className="w-8 h-8 rounded-full border border-slate-600 shrink-0 object-cover"
-          />
-          {!collapsed && (
-            <div className="ml-3 flex-1 min-w-0">
-              <p className="text-xs font-bold text-slate-100 truncate">
-                {displayName}
-              </p>
-              <p className="text-[10px] font-semibold text-[#4ade80] truncate">
-                Quản trị viên
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Back to dashboard */}
-        <Link
-          to={ROUTES.DASHBOARD.ROOT}
-          title={collapsed ? "Về trang người dùng" : undefined}
-          className={`flex items-center w-full py-2.5 rounded-full text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors ${
-            collapsed ? "justify-center px-0" : "px-4"
-          }`}
-        >
-          <ArrowLeft
-            className={`w-4.5 h-4.5 shrink-0 ${!collapsed ? "mr-3.5" : ""}`}
-            strokeWidth={2.5}
-          />
-          {!collapsed && (
-            <span className="whitespace-nowrap">Về trang người dùng</span>
-          )}
-        </Link>
-
-        {/* Logout */}
-        <button
-          onClick={() => void logout()}
-          title={collapsed ? "Đăng xuất" : undefined}
-          className={`flex items-center w-full py-2.5 rounded-full text-sm font-bold text-red-400 hover:bg-red-950/40 transition-colors ${
-            collapsed ? "justify-center px-0" : "px-4"
-          }`}
-        >
-          <LogOut
-            className={`w-4.5 h-4.5 shrink-0 ${!collapsed ? "mr-3.5" : ""}`}
-            strokeWidth={2.5}
-          />
-          {!collapsed && <span className="whitespace-nowrap">Đăng xuất</span>}
-        </button>
-      </div>
     </aside>
   );
 }

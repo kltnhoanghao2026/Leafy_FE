@@ -1,20 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  AlertCircle,
-  UserCheck2,
-  Lock,
-  Unlock,
-  ShieldCheck,
-} from "lucide-react";
+import { Search, UserCheck2, Lock, Unlock, ShieldCheck } from "lucide-react";
+import { AdminTable } from "../../../components/admin/AdminTable";
+import { AdminPagination } from "../../../components/admin/AdminPagination";
 import {
   useAdminUsers,
   useAdminSearchUsers,
   useActivateUser,
   useDeactivateUser,
-} from "../queries/users.queries";
+} from "./users.queries";
 import { useAuthStore } from "../../../store/authStore";
 import type { AdminUserDto, UserRole } from "../types";
 
@@ -82,7 +75,7 @@ function StatusBadge({ active }: { active: boolean }) {
 
 function SkeletonRow() {
   return (
-    <div className="grid grid-cols-[1fr_110px_120px_160px] gap-4 items-center px-6 py-4 animate-pulse border-b border-slate-100 last:border-0">
+    <div className="grid grid-cols-[1fr_110px_120px_160px] gap-4 items-center px-4 py-3 animate-pulse border-b border-slate-100 last:border-0">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-full bg-slate-200 shrink-0" />
         <div className="space-y-1.5">
@@ -128,7 +121,7 @@ function UserRow({ user, isSelf }: UserRowProps) {
   }
 
   return (
-    <div className="grid grid-cols-[1fr_110px_120px_160px] gap-4 items-center px-6 py-4 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
+    <div className="grid grid-cols-[1fr_110px_120px_160px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
       {/* User info */}
       <div className="flex items-center gap-3 min-w-0">
         <div
@@ -202,6 +195,7 @@ export function UserManagementPage() {
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   // Inline 300ms debounce — no extra library needed
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,10 +212,10 @@ export function UserManagementPage() {
 
   const isSearching = debouncedSearch.length > 0;
 
-  const listQuery = useAdminUsers({ page, size: PAGE_SIZE });
+  const listQuery = useAdminUsers({ page, size: pageSize });
   const searchQuery = useAdminSearchUsers(debouncedSearch, {
     page,
-    size: PAGE_SIZE,
+    size: pageSize,
   });
 
   const { data, isLoading, isError, error } = isSearching
@@ -268,92 +262,51 @@ export function UserManagementPage() {
         </div>
       </div>
 
+      {/* Pagination — top */}
+      <AdminPagination
+        page={page}
+        totalPages={totalPages}
+        totalElements={totalElements}
+        itemLabel="người dùng"
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(s) => {
+          setPageSize(s);
+          setPage(0);
+        }}
+      />
+
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {/* Table header */}
-        <div className="grid grid-cols-[1fr_110px_120px_160px] gap-4 px-6 py-3 bg-slate-50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wide">
-          <span>Người dùng</span>
-          <span>Vai trò</span>
-          <span>Trạng thái</span>
-          <span className="text-right">Hành động</span>
-        </div>
-
-        {/* Loading skeletons */}
-        {isLoading && (
-          <div>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonRow key={i} />
-            ))}
-          </div>
-        )}
-
-        {/* Error state */}
-        {isError && !isLoading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <AlertCircle className="w-8 h-8 text-red-400" strokeWidth={1.5} />
-            <div className="text-center">
-              <p className="text-sm font-medium text-slate-600">
-                Không thể tải danh sách người dùng
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {(error as Error)?.message ?? "Lỗi không xác định"}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!isLoading && !isError && users.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
-            <UserCheck2 className="w-8 h-8 opacity-30" strokeWidth={1.5} />
-            <p className="text-sm font-medium">
-              {isSearching
-                ? `Không tìm thấy kết quả cho "${debouncedSearch}"`
-                : "Chưa có dữ liệu người dùng"}
-            </p>
-          </div>
-        )}
-
-        {/* User rows */}
-        {!isLoading && !isError && users.length > 0 && (
-          <div>
-            {users.map((user) => (
-              <UserRow
-                key={user.id}
-                user={user}
-                isSelf={user.id === currentUserId}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Pagination */}
-      {!isLoading && !isError && totalPages > 1 && (
-        <div className="flex items-center justify-between px-1">
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-            Trước
-          </button>
-
-          <span className="text-sm text-slate-500 font-medium">
-            Trang {page + 1} / {totalPages}
-          </span>
-
-          <button
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={page >= totalPages - 1}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            Tiếp
-            <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-          </button>
-        </div>
-      )}
+      <AdminTable
+        gridCols="grid-cols-[1fr_110px_120px_160px]"
+        columns={[
+          { label: "Người dùng" },
+          { label: "Vai trò" },
+          { label: "Trạng thái" },
+          { label: "Hành động", align: "right" },
+        ]}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={`Không thể tải danh sách người dùng${
+          (error as Error)?.message ? `: ${(error as Error).message}` : ""
+        }`}
+        isEmpty={users.length === 0}
+        emptyMessage={
+          isSearching
+            ? `Không tìm thấy kết quả cho "${debouncedSearch}"`
+            : "Chưa có dữ liệu người dùng"
+        }
+        emptyIcon={<UserCheck2 className="w-8 h-8" strokeWidth={1.5} />}
+        renderSkeleton={() => <SkeletonRow />}
+      >
+        {users.map((user) => (
+          <UserRow
+            key={user.id}
+            user={user}
+            isSelf={user.id === currentUserId}
+          />
+        ))}
+      </AdminTable>
     </div>
   );
 }

@@ -34,12 +34,12 @@ export function ContentModerationPage() {
 
       {/* Content placeholder */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-700">
             Bài viết chờ kiểm duyệt
           </h2>
         </div>
-        <div className="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-10 text-slate-400">
           <div className="flex gap-3 mb-4 opacity-30">
             <MessageSquare className="w-8 h-8" strokeWidth={1.5} />
             <MessageCircle className="w-8 h-8" strokeWidth={1.5} />
