@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
   ChevronLeft,
@@ -43,16 +43,12 @@ const getProfileAvatar = (profile: SearchProfileItem): string =>
 export function SearchPage() {
   const [keyword, setKeyword] = useState("");
   const [submittedKeyword, setSubmittedKeyword] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [mode, setMode] = useState<SearchMode>("posts");
   const [page, setPage] = useState(0);
   const debouncedKeyword = useDebouncedValue(keyword, 400);
-  const searchTerm = (submittedKeyword || debouncedKeyword).trim();
+  const searchTerm = (isSubmitted ? submittedKeyword : debouncedKeyword).trim();
   const canSearch = searchTerm.length >= MIN_SEARCH_LENGTH;
-
-  useEffect(() => {
-    setSubmittedKeyword("");
-    setPage(0);
-  }, [debouncedKeyword, mode]);
 
   const postParams = useMemo<SearchPostsParams>(
     () => ({
@@ -84,6 +80,7 @@ export function SearchPage() {
     event.preventDefault();
     setPage(0);
     setSubmittedKeyword(keyword.trim());
+    setIsSubmitted(true);
   };
 
   return (
@@ -110,7 +107,12 @@ export function SearchPage() {
             <input
               id="searchKeyword"
               value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
+              onChange={(event) => {
+                setKeyword(event.target.value);
+                setIsSubmitted(false);
+                setSubmittedKeyword("");
+                setPage(0);
+              }}
               placeholder="Enter at least 2 characters to search posts or profiles"
               className="w-full bg-transparent text-sm font-bold text-slate-800 outline-none placeholder:text-slate-400"
             />
@@ -132,6 +134,8 @@ export function SearchPage() {
               onClick={() => {
                 setMode(option);
                 setPage(0);
+                setIsSubmitted(false);
+                setSubmittedKeyword("");
               }}
               className={`rounded-full px-4 py-2 text-sm font-black transition-colors ${
                 mode === option

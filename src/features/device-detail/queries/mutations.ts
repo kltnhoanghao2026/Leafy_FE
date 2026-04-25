@@ -37,3 +37,24 @@ export const usePushDeviceConfig = (deviceId: string) => {
     },
   });
 };
+
+export const useCaptureDeviceImage = (deviceId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () =>
+      collectorApi.captureDeviceImage(deviceId, {
+        quality: "MEDIUM",
+        resolution: "VGA",
+      }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: deviceKeys.media(deviceId) }),
+        queryClient.invalidateQueries({ queryKey: deviceKeys.detail(deviceId) }),
+      ]);
+    },
+    meta: {
+      successMessage: "Camera capture requested.",
+    },
+  });
+};

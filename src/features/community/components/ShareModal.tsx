@@ -11,6 +11,8 @@ import { toast } from "react-hot-toast";
 import { ROUTES } from "../../../lib/routes";
 import { useCreateCommunityPost } from "../queries";
 import type { Post } from "../types";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ interface ShareModalProps {
 
 export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
   const sharePost = useCreateCommunityPost();
+  const currentUser = useCommunityCurrentUser();
   const [linkCopied, setLinkCopied] = useState(false);
   const [repostMessage, setRepostMessage] = useState("");
   const shareLink = `${window.location.origin}${ROUTES.DASHBOARD.COMMUNITY}?post=${post.id}`;
@@ -114,8 +117,9 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
 
         <div className="px-6 pt-5 pb-2">
           <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-5">
-            <img
-              src={post.author.avatar}
+            <CommunityAvatar
+              source={post.author.avatar}
+              name={post.author.name}
               alt={post.author.name}
               className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
             />
@@ -137,9 +141,10 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
               </p>
             </div>
             <div className="flex gap-3">
-              <img
-                src="https://i.pravatar.cc/150?img=11"
-                alt="Current User"
+              <CommunityAvatar
+                source={currentUser.avatar}
+                name={currentUser.name}
+                alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
               />
               <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-[#245A34]/20 focus-within:border-[#245A34] transition-all">

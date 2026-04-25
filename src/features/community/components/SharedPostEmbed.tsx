@@ -1,6 +1,7 @@
 import { Heart, MessageSquare, Share2, MapPin } from 'lucide-react'
 import type { SharedPostSnapshot } from '../types'
 import { MediaImage } from './MediaImage'
+import { CommunityAvatar } from './CommunityAvatar'
 
 interface SharedPostEmbedProps {
   post: SharedPostSnapshot
@@ -14,8 +15,9 @@ export function SharedPostEmbed({ post }: SharedPostEmbedProps) {
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
-            <img
-              src={post.author.avatar}
+            <CommunityAvatar
+              source={post.author.avatar}
+              name={post.author.name}
               alt={post.author.name}
               className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
             />

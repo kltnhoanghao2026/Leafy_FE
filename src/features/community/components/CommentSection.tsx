@@ -7,6 +7,8 @@ import {
   useCommunityComments,
   useCreateCommunityComment,
 } from "../queries";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CommentSectionProps {
   post: Post;
@@ -15,6 +17,7 @@ interface CommentSectionProps {
 export function CommentSection({ post }: CommentSectionProps) {
   const [commentText, setCommentText] = useState("");
   const [page, setPage] = useState(0);
+  const currentUser = useCommunityCurrentUser();
   const commentsQuery = useCommunityComments(post.id, { page, size: 20 });
   const createComment = useCreateCommunityComment();
   const commentsPage = commentsQuery.data;
@@ -40,9 +43,10 @@ export function CommentSection({ post }: CommentSectionProps) {
   return (
     <div className="pt-6 border-t border-slate-100/80 mt-4 animate-in slide-in-from-top-2 duration-300">
       <form onSubmit={handleSubmit} className="flex gap-3 items-start mb-6">
-        <img
-          src="https://i.pravatar.cc/150?img=11"
-          alt="Current User"
+        <CommunityAvatar
+          source={currentUser.avatar}
+          name={currentUser.name}
+          alt={currentUser.name}
           className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200"
         />
         <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-3xl px-5 py-2.5 flex items-center focus-within:ring-2 focus-within:ring-[#245A34]/20 focus-within:border-[#245A34] transition-all">

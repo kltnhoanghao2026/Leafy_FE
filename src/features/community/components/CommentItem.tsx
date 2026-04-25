@@ -7,6 +7,8 @@ import {
   useCreateCommunityComment,
   useVoteComment,
 } from "../queries";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CommentItemProps {
   postId: string;
@@ -24,6 +26,7 @@ export function CommentItem({
   const [showReplies, setShowReplies] = useState(false);
   const voteComment = useVoteComment();
   const createComment = useCreateCommunityComment();
+  const currentUser = useCommunityCurrentUser();
   const repliesQuery = useCommunityReplies(
     comment.id,
     { page: 0, size: 20 },
@@ -32,7 +35,7 @@ export function CommentItem({
   const replies = repliesQuery.data?.items ?? [];
 
   const handleLike = () => {
-    voteComment.mutate(comment.id);
+    voteComment.mutate({ commentId: comment.id, type: "UPVOTE" });
   };
 
   const handleSubmitReply = async (event: FormEvent<HTMLFormElement>) => {
@@ -56,8 +59,9 @@ export function CommentItem({
 
   return (
     <div className={`flex gap-3 ${isReply ? "mt-4" : "mt-6"}`}>
-      <img
-        src={comment.author.avatar}
+      <CommunityAvatar
+        source={comment.author.avatar}
+        name={comment.author.name}
         alt={comment.author.name}
         className={`${isReply ? "w-8 h-8" : "w-10 h-10"} rounded-full object-cover shrink-0 border border-slate-200`}
       />
@@ -79,8 +83,8 @@ export function CommentItem({
           <button
             type="button"
             onClick={handleLike}
-            disabled={voteComment.isPending && voteComment.variables === comment.id}
-            aria-label={`Like comment ${comment.id}`}
+            disabled={voteComment.isPending && voteComment.variables?.commentId === comment.id}
+            aria-label={`Upvote comment ${comment.id}`}
             className={`text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               comment.isLikedByMe
                 ? "text-[#e41e3f]"
@@ -126,9 +130,10 @@ export function CommentItem({
 
         {isReplying ? (
           <form onSubmit={handleSubmitReply} className="mt-4 flex gap-3 items-end">
-            <img
-              src="https://i.pravatar.cc/150?img=11"
-              alt="Current User"
+            <CommunityAvatar
+              source={currentUser.avatar}
+              name={currentUser.name}
+              alt={currentUser.name}
               className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
             />
             <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-3xl px-4 py-2 flex items-center focus-within:ring-2 focus-within:ring-[#245A34]/20 focus-within:border-[#245A34] transition-all">

@@ -3,6 +3,8 @@ import type { ChangeEvent, FormEvent } from "react";
 import { AlertCircle, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
 import { useCreateCommunityPost } from "../queries";
 import { useUploadFileMutation } from "../../settings/queries";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ const LOCATIONS = [
 export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const createPost = useCreateCommunityPost();
   const uploadFile = useUploadFileMutation();
+  const currentUser = useCommunityCurrentUser();
   const [content, setContent] = useState("");
   const [location, setLocation] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
@@ -136,14 +139,15 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5">
             <div className="flex items-center gap-3 mb-4">
-              <img
-                src="https://i.pravatar.cc/150?img=11"
-                alt="Current User"
+              <CommunityAvatar
+                source={currentUser.avatar}
+                name={currentUser.name}
+                alt={currentUser.name}
                 className="w-11 h-11 rounded-full object-cover border border-slate-200"
               />
               <div>
                 <p className="text-[15px] font-bold text-gray-900">
-                  Current user
+                  {currentUser.name}
                 </p>
                 {location && location !== "PICKING" ? (
                   <p className="text-[12px] font-semibold text-[#245A34] flex items-center gap-1">

@@ -6,7 +6,7 @@ export type CommunityVoteTargetType = "POST" | "COMMENT";
 export interface AuthorSummary {
   id: string;
   name: string;
-  avatar: string;
+  avatar?: string | null;
 }
 
 export interface Comment {
@@ -15,6 +15,8 @@ export interface Comment {
   content: string;
   timestamp: string;
   likes: number;
+  downvotes?: number;
+  currentUserVoteType?: CommunityVoteType | null;
   isLikedByMe?: boolean;
   replyCount?: number;
   replies?: Comment[];
@@ -29,6 +31,9 @@ export interface Post {
   images?: string[];
   isUrgent?: boolean;
   likes: number;
+  upvotes: number;
+  downvotes: number;
+  currentUserVoteType: CommunityVoteType | null;
   isLikedByMe?: boolean;
   comments: number;
   commentsList?: Comment[];
@@ -45,6 +50,8 @@ export interface SharedPostSnapshot {
   images?: string[];
   isUrgent?: boolean;
   likes: number;
+  upvotes?: number;
+  downvotes?: number;
   comments: number;
   shares: number;
   commentsList?: Comment[];

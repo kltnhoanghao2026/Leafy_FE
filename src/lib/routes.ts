@@ -242,6 +242,10 @@ export const API_ENDPOINTS = {
     DEVICE_CONFIG: (deviceId: string) => `/iot/devices/${deviceId}/config`,
     DEVICE_CONFIG_PUSH: (deviceId: string) =>
       `/iot/devices/${deviceId}/config/push`,
+    DEVICE_CAMERA_CAPTURE: (deviceId: string) =>
+      `/iot/devices/${deviceId}/camera/capture`,
+    DEVICE_MEDIA: (deviceId: string) => `/iot/devices/${deviceId}/media`,
+    MEDIA_EVENT: (mediaEventId: string) => `/iot/media-events/${mediaEventId}`,
     DASHBOARD_OVERVIEW: "/iot/dashboard/overview",
     FARM_ZONE_OVERVIEW: (zoneId: string) =>
       `/iot/farm-zones/${zoneId}/overview`,

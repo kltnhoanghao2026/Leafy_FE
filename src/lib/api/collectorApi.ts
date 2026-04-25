@@ -6,12 +6,15 @@ import type {
   AlertEventsParams,
   AlertRuleResponse,
   AlertRulesParams,
+  CameraCaptureRequest,
+  CameraCaptureResponse,
   ChartRange,
   ClaimDeviceRequest,
   CreateAlertRuleRequest,
   DashboardOverviewResponse,
   DeviceConfigResponse,
   DeviceDetailResponse,
+  DeviceMediaEventResponse,
   DeviceResponse,
   GenerateClaimCodeResponse,
   LatestReadingItemResponse,
@@ -112,6 +115,20 @@ export const collectorApi = {
   pushDeviceConfig: (deviceId: string) =>
     apiClient.post<DeviceConfigResponse>(
       API_ENDPOINTS.IOT.DEVICE_CONFIG_PUSH(deviceId),
+    ),
+
+  captureDeviceImage: (
+    deviceId: string,
+    payload: CameraCaptureRequest = { quality: "MEDIUM", resolution: "VGA" },
+  ) =>
+    apiClient.post<CameraCaptureResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE(deviceId),
+      payload,
+    ),
+
+  getDeviceMedia: (deviceId: string) =>
+    apiClient.get<DeviceMediaEventResponse[]>(
+      API_ENDPOINTS.IOT.DEVICE_MEDIA(deviceId),
     ),
 
   getAlertRules: (params: AlertRulesParams = {}) =>

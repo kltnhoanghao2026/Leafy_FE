@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Image as ImageIcon, MapPin } from 'lucide-react'
 import { CreatePostModal } from './CreatePostModal'
+import { CommunityAvatar } from './CommunityAvatar'
+import { useCommunityCurrentUser } from '../hooks/useCommunityCurrentUser'
 
 export function CreatePostArea() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const currentUser = useCommunityCurrentUser()
 
   return (
     <>
@@ -13,9 +16,10 @@ export function CreatePostArea() {
       >
         {/* Input Row */}
         <div className="flex gap-4 mb-6">
-          <img 
-            src="https://i.pravatar.cc/150?img=11" 
-            alt="Current User" 
+          <CommunityAvatar
+            source={currentUser.avatar}
+            name={currentUser.name}
+            alt={currentUser.name}
             className="w-12 h-12 rounded-full object-cover shrink-0 border border-slate-200"
           />
           <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-3xl px-5 py-3 hover:bg-slate-100/50 transition-colors">

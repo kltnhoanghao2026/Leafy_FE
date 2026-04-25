@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Heart, MessageSquare, Share2, MoreHorizontal } from 'lucide-react'
-import type { Post } from '../types'
+import { ArrowBigDown, ArrowBigUp, MessageSquare, Share2, MoreHorizontal } from 'lucide-react'
+import type { CommunityVoteType, Post } from '../types'
 import { useVotePost } from '../queries'
 import { CommentSection } from './CommentSection'
 import { ShareModal } from './ShareModal'
 import { SharedPostEmbed } from './SharedPostEmbed'
 import { MediaImage } from './MediaImage'
+import { CommunityAvatar } from './CommunityAvatar'
 
 interface PostCardProps {
   post: Post
@@ -15,9 +16,10 @@ export function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const votePost = useVotePost()
+  const isVotePending = votePost.isPending && votePost.variables?.postId === post.id
 
-  const handleLike = () => {
-    votePost.mutate(post.id)
+  const handleVote = (type: CommunityVoteType) => {
+    votePost.mutate({ postId: post.id, type })
   }
 
   return (
@@ -26,8 +28,9 @@ export function PostCard({ post }: PostCardProps) {
       {/* Post Header */}
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
-          <img 
-            src={post.author.avatar} 
+          <CommunityAvatar
+            source={post.author.avatar}
+            name={post.author.name}
             alt={post.author.name}
             className="w-12 h-12 rounded-full object-cover border border-slate-200"
           />
@@ -80,15 +83,40 @@ export function PostCard({ post }: PostCardProps) {
       {/* Post Footer Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-slate-100/80">
         <div className="flex items-center gap-6">
-          <button 
-            onClick={handleLike}
-            disabled={votePost.isPending && votePost.variables === post.id}
-            aria-label={`Like post ${post.id}`}
-            className={`flex items-center gap-2 transition-colors group ${post.isLikedByMe ? 'text-[#e41e3f]' : 'text-slate-500 hover:text-[#245A34]'}`}
-          >
-            <Heart className={`w-[18px] h-[18px] ${post.isLikedByMe ? 'fill-[#e41e3f]' : 'group-hover:fill-[#245A34]'}`} strokeWidth={2.5} />
-            <span className="text-[14px] font-bold">{post.likes}</span>
-          </button>
+          <div className="flex items-center gap-3 rounded-full bg-slate-50 px-2 py-1">
+            <button
+              onClick={() => handleVote("UPVOTE")}
+              disabled={isVotePending}
+              aria-label={`Upvote post ${post.id}`}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                post.currentUserVoteType === "UPVOTE"
+                  ? "bg-[#245A34] text-white"
+                  : "text-slate-600 hover:text-[#245A34]"
+              }`}
+            >
+              <ArrowBigUp
+                className={`h-[18px] w-[18px] ${post.currentUserVoteType === "UPVOTE" ? "fill-current" : ""}`}
+                strokeWidth={2.5}
+              />
+              <span className="text-[14px] font-bold">{post.upvotes}</span>
+            </button>
+            <button
+              onClick={() => handleVote("DOWNVOTE")}
+              disabled={isVotePending}
+              aria-label={`Downvote post ${post.id}`}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                post.currentUserVoteType === "DOWNVOTE"
+                  ? "bg-red-500 text-white"
+                  : "text-slate-600 hover:text-red-500"
+              }`}
+            >
+              <ArrowBigDown
+                className={`h-[18px] w-[18px] ${post.currentUserVoteType === "DOWNVOTE" ? "fill-current" : ""}`}
+                strokeWidth={2.5}
+              />
+              <span className="text-[14px] font-bold">{post.downvotes}</span>
+            </button>
+          </div>
           
           <button 
             onClick={() => setShowComments(!showComments)}

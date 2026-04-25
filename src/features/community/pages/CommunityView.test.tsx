@@ -2,6 +2,7 @@ import { delay, http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useAuthStore } from "../../../store/authStore";
 import { CommunityView } from "./CommunityView";
 import { renderWithClient } from "../../../test/render";
 import { server } from "../../../test/server";
@@ -114,6 +115,30 @@ const uploadedFile = {
   lastModifiedAt: "2026-04-16T03:00:00Z",
 };
 
+const currentUserProfile = {
+  id: "profile-current",
+  userId: "user-current",
+  fullName: "Current Grower",
+  profilePicture: null,
+  avatar: "https://example.com/current-user.png",
+  role: "FARMER",
+  specialty: null,
+  certificates: [],
+  isVerified: true,
+  bio: null,
+  addressLine: null,
+  provinceCode: null,
+  districtCode: null,
+  wardCode: null,
+  latitude: null,
+  longitude: null,
+  active: true,
+  email: "grower@example.com",
+  phoneNumber: "0123456789",
+  createdAt: "2026-04-16T03:00:00Z",
+  lastModifiedAt: "2026-04-16T03:00:00Z",
+};
+
 beforeEach(() => {
   Object.defineProperty(URL, "createObjectURL", {
     configurable: true,
@@ -123,10 +148,28 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn(),
   });
+  useAuthStore.setState({
+    user: {
+      id: "user-current",
+      name: "Current Grower",
+      email: "grower@example.com",
+      avatar: "https://example.com/current-user.png",
+    },
+    accessToken: "access-token",
+    refreshToken: "refresh-token",
+    isLoading: false,
+    rememberMe: false,
+  });
+  server.use(
+    http.get("*/api/profiles/me", () => {
+      return HttpResponse.json(envelope(currentUserProfile));
+    }),
+  );
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+  useAuthStore.getState().logout();
 });
 
 const useFeed = (posts: CommunityPostResponse[] = [postOne()]) => {
@@ -238,6 +281,7 @@ describe("CommunityView", () => {
 
     await screen.findByText("Backend coffee leaf question");
     await userEvent.click(screen.getAllByRole("button", { name: /open create post/i })[0]);
+    expect(await screen.findByText("Current Grower")).toBeInTheDocument();
     await userEvent.type(
       screen.getByPlaceholderText(/share a garden update/i),
       "New backend post",
@@ -552,12 +596,59 @@ describe("CommunityView", () => {
     renderWithClient(<CommunityView />);
 
     await screen.findByText("Backend coffee leaf question");
-    await userEvent.click(screen.getByRole("button", { name: /like post post-1/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /upvote post post-1/i }),
+    );
 
     await waitFor(() => {
       expect(voteCalled).toBe(true);
     });
-    expect(await screen.findByText("4")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /upvote post post-1/i }),
+    ).toHaveTextContent("4");
+  });
+
+  it("downvotes a post through the backend", async () => {
+    let voteCalled = false;
+    let posts = [postOne()];
+
+    server.use(
+      http.get("*/api/posts/feed", () => {
+        return HttpResponse.json(envelope(springPage(posts)));
+      }),
+      http.post("*/api/votes/POST/:postId", ({ request, params }) => {
+        const url = new URL(request.url);
+        expect(params.postId).toBe("post-1");
+        expect(url.searchParams.get("type")).toBe("DOWNVOTE");
+        voteCalled = true;
+        posts = [
+          postOne({
+            stats: {
+              upvoteCount: 3,
+              downvoteCount: 1,
+              commentCount: 1,
+              shareCount: 2,
+            },
+            currentUserVoteType: "DOWNVOTE",
+          }),
+        ];
+        return HttpResponse.json(envelope(null));
+      }),
+    );
+
+    renderWithClient(<CommunityView />);
+
+    await screen.findByText("Backend coffee leaf question");
+    await userEvent.click(
+      screen.getByRole("button", { name: /downvote post post-1/i }),
+    );
+
+    await waitFor(() => {
+      expect(voteCalled).toBe(true);
+    });
+    expect(
+      screen.getByRole("button", { name: /downvote post post-1/i }),
+    ).toHaveTextContent("1");
   });
 
   it("votes on a comment through the backend", async () => {
@@ -589,7 +680,7 @@ describe("CommunityView", () => {
     );
     await screen.findByText("Backend comment from service");
     await userEvent.click(
-      screen.getByRole("button", { name: /like comment comment-1/i }),
+      screen.getByRole("button", { name: /upvote comment comment-1/i }),
     );
 
     await waitFor(() => {

@@ -156,6 +156,7 @@ export function SensorTable() {
       />
 
       <EditDeviceModal
+        key={`${editingDevice?.id ?? 'closed'}-${zones.length}`}
         isOpen={!!editingDevice}
         onClose={() => setEditingDevice(null)}
         device={editingDevice}

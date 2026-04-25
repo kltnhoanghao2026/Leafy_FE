@@ -11,15 +11,13 @@ import type {
   SharedPostSnapshot,
 } from "./types";
 
-const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=11";
-
 const authorFromProfile = (
   authorId: string | null,
   profile: CommunityProfileSummary | null,
 ): AuthorSummary => ({
   id: profile?.id || authorId || "unknown",
   name: profile?.fullName || "Unknown author",
-  avatar: profile?.avatar || DEFAULT_AVATAR,
+  avatar: profile?.avatar ?? null,
 });
 
 const textFromPost = (post: CommunityPostResponse): string =>
@@ -57,6 +55,8 @@ export const mapPostToSharedSnapshot = (
   images: imagesFromPost(post),
   isUrgent: hasUrgentHashtag(post),
   likes: post.stats?.upvoteCount ?? 0,
+  upvotes: post.stats?.upvoteCount ?? 0,
+  downvotes: post.stats?.downvoteCount ?? 0,
   comments: post.stats?.commentCount ?? 0,
   shares: post.stats?.shareCount ?? 0,
 });
@@ -70,6 +70,9 @@ export const mapPostResponseToPost = (post: CommunityPostResponse): Post => ({
   images: imagesFromPost(post),
   isUrgent: hasUrgentHashtag(post),
   likes: post.stats?.upvoteCount ?? 0,
+  upvotes: post.stats?.upvoteCount ?? 0,
+  downvotes: post.stats?.downvoteCount ?? 0,
+  currentUserVoteType: post.currentUserVoteType,
   isLikedByMe: post.currentUserVoteType === "UPVOTE",
   comments: post.stats?.commentCount ?? 0,
   commentsList: undefined,
@@ -87,6 +90,8 @@ export const mapCommentResponseToComment = (
   content: comment.content,
   timestamp: formatDateTime(comment.createdAt || comment.lastModifiedAt),
   likes: comment.upvoteCount ?? 0,
+  downvotes: comment.downvoteCount ?? 0,
+  currentUserVoteType: null,
   isLikedByMe: false,
   replyCount: comment.replyCount ?? 0,
   replies: undefined,

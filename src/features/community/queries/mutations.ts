@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { communityApi } from "../../../lib/api/communityApi";
 import type {
+  CommunityVoteType,
   CreateCommunityCommentRequest,
   CreateCommunityPostRequest,
 } from "../types";
@@ -52,11 +53,11 @@ export const useVotePost = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (postId: string) =>
+    mutationFn: (payload: { postId: string; type: CommunityVoteType }) =>
       communityApi.vote({
         targetType: "POST",
-        targetId: postId,
-        type: "UPVOTE",
+        targetId: payload.postId,
+        type: payload.type,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -73,11 +74,11 @@ export const useVoteComment = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (commentId: string) =>
+    mutationFn: (payload: { commentId: string; type: CommunityVoteType }) =>
       communityApi.vote({
         targetType: "COMMENT",
-        targetId: commentId,
-        type: "UPVOTE",
+        targetId: payload.commentId,
+        type: payload.type,
       }),
     onSuccess: async () => {
       await Promise.all([
