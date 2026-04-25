@@ -21,6 +21,7 @@ export interface LoginCredentials {
 
 // --- Register ---
 export interface RegisterFormInputs {
+  fullName: string;
   phone: string;
   email: string;
   password: string;

@@ -14,31 +14,31 @@ import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPag
 import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
 import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
+import { RagChatPage, RagTreatmentPlanDetailPage } from "./features/rag-chat";
+import { DiseasePredictionPage } from "./features/disease-detection";
 import { CommunityView } from "./features/community/pages/CommunityView";
 import { SettingsView } from "./features/settings/pages/SettingsView";
-import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
-import { UserManagementPage } from "./features/admin/users/UserManagementPage";
-import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
-import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
-import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
-import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
-import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
-import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
+import { AdminOverviewPage } from "./features/admin/overview";
+import { UserManagementPage } from "./features/admin/users";
+import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
+import { ContentModerationPage } from "./features/admin/content-moderation";
+import { DocumentIngestionPage } from "./features/admin/knowledge-base";
+import { SystemHealthPage } from "./features/admin/health";
+import { AnalyticsDashboardPage } from "./features/admin/analytics";
 import {
-  PlantDiseaseDBPage,
+
   SpeciesPage,
   PlantsPage,
   PlantEventsPage,
-} from "./features/admin/plant-disease/PlantDiseaseDBPage";
-import { PlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
-import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
-import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
-import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
-import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
-import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
-import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
-import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
-import DataSyncPage from "./features/admin/sync/DataSyncPage";
+  PlantDetailPage,
+  SpeciesDetailPage,
+  PlantEventDetailPage,
+  DiseasePage,
+} from "./features/admin/plant-disease";
+import { ProfileManagementPage, ProfileDetailPage } from "./features/admin/profiles";
+import { CertificateApprovalPage } from "./features/admin/certificates";
+import { DataSeedingPage } from "./features/admin/seeding";
+import { DataSyncPage } from "./features/admin/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -79,6 +79,12 @@ function App() {
               />
               <Route path="alerts" element={<AlertsPage />} />
               <Route path="alert-rules" element={<AlertRulesPage />} />
+              <Route path="rag-panel" element={<RagChatPage />} />
+              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
+              <Route
+                path="rag-panel/treatment-plans/:planId"
+                element={<RagTreatmentPlanDetailPage />}
+              />
               <Route path="devices" element={<DeviceManagementPage />} />
               <Route
                 path="devices/onboarding"
@@ -106,6 +112,7 @@ function App() {
                 element={<FarmZoneDetailPage />}
               />
               <Route path="content" element={<ContentModerationPage />} />
+              <Route path="knowledge-base" element={<DocumentIngestionPage />} />
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
