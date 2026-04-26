@@ -20,6 +20,7 @@ import {
   useSeedSpeciesPerenual,
   useSeedCommunity,
   useSeedCertificates,
+  useSeedExperts,
 } from "../";
 
 function NumInput({
@@ -272,6 +273,11 @@ export function DataSeedingPage() {
   const seedCertificates = useSeedCertificates();
   const certResult = seedCertificates.data?.data?.data;
 
+  // ── Expert seeder state
+  const [expertCount, setExpertCount] = useState("10");
+  const seedExperts = useSeedExperts();
+  const expertResult = seedExperts.data?.data?.data;
+
   function toOptInt(s: string): number | undefined {
     const n = parseInt(s, 10);
     return isNaN(n) ? undefined : n;
@@ -312,6 +318,7 @@ export function DataSeedingPage() {
           { label: "3. Cây trồng", color: "bg-violet-100 text-violet-700" },
           { label: "4. Cộng đồng", color: "bg-rose-100 text-rose-700" },
           { label: "5. Chứng chỉ", color: "bg-amber-100 text-amber-700" },
+          { label: "6. Chuyên gia", color: "bg-teal-100 text-teal-700" },
         ].map((step, i, arr) => (
           <span key={step.label} className="flex items-center gap-2">
             <span
@@ -626,7 +633,38 @@ export function DataSeedingPage() {
           </div>
         </SeederCard>
 
-        {/* 6. Species / Perenual — full width */}
+        {/* 6. Experts */}
+        <SeederCard
+          step={6}
+          icon={<Users className="w-4 h-4" />}
+          title="Chuyên gia (Profiles)"
+          description="Tạo các hồ sơ chuyên gia với thông tin ngẫu nhiên để phục vụ danh mục chuyên gia."
+          isPending={seedExperts.isPending}
+          onRun={() => seedExperts.mutate(parseInt(expertCount, 10) || 10)}
+          result={
+            expertResult && (
+              <ResultPanel title="Kết quả seeder chuyên gia" ok>
+                <StatRow
+                  label="Hồ sơ tạo mới"
+                  value={expertResult}
+                />
+              </ResultPanel>
+            )
+          }
+        >
+          <div className="grid grid-cols-1 gap-3">
+            <NumInput
+              label="Số lượng chuyên gia"
+              value={expertCount}
+              onChange={setExpertCount}
+              min={1}
+              max={100}
+              placeholder="Mặc định: 10"
+            />
+          </div>
+        </SeederCard>
+
+        {/* 7. Species / Perenual — full width */}
         <div className="lg:col-span-2">
           <SeederCard
             icon={<FlaskConical className="w-4 h-4" />}

@@ -83,6 +83,18 @@ export const syncApi = {
       API_ENDPOINTS.ADMIN.SYNC.POSTS_RESET,
     ),
 
+  reindexProfiles: (size?: number) =>
+    apiClient.post<ApiEnvelope<PostSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PROFILES_REINDEX,
+      null,
+      { params: size != null ? { size } : undefined },
+    ),
+
+  resetProfileIndex: () =>
+    apiClient.post<ApiEnvelope<PostSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PROFILES_RESET,
+    ),
+
   listFailedEvents: (params: FailedEventsListParams = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<FailedEventDto>>>(
       API_ENDPOINTS.ADMIN.SYNC.FAILED_EVENTS_LIST,

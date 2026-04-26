@@ -32,7 +32,7 @@ export function Sidebar() {
     profile?.profilePicture ||
     "https://i.pravatar.cc/150?img=11";
 
-  const navItems = [
+  const baseNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: "Chẩn đoán hình ảnh", path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
@@ -45,6 +45,17 @@ export function Sidebar() {
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
+
+  const navItems = baseNavItems.map((item) => {
+    if (item.name === "Chuyên gia" && profile?.role === "EXPERT") {
+      return {
+        name: "Yêu cầu tư vấn",
+        path: "/dashboard/pending-requests",
+        icon: UserSquare,
+      };
+    }
+    return item;
+  });
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10">

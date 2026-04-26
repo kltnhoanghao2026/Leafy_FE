@@ -33,6 +33,7 @@ export const ROUTES = {
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
     EXPERTS: "/dashboard/experts",
+    PENDING_REQUESTS: "/dashboard/pending-requests",
     DEVICES: "/dashboard/devices",
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     REPORTS: "/dashboard/reports",
@@ -146,6 +147,7 @@ export const API_ENDPOINTS = {
     ME: "/profiles/me",
     GET: (profileId: string) => `/profiles/${profileId}`,
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
+    PUBLIC_EXPERTS: "/profiles/public/experts",
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
     PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
@@ -332,6 +334,9 @@ export const API_ENDPOINTS = {
       PROFILES_START: "/profiles/sync/start",
       PROFILES_RESUME: (taskId: string) => `/profiles/sync/resume/${taskId}`,
       PROFILES_STATUS: (taskId: string) => `/profiles/sync/status/${taskId}`,
+      // Profile sync - search-service direct ES sync
+      PROFILES_REINDEX: "/search/profiles/reindex-all",
+      PROFILES_RESET: "/search/profiles/reset",
       // Post sync — search-service /sync/posts/* (via /api/search/sync/**)
       POSTS_REINDEX: "/search/sync/posts",
       POSTS_RESET: "/search/sync/posts/reset",
@@ -350,6 +355,7 @@ export const API_ENDPOINTS = {
       SPECIES_PERENUAL: "/admin/seed/species/perenual",
       COMMUNITY: "/admin/seed/community",
       CERTIFICATES: "/admin/seed/certificates",
+      EXPERTS: "/admin/seed/experts",
     },
   },
 } as const;

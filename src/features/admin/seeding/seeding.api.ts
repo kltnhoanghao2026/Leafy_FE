@@ -126,4 +126,11 @@ export const seedingApi = {
         },
       },
     ),
+
+  seedExperts: (count: number) =>
+    apiClient.post<ApiEnvelope<number>>(
+      API_ENDPOINTS.ADMIN.SEED.EXPERTS,
+      null,
+      { params: { count } },
+    ),
 };

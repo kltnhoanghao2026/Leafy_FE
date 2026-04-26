@@ -19,6 +19,8 @@ import {
   useStartProfileSync,
   useResumeProfileSync,
   useProfileSyncStatus,
+  useReindexProfiles,
+  useResetProfileIndex,
   useReindexPosts,
   useResetPostIndex,
   useFailedEvents,
@@ -126,9 +128,14 @@ function ConfirmBanner({
 
 function ProfileSyncCard() {
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   const { data: syncStatus, isFetching } = useProfileSyncStatus(taskId);
   const startSync = useStartProfileSync();
   const resumeSync = useResumeProfileSync();
+  
+  const reindexProfiles = useReindexProfiles();
+  const resetProfileIndex = useResetProfileIndex();
 
   const isActive =
     syncStatus?.status === "STARTING" || syncStatus?.status === "RUNNING";
@@ -149,6 +156,12 @@ function ProfileSyncCard() {
         const id = res.data.data?.taskId;
         if (id) setTaskId(id);
       },
+    });
+  };
+
+  const handleReset = () => {
+    resetProfileIndex.mutate(undefined, {
+      onSuccess: () => setShowResetConfirm(false),
     });
   };
 
@@ -182,7 +195,7 @@ function ProfileSyncCard() {
           {syncStatus.status === "COMPLETED" && <ProgressBar value={100} />}
           <div className="flex flex-col gap-0.5">
             <StatRow
-              label="Đã xử lý"
+              label="Đã xử lý (qua Kafka)"
               value={`${syncStatus.processedCount.toLocaleString()} / ${syncStatus.totalCount.toLocaleString()}`}
             />
             <StatRow
@@ -201,6 +214,14 @@ function ProfileSyncCard() {
         </div>
       )}
 
+      {showResetConfirm && (
+        <ConfirmBanner
+          message="Thao tác này sẽ xoá toàn bộ chỉ mục hồ sơ hiện tại và bắt đầu lại từ đầu. Không thể hoàn tác."
+          onConfirm={handleReset}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
+
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={handleStart}
@@ -212,7 +233,38 @@ function ProfileSyncCard() {
           ) : (
             <Play className="w-4 h-4" />
           )}
-          Bắt đầu đồng bộ
+          Đồng bộ ngầm (Kafka)
+        </button>
+
+        <button
+          onClick={() => reindexProfiles.mutate(undefined)}
+          disabled={reindexProfiles.isPending || resetProfileIndex.isPending || isActive}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-emerald-300 bg-white text-emerald-600 text-sm font-medium hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {reindexProfiles.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Tái lập chỉ mục trực tiếp
+        </button>
+
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          disabled={
+            reindexProfiles.isPending ||
+            resetProfileIndex.isPending ||
+            showResetConfirm ||
+            isActive
+          }
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resetProfileIndex.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <TriangleAlert className="w-4 h-4" />
+          )}
+          Xoá & khởi tạo lại
         </button>
 
         {taskId && syncStatus?.status === "FAILED" && (

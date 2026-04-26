@@ -101,3 +101,13 @@ export const useSeedCertificates = () =>
     },
     onError: () => toast.error("Seeder chứng chỉ thất bại"),
   });
+
+export const useSeedExperts = () =>
+  useMutation({
+    mutationFn: (count: number) => seedingApi.seedExperts(count),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      toast.success(`Chuyên gia: Đã tạo ${d ?? 0} hồ sơ`);
+    },
+    onError: () => toast.error("Seeder chuyên gia thất bại"),
+  });

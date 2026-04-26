@@ -52,6 +52,23 @@ export const useResetPostIndex = () =>
     onError: () => toast.error("Xoá chỉ mục bài viết thất bại"),
   });
 
+export const useReindexProfiles = () =>
+  useMutation({
+    mutationFn: (size?: number) => syncApi.reindexProfiles(size),
+    onSuccess: (res) => {
+      const count = res.data.data?.indexedCount ?? 0;
+      toast.success(`Tái lập chỉ mục hồ sơ: ${count.toLocaleString()} hồ sơ`);
+    },
+    onError: () => toast.error("Tái lập chỉ mục hồ sơ thất bại"),
+  });
+
+export const useResetProfileIndex = () =>
+  useMutation({
+    mutationFn: () => syncApi.resetProfileIndex(),
+    onSuccess: () => toast.success("Đã xoá và khởi tạo lại chỉ mục hồ sơ"),
+    onError: () => toast.error("Xoá chỉ mục hồ sơ thất bại"),
+  });
+
 // ── Failed Events ────────────────────────────────────────────────────────────
 
 export const useFailedEvents = (params: FailedEventsListParams = {}) =>
