@@ -31,6 +31,8 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
+    DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
+    DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
   },
@@ -215,9 +217,15 @@ export const API_ENDPOINTS = {
 
   DISEASES: {
     DETECT_LEAF: "/diseases/detect-leaf",
+    DETECT_LEAF_HEALTH: "/diseases/detect-leaf/health",
+    DETECT_LEAF_VISUALIZE: "/diseases/detect-leaf/visualize",
+    DETECT_LEAF_CROP: "/diseases/detect-leaf/crop",
     PREDICT: "/diseases/predict",
+    PREDICT_HEALTH: "/diseases/predict/health",
     PREDICT_TFLITE: "/diseases/predict/tflite",
     DIAGNOSE_REQUESTS: "/diseases/diagnose/requests",
+    DIAGNOSE_REQUEST: (requestId: string) =>
+      `/diseases/diagnose/requests/${requestId}`,
     DIAGNOSE_RESULTS: "/diseases/diagnose/results",
     DIAGNOSE_RESULT_BY_REQUEST: (requestId: string) =>
       `/diseases/diagnose/results/by-request/${requestId}`,

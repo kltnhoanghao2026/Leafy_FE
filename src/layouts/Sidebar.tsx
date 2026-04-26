@@ -6,6 +6,7 @@ import {
   BellRing,
   Cpu,
   Sprout,
+  Stethoscope,
   Users,
   Settings,
   LogOut,
@@ -47,6 +48,11 @@ export function Sidebar() {
       icon: Cpu,
     },
     { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    {
+      name: "Chẩn đoán bệnh",
+      path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS,
+      icon: Stethoscope,
+    },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];

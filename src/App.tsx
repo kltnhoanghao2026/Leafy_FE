@@ -11,6 +11,8 @@ import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailM
 import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
 import { DeviceIndexRedirect } from "./features/device-onboarding/pages/DeviceIndexRedirect";
 import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
+import { DiagnosisHistoryPage } from "./features/disease-diagnosis/pages/DiagnosisHistoryPage";
+import { DiseaseDiagnosisPage } from "./features/disease-diagnosis/pages/DiseaseDiagnosisPage";
 import { PlantDetailPage } from "./features/plant-management/pages/PlantDetailPage";
 import { PlantListPage } from "./features/plant-management/pages/PlantListPage";
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
@@ -62,6 +64,14 @@ function App() {
               <Route path="devices/:deviceId" element={<DeviceDetailPage />} />
               <Route path="plants" element={<PlantListPage />} />
               <Route path="plants/:plantId" element={<PlantDetailPage />} />
+              <Route
+                path="disease-diagnosis"
+                element={<DiseaseDiagnosisPage />}
+              />
+              <Route
+                path="disease-diagnosis/history"
+                element={<DiagnosisHistoryPage />}
+              />
               <Route path="search" element={<SearchPage />} />
               <Route path="community" element={<CommunityView />} />
               <Route path="settings" element={<SettingsView />} />

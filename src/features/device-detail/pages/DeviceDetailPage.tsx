@@ -437,17 +437,14 @@ export function DeviceDetailPage() {
   const { deviceId } = useParams();
   const resolvedDeviceId = deviceId ?? "";
   const [range, setRange] = useState<ChartRange>("H24");
-  const [mediaPolling, setMediaPolling] = useState(false);
+  const [captureRequestId, setCaptureRequestId] = useState<string | null>(null);
   const pushWatchUntilRef = useRef(0);
+  const completedCaptureRef = useRef<string | null>(null);
 
   const deviceDetailQuery = useDeviceDetail(resolvedDeviceId, !!deviceId);
   const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
   const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
-  const mediaQuery = useDeviceMedia(
-    resolvedDeviceId,
-    !!deviceId,
-    mediaPolling ? 3000 : false,
-  );
+  const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId);
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
@@ -470,18 +467,62 @@ export function DeviceDetailPage() {
 
   const device = deviceDetailQuery.data;
   const config = configQuery.data;
-  const mediaEvents = mediaQuery.data ?? [];
+  const mediaEvents = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
+  const watchedCaptureEvent = useMemo(
+    () =>
+      captureRequestId
+        ? mediaEvents.find((event) => event.requestId === captureRequestId)
+        : null,
+    [captureRequestId, mediaEvents],
+  );
+  const isMediaPolling =
+    captureRequestId !== null &&
+    (!watchedCaptureEvent || isMediaWaiting(watchedCaptureEvent));
   const canManageConfig =
     device?.isActive === true && device?.provisioningStatus === "CLAIMED";
 
   useEffect(() => {
-    if (!mediaPolling) return;
+    if (!isMediaPolling) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void mediaQuery.refetch();
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isMediaPolling, mediaQuery]);
+
+  useEffect(() => {
+    if (
+      !captureRequestId ||
+      !watchedCaptureEvent ||
+      isMediaWaiting(watchedCaptureEvent) ||
+      completedCaptureRef.current === captureRequestId
+    ) {
+      return;
+    }
+
+    completedCaptureRef.current = captureRequestId;
+    void deviceDetailQuery.refetch();
+  }, [captureRequestId, deviceDetailQuery, watchedCaptureEvent]);
+
+  useEffect(() => {
+    if (!captureRequestId) {
+      return;
+    }
+
     const latest = mediaEvents[0];
-    if (latest && !isMediaWaiting(latest)) {
-      setMediaPolling(false);
+    if (
+      latest &&
+      !latest.requestId &&
+      !isMediaWaiting(latest) &&
+      completedCaptureRef.current !== captureRequestId
+    ) {
+      completedCaptureRef.current = captureRequestId;
       void deviceDetailQuery.refetch();
     }
-  }, [deviceDetailQuery, mediaEvents, mediaPolling]);
+  }, [captureRequestId, deviceDetailQuery, mediaEvents]);
 
   const visibleReadings = useMemo(() => {
     const latestReadings =
@@ -516,8 +557,9 @@ export function DeviceDetailPage() {
   };
 
   const handleCaptureImage = async () => {
-    setMediaPolling(true);
-    await captureImageMutation.mutateAsync();
+    const response = await captureImageMutation.mutateAsync();
+    completedCaptureRef.current = null;
+    setCaptureRequestId(response.data.requestId);
     await mediaQuery.refetch();
   };
 
@@ -715,7 +757,7 @@ export function DeviceDetailPage() {
             mediaEvents={mediaEvents}
             canCapture={canManageConfig}
             isCapturing={captureImageMutation.isPending}
-            isPolling={mediaPolling}
+            isPolling={isMediaPolling}
             onCapture={handleCaptureImage}
           />
 
