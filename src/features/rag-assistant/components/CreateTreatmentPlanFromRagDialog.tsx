@@ -10,7 +10,7 @@ import type {
   TreatmentPlanResponse,
 } from "../../plant-management/types";
 import { useMyProfile } from "../../settings/queries";
-import type { RagTreatmentPlan } from "../types";
+import type { DiseaseDiagnosisChatContext, RagTreatmentPlan } from "../types";
 import { getPlanTitle } from "../utils/ragResponse";
 import {
   buildCreateTreatmentPlanRequest,
@@ -21,6 +21,7 @@ import {
 
 interface CreateTreatmentPlanFromRagDialogProps {
   plan: RagTreatmentPlan;
+  context?: DiseaseDiagnosisChatContext | null;
   onClose: () => void;
 }
 
@@ -62,10 +63,16 @@ const updateScheduleItem = (
 
 export function CreateTreatmentPlanFromRagDialog({
   plan,
+  context,
   onClose,
 }: CreateTreatmentPlanFromRagDialogProps) {
-  const [values, setValues] = useState(() =>
-    buildInitialTreatmentPlanFormValues(plan),
+  const [values, setValues] = useState<RagTreatmentPlanFormValues>(() =>
+    ({
+      ...buildInitialTreatmentPlanFormValues(plan),
+      plantId: context?.plantId || plan.plantId || undefined,
+      farmPlotId: context?.farmPlotId || plan.farmPlotId || undefined,
+      farmZoneId: context?.farmZoneId || plan.farmZoneId || undefined,
+    }),
   );
   const [createdPlan, setCreatedPlan] = useState<TreatmentPlanResponse | null>(
     null,

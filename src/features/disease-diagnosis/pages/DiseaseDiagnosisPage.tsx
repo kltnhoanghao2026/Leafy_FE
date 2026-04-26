@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { History, Leaf } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { ImageUploadPanel } from "../components/ImageUploadPanel";
+import {
+  DiagnosisPlantSelector,
+  type DiagnosisPlantContext,
+} from "../components/DiagnosisPlantSelector";
 import { PredictionResultCard } from "../components/PredictionResultCard";
 import { usePredictDiseaseMutation, usePredictHealth } from "../queries";
 import type { DiseasePrediction, PredictResponse } from "../types";
@@ -32,10 +36,17 @@ const toFriendlyError = (error: unknown) => {
 };
 
 export function DiseaseDiagnosisPage() {
+  const location = useLocation();
+  const routeState = location.state as
+    | { plantContext?: DiagnosisPlantContext }
+    | null;
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictResponse | null>(null);
+  const [plantContext, setPlantContext] = useState<DiagnosisPlantContext>(
+    routeState?.plantContext ?? {},
+  );
   const previewUrlRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const predictMutation = usePredictDiseaseMutation();
@@ -114,6 +125,7 @@ export function DiseaseDiagnosisPage() {
             label: getDiseaseLabel(item.className),
             confidence: item.confidenceScore,
           })),
+          ...plantContext,
         },
       },
     });
@@ -168,6 +180,11 @@ export function DiseaseDiagnosisPage() {
           setError(null);
           setResult(null);
         }}
+      />
+
+      <DiagnosisPlantSelector
+        value={plantContext}
+        onChange={setPlantContext}
       />
 
       {result ? (

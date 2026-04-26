@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
-import { Route, Routes } from "react-router-dom";
+import userEvent from "@testing-library/user-event";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { ROUTES } from "../../../lib/routes";
@@ -208,6 +209,49 @@ describe("PlantDetailPage", () => {
     expect(await screen.findByText("Dinh dưỡng")).toBeInTheDocument();
     expect(screen.getByText("Coffee rust")).toBeInTheDocument();
     expect(screen.getByText("Đang điều trị")).toBeInTheDocument();
+  });
+
+  it("navigates to disease diagnosis with plant context", async () => {
+    const user = userEvent.setup();
+    mockDetailData();
+
+    function DiseaseRouteProbe() {
+      const location = useLocation();
+      const state = location.state as {
+        plantContext?: {
+          plantId?: string;
+          plantName?: string;
+          farmPlotId?: string;
+          farmPlotName?: string;
+        };
+      } | null;
+      return (
+        <div>
+          Disease route {state?.plantContext?.plantId}{" "}
+          {state?.plantContext?.plantName} {state?.plantContext?.farmPlotId}{" "}
+          {state?.plantContext?.farmPlotName}
+        </div>
+      );
+    }
+
+    renderWithClient(
+      <Routes>
+        <Route path="/dashboard/plants/:plantId" element={<PlantDetailPage />} />
+        <Route
+          path={ROUTES.DASHBOARD.DISEASE_DIAGNOSIS}
+          element={<DiseaseRouteProbe />}
+        />
+      </Routes>,
+      { route: ROUTES.DASHBOARD.PLANT_DETAIL(PLANT_ID) },
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Chẩn đoán bệnh cho cây này" }),
+    );
+
+    expect(
+      await screen.findByText(/Disease route plant-1 Cà phê A01 plot-1 North Field/),
+    ).toBeInTheDocument();
   });
 
   it("renders error state when plant detail cannot be loaded", async () => {

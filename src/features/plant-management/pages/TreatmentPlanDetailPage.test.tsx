@@ -14,6 +14,7 @@ const apiMocks = vi.hoisted(() => ({
   deletePlantEvent: vi.fn(),
   getMyProfile: vi.fn(),
   getPlotsByOwner: vi.fn(),
+  getZonesByPlot: vi.fn(),
   getPlantById: vi.fn(),
 }));
 
@@ -48,6 +49,7 @@ vi.mock("../../settings/api/profile.api", () => ({
 vi.mock("../../farm-management/api/farm.api", () => ({
   farmApi: {
     getPlotsByOwner: apiMocks.getPlotsByOwner,
+    getZonesByPlot: apiMocks.getZonesByPlot,
   },
 }));
 
@@ -59,6 +61,7 @@ const plan = {
   source: "documents",
   plantId: "plant-1",
   farmPlotId: "plot-1",
+  farmZoneId: "zone-1",
   status: "PENDING",
   confidenceScore: 0.92,
   severityLevel: "HIGH",
@@ -74,7 +77,7 @@ const event = {
   id: "event-1",
   plantId: "plant-1",
   farmPlotId: "plot-1",
-  farmZoneId: null,
+  farmZoneId: "zone-1",
   eventType: "TREATMENT_APPLICATION",
   note: "Phun thuốc",
   description: "Phun theo khuyến cáo",
@@ -102,6 +105,9 @@ beforeEach(() => {
   apiMocks.getPlotsByOwner.mockResolvedValue([
     { id: "plot-1", name: "Vườn chính", ownerProfileId: "profile-1" },
   ]);
+  apiMocks.getZonesByPlot.mockResolvedValue([
+    { id: "zone-1", zoneName: "Khu A", farmPlotId: "plot-1" },
+  ]);
   apiMocks.getPlantById.mockResolvedValue({
     id: "plant-1",
     nickName: "Cà phê A",
@@ -124,7 +130,7 @@ describe("TreatmentPlanDetailPage", () => {
     expect(apiMocks.getPlantEventsByPlan).toHaveBeenCalledWith("rag-plan-1");
   });
 
-  it("updates status and event planned flag", async () => {
+  it("updates status and edits generated event", async () => {
     const user = userEvent.setup();
     renderWithClient(<TreatmentPlanDetailPage />, {
       route: ROUTES.DASHBOARD.TREATMENT_PLAN_DETAIL("plan-1"),
@@ -132,16 +138,25 @@ describe("TreatmentPlanDetailPage", () => {
 
     await screen.findByText("Gỉ sắt");
     await user.selectOptions(screen.getByLabelText("Đổi trạng thái kế hoạch"), "ACTIVE");
-    await user.click(await screen.findByRole("button", { name: "Đánh dấu đã ghi nhận" }));
+    await user.click(await screen.findByRole("button", { name: "Chỉnh sửa event" }));
+    await user.clear(screen.getByDisplayValue("Phun thuốc"));
+    await user.type(screen.getByLabelText(/Tiêu đề\/note/), "Phun thuốc cập nhật");
+    await user.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
 
     await waitFor(() => {
       expect(apiMocks.updateTreatmentPlanStatus).toHaveBeenCalledWith(
         "plan-1",
         "ACTIVE",
       );
-      expect(apiMocks.updatePlantEvent).toHaveBeenCalledWith("event-1", {
-        isPlanned: false,
-      });
+      expect(apiMocks.updatePlantEvent).toHaveBeenCalledWith(
+        "event-1",
+        expect.objectContaining({
+          note: "Phun thuốc cập nhật",
+          isPlanned: true,
+          farmPlotId: "plot-1",
+          farmZoneId: "zone-1",
+        }),
+      );
     });
   });
 

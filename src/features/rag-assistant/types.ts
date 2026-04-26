@@ -78,6 +78,12 @@ export interface DiseaseDiagnosisChatContext {
   diseaseClassName: string;
   diseaseLabel: string;
   confidence: number;
+  plantId?: string;
+  plantName?: string;
+  farmPlotId?: string;
+  farmPlotName?: string;
+  farmZoneId?: string;
+  farmZoneName?: string;
   topPredictions?: Array<{
     className: string;
     label: string;

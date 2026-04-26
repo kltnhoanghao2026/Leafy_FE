@@ -95,6 +95,32 @@ beforeEach(() => {
 });
 
 describe("CreateTreatmentPlanFromRagDialog", () => {
+  it("prefills plant, farm plot, and zone from disease context", async () => {
+    renderWithClient(
+      <CreateTreatmentPlanFromRagDialog
+        plan={ragPlan}
+        context={{
+          diseaseClassName: "rust",
+          diseaseLabel: "Gỉ sắt",
+          confidence: 0.92,
+          plantId: "plant-1",
+          plantName: "Cà phê A",
+          farmPlotId: "plot-1",
+          farmPlotName: "Vườn chính",
+          farmZoneId: "zone-1",
+          farmZoneName: "Khu A",
+        }}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByRole("option", { name: "Cà phê A" });
+    await screen.findByRole("option", { name: "Khu A" });
+    expect(screen.getByLabelText("Cây trồng")).toHaveValue("plant-1");
+    expect(screen.getByLabelText("Vườn")).toHaveValue("plot-1");
+    expect(screen.getByLabelText("Khu vực")).toHaveValue("zone-1");
+  });
+
   it("renders AI plan info, allows scope selection, and submits plant treatment plan", async () => {
     const user = userEvent.setup();
     renderWithClient(

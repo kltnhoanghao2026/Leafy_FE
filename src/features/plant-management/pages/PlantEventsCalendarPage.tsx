@@ -1,9 +1,16 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { CalendarDays, RefreshCw } from "lucide-react";
 import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
 import { useMyProfile } from "../../settings/queries";
-import { usePlantEventsCalendar, usePlants } from "../queries";
+import {
+  usePlantEventsCalendar,
+  usePlants,
+  useUpdatePlantEventMutation,
+} from "../queries";
+import { PlantEventEditDialog } from "../components/PlantEventEditDialog";
 import { EVENT_TYPE_LABELS, formatDate } from "../components/displayUtils";
+import type { PlantEventResponse } from "../types";
 
 const addDays = (date: Date, days: number) => {
   const next = new Date(date);
@@ -14,17 +21,24 @@ const addDays = (date: Date, days: number) => {
 const today = new Date();
 
 export function PlantEventsCalendarPage() {
+  const location = useLocation();
+  const routeFilters = (location.state as {
+    filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string };
+  } | null)?.filters;
   const [startDate, setStartDate] = useState(today.toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(addDays(today, 14));
-  const [farmPlotId, setFarmPlotId] = useState("");
-  const [farmZoneId, setFarmZoneId] = useState("");
-  const [plantId, setPlantId] = useState("");
+  const [farmPlotId, setFarmPlotId] = useState(routeFilters?.farmPlotId ?? "");
+  const [farmZoneId, setFarmZoneId] = useState(routeFilters?.farmZoneId ?? "");
+  const [plantId, setPlantId] = useState(routeFilters?.plantId ?? "");
+  const [editEventTarget, setEditEventTarget] =
+    useState<PlantEventResponse | null>(null);
 
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const zonesQuery = useFarmZones(farmPlotId, !!farmPlotId);
   const plantsQuery = usePlants();
+  const updateEvent = useUpdatePlantEventMutation();
   const calendarQuery = usePlantEventsCalendar({
     startDate,
     endDate,
@@ -38,6 +52,14 @@ export function PlantEventsCalendarPage() {
   const plantById = useMemo(
     () => new Map(plants.map((plant) => [plant.id, plant])),
     [plants],
+  );
+  const plotById = useMemo(
+    () => new Map((plotsQuery.data ?? []).map((plot) => [plot.id, plot])),
+    [plotsQuery.data],
+  );
+  const zoneById = useMemo(
+    () => new Map((zonesQuery.data ?? []).map((zone) => [zone.id, zone])),
+    [zonesQuery.data],
   );
   const groupedEvents = useMemo(() => {
     const groups = new Map<string, typeof events>();
@@ -191,6 +213,25 @@ export function PlantEventsCalendarPage() {
                         {event.planned ? "Đã lên lịch" : "Đã ghi nhận"}
                       </span>
                     </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-3">
+                      <span className="text-xs font-bold text-slate-400">
+                        {event.farmPlotId
+                          ? plotById.get(event.farmPlotId)?.name || event.farmPlotId
+                          : "Không gắn vườn"}
+                        {" · "}
+                        {event.farmZoneId
+                          ? zoneById.get(event.farmZoneId)?.zoneName || event.farmZoneId
+                          : "Không gắn khu"}
+                        {event.sourcePlanId ? ` · Source plan: ${event.sourcePlanId}` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditEventTarget(event)}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"
+                      >
+                        Chỉnh sửa event
+                      </button>
+                    </div>
                   </article>
                 );
               })}
@@ -198,6 +239,18 @@ export function PlantEventsCalendarPage() {
           </section>
         ))}
       </div>
+      {editEventTarget ? (
+        <PlantEventEditDialog
+          event={editEventTarget}
+          isSubmitting={updateEvent.isPending}
+          onClose={() => setEditEventTarget(null)}
+          onSubmit={(payload) =>
+            void updateEvent
+              .mutateAsync({ eventId: editEventTarget.id, payload })
+              .then(() => setEditEventTarget(null))
+          }
+        />
+      ) : null}
     </div>
   );
 }

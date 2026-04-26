@@ -92,7 +92,14 @@ beforeEach(() => {
       status: "ACTIVE",
     },
   ]);
-  createDialogApiMocks.getZonesByPlot.mockResolvedValue([]);
+  createDialogApiMocks.getZonesByPlot.mockResolvedValue([
+    {
+      id: "zone-1",
+      farmPlotId: "plot-1",
+      zoneName: "Khu A",
+      status: "ACTIVE",
+    },
+  ]);
   createDialogApiMocks.createTreatmentPlan.mockResolvedValue({
     id: "plan-created-1",
     plantId: "plant-1",
@@ -214,6 +221,28 @@ describe("AiAssistantPage", () => {
     expect(
       await screen.findByDisplayValue(
         "Ảnh lá cà phê được chẩn đoán là Gỉ sắt với độ tin cậy 92%. Hãy tư vấn cách xử lý, phòng ngừa và lịch chăm sóc phù hợp.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("prefills richer prompt from disease diagnosis plant context", async () => {
+    renderWithRouteState({
+      diseaseContext: {
+        diseaseClassName: "rust",
+        diseaseLabel: "Gá»‰ sáº¯t",
+        confidence: 0.92,
+        plantId: "plant-1",
+        plantName: "Cà phê A",
+        farmPlotId: "plot-1",
+        farmPlotName: "Vườn chính",
+        farmZoneId: "zone-1",
+        farmZoneName: "Khu A",
+      },
+    });
+
+    expect(
+      await screen.findByDisplayValue(
+        "Ảnh lá cà phê của cây Cà phê A trong vườn Vườn chính, khu vực Khu A được chẩn đoán là Gá»‰ sáº¯t với độ tin cậy 92%. Hãy tư vấn cách xử lý, phòng ngừa và lập kế hoạch chăm sóc phù hợp.",
       ),
     ).toBeInTheDocument();
   });

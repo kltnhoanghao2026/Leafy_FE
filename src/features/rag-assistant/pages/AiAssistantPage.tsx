@@ -187,6 +187,7 @@ export function AiAssistantPage() {
       {planForCreate ? (
         <CreateTreatmentPlanFromRagDialog
           plan={planForCreate}
+          context={diseaseContext}
           onClose={() => setPlanForCreate(null)}
         />
       ) : null}

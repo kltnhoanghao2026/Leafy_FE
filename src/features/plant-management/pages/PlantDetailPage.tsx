@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil, RefreshCw, Sprout, Trash2 } from "lucide-react";
+import { ArrowLeft, Microscope, Pencil, RefreshCw, Sprout, Trash2 } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
 import { useFarmPlots } from "../../farm-management/queries";
@@ -135,6 +135,25 @@ export function PlantDetailPage() {
             <span className="inline-flex items-center rounded-2xl bg-emerald-50 px-4 py-2.5 text-sm font-black text-emerald-700">
               {PLANT_STATUS_LABELS[plant.plantStatus]}
             </span>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, {
+                  state: {
+                    plantContext: {
+                      plantId: plant.id,
+                      plantName: displayName,
+                      farmPlotId: plant.farmPlotId,
+                      farmPlotName: farmPlot?.name,
+                    },
+                  },
+                })
+              }
+              className="inline-flex items-center rounded-2xl bg-[#245A34] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1b432a]"
+            >
+              <Microscope className="mr-2 h-4 w-4" strokeWidth={2.5} />
+              Chẩn đoán bệnh cho cây này
+            </button>
             <button
               type="button"
               onClick={() => setIsEditOpen(true)}

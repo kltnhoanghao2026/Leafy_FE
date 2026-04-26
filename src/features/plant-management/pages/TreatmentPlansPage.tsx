@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { CalendarDays, ClipboardList, RefreshCw, Search, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
+import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
+import { useMyProfile } from "../../settings/queries";
 import { ROUTES } from "../../../lib/routes";
 import {
   useDeleteTreatmentPlanMutation,
@@ -28,6 +30,9 @@ export function TreatmentPlansPage() {
 
   const plansQuery = useMyTreatmentPlans({ status });
   const plantsQuery = usePlants();
+  const profileQuery = useMyProfile();
+  const ownerProfileId = profileQuery.data?.id ?? "";
+  const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const updateStatus = useUpdateTreatmentPlanStatusMutation();
   const deletePlan = useDeleteTreatmentPlanMutation();
 
@@ -35,6 +40,10 @@ export function TreatmentPlansPage() {
   const plantById = useMemo(
     () => new Map(plants.map((plant) => [plant.id, plant])),
     [plants],
+  );
+  const plotById = useMemo(
+    () => new Map((plotsQuery.data ?? []).map((plot) => [plot.id, plot])),
+    [plotsQuery.data],
   );
 
   const filteredPlans = useMemo(() => {
@@ -175,6 +184,7 @@ export function TreatmentPlansPage() {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {filteredPlans.map((plan) => {
           const plant = plan.plantId ? plantById.get(plan.plantId) : null;
+          const plot = plan.farmPlotId ? plotById.get(plan.farmPlotId) : null;
           return (
             <article key={plan.id} className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -201,6 +211,13 @@ export function TreatmentPlansPage() {
                   <p className="font-black uppercase tracking-wide text-slate-400">Số lịch</p>
                   <p className="mt-1 font-bold text-slate-800">{plan.plantEventIds?.length ?? 0}</p>
                 </div>
+                <div className="rounded-2xl bg-slate-50 p-3">
+                  <p className="font-black uppercase tracking-wide text-slate-400">Vườn</p>
+                  <p className="mt-1 font-bold text-slate-800">
+                    {plot?.name || plan.farmPlotId || "Chưa gắn vườn"}
+                  </p>
+                </div>
+                <ZoneTile farmPlotId={plan.farmPlotId} farmZoneId={plan.farmZoneId} />
                 <div className="rounded-2xl bg-slate-50 p-3">
                   <p className="font-black uppercase tracking-wide text-slate-400">Mức độ</p>
                   <p className="mt-1 font-bold text-slate-800">{plan.severityLevel || "Chưa rõ"}</p>
@@ -262,3 +279,24 @@ export function TreatmentPlansPage() {
 }
 
 export default TreatmentPlansPage;
+
+function ZoneTile({
+  farmPlotId,
+  farmZoneId,
+}: {
+  farmPlotId?: string | null;
+  farmZoneId?: string | null;
+}) {
+  const zonesQuery = useFarmZones(farmPlotId ?? "", Boolean(farmPlotId));
+  const zoneName = farmZoneId
+    ? (zonesQuery.data ?? []).find((zone) => zone.id === farmZoneId)?.zoneName ||
+      farmZoneId
+    : "Chưa gắn khu";
+
+  return (
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="font-black uppercase tracking-wide text-slate-400">Khu vực</p>
+      <p className="mt-1 font-bold text-slate-800">{zoneName}</p>
+    </div>
+  );
+}

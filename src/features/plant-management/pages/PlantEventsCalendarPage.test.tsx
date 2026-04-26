@@ -11,11 +11,13 @@ const apiMocks = vi.hoisted(() => ({
   getPlotsByOwner: vi.fn(),
   getZonesByPlot: vi.fn(),
   getPlants: vi.fn(),
+  updatePlantEvent: vi.fn(),
 }));
 
 vi.mock("../api/plant-event.api", () => ({
   plantEventApi: {
     getPlantEventsCalendar: apiMocks.getPlantEventsCalendar,
+    updatePlantEvent: apiMocks.updatePlantEvent,
   },
 }));
 
@@ -45,10 +47,14 @@ beforeEach(() => {
       id: "event-1",
       plantId: "plant-1",
       farmPlotId: "plot-1",
+      farmZoneId: "zone-1",
       eventType: "SCOUTING",
       note: "Kiểm tra lá",
+      description: "Kiểm tra mặt dưới lá",
       planned: true,
       calculatedStartDate: "2026-04-27",
+      calculatedEndDate: "2026-04-27",
+      sourcePlanId: "plan-1",
       active: true,
     },
   ]);
@@ -59,6 +65,10 @@ beforeEach(() => {
   apiMocks.getZonesByPlot.mockResolvedValue([
     { id: "zone-1", zoneName: "Khu A", farmPlotId: "plot-1" },
   ]);
+  apiMocks.updatePlantEvent.mockResolvedValue({
+    id: "event-1",
+    note: "Kiểm tra lá cập nhật",
+  });
   apiMocks.getPlants.mockResolvedValue([
     {
       id: "plant-1",
@@ -82,6 +92,29 @@ describe("PlantEventsCalendarPage", () => {
     await screen.findByRole("option", { name: "Vườn chính" });
     await user.selectOptions(screen.getByLabelText("Vườn"), "plot-1");
     expect(await screen.findByRole("option", { name: "Khu A" })).toBeInTheDocument();
+  });
+
+  it("renders scope names and edits event", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<PlantEventsCalendarPage />, {
+      route: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
+    });
+
+    expect(await screen.findByText("Kiểm tra lá")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Chỉnh sửa event" }));
+    await user.clear(screen.getByDisplayValue("Kiểm tra lá"));
+    await user.type(screen.getByLabelText(/Tiêu đề\/note|TiÃªu Ä‘á»\/note/), "Kiểm tra lá cập nhật");
+    await user.click(screen.getByRole("button", { name: /Lưu thay đổi|LÆ°u thay Ä‘á»•i/ }));
+
+    expect(screen.getAllByText(/VÆ°á»n chÃ­nh|Vườn chính/).length).toBeGreaterThan(0);
+    expect(apiMocks.updatePlantEvent).toHaveBeenCalledWith(
+      "event-1",
+      expect.objectContaining({
+        note: "Kiểm tra lá cập nhật",
+        farmPlotId: "plot-1",
+        farmZoneId: "zone-1",
+      }),
+    );
   });
 
   it("renders empty state", async () => {

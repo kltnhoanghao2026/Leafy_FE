@@ -18,6 +18,10 @@ const predictionResponse = {
 const diseaseApiMocks = vi.hoisted(() => ({
   getPredictHealth: vi.fn(),
   predictDisease: vi.fn(),
+  getMyProfile: vi.fn(),
+  getPlotsByOwner: vi.fn(),
+  getZonesByPlot: vi.fn(),
+  getPlants: vi.fn(),
 }));
 
 vi.mock("../api/disease.api", () => ({
@@ -27,12 +31,48 @@ vi.mock("../api/disease.api", () => ({
   },
 }));
 
+vi.mock("../../settings/api/profile.api", () => ({
+  profileApi: {
+    getMyProfile: diseaseApiMocks.getMyProfile,
+  },
+}));
+
+vi.mock("../../farm-management/api/farm.api", () => ({
+  farmApi: {
+    getPlotsByOwner: diseaseApiMocks.getPlotsByOwner,
+    getZonesByPlot: diseaseApiMocks.getZonesByPlot,
+  },
+}));
+
+vi.mock("../../plant-management/api/plant.api", () => ({
+  plantApi: {
+    getPlants: diseaseApiMocks.getPlants,
+  },
+}));
+
 const uploadInput = () => screen.getByLabelText(/Tải ảnh lá cây|T/);
 const diagnoseButton = () => screen.getByRole("button", { name: /Chẩn|Ch/ });
 
 beforeEach(() => {
   diseaseApiMocks.getPredictHealth.mockResolvedValue({ status: "UP" });
   diseaseApiMocks.predictDisease.mockReset();
+  diseaseApiMocks.getMyProfile.mockResolvedValue({ data: { data: { id: "profile-1" } } });
+  diseaseApiMocks.getPlotsByOwner.mockResolvedValue([
+    { id: "plot-1", name: "Vườn chính", ownerProfileId: "profile-1" },
+  ]);
+  diseaseApiMocks.getZonesByPlot.mockResolvedValue([
+    { id: "zone-1", zoneName: "Khu A", farmPlotId: "plot-1" },
+  ]);
+  diseaseApiMocks.getPlants.mockResolvedValue([
+    {
+      id: "plant-1",
+      nickName: "Cà phê A",
+      plantNumber: "P-001",
+      farmPlotId: "plot-1",
+      speciesId: "species-1",
+      plantStatus: "ACTIVE",
+    },
+  ]);
   vi.stubGlobal("URL", {
     ...URL,
     createObjectURL: vi.fn(() => "blob:preview"),
@@ -47,6 +87,7 @@ describe("DiseaseDiagnosisPage", () => {
     });
 
     expect(await screen.findByText("Disease detection")).toBeInTheDocument();
+    expect(await screen.findByText(/ThÃ´ng tin cÃ¢y liÃªn quan|Thông tin cây liên quan/)).toBeInTheDocument();
     expect(uploadInput()).toBeInTheDocument();
     expect(diagnoseButton()).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute(
@@ -105,12 +146,21 @@ describe("DiseaseDiagnosisPage", () => {
     function AiRouteProbe() {
       const location = useLocation();
       const state = location.state as {
-        diseaseContext?: { diseaseClassName?: string; confidence?: number };
+        diseaseContext?: {
+          diseaseClassName?: string;
+          confidence?: number;
+          plantId?: string;
+          plantName?: string;
+          farmPlotId?: string;
+          farmPlotName?: string;
+        };
       } | null;
       return (
         <div>
           AI route {state?.diseaseContext?.diseaseClassName}{" "}
-          {state?.diseaseContext?.confidence}
+          {state?.diseaseContext?.confidence} {state?.diseaseContext?.plantId}{" "}
+          {state?.diseaseContext?.plantName} {state?.diseaseContext?.farmPlotId}{" "}
+          {state?.diseaseContext?.farmPlotName}
         </div>
       );
     }
@@ -130,6 +180,11 @@ describe("DiseaseDiagnosisPage", () => {
     );
 
     const file = new File(["leaf"], "leaf.jpg", { type: "image/jpeg" });
+    await screen.findByRole("option", { name: "Cà phê A" });
+    await user.selectOptions(
+      screen.getByLabelText(/Cây trồng|CÃ¢y trá»“ng/),
+      "plant-1",
+    );
     await user.upload(uploadInput(), file);
     await user.click(diagnoseButton());
     await user.click(
@@ -138,7 +193,9 @@ describe("DiseaseDiagnosisPage", () => {
       }),
     );
 
-    expect(await screen.findByText(/AI route rust 0.86/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/AI route rust 0.86 plant-1 Cà phê A plot-1 Vườn chính/),
+    ).toBeInTheDocument();
   });
 
   it("shows friendly error when predict fails", async () => {

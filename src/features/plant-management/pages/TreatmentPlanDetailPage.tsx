@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CalendarDays, RefreshCw, Trash2 } from "lucide-react";
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
-import { useFarmPlots } from "../../farm-management/queries";
+import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
 import { ROUTES } from "../../../lib/routes";
+import { PlantEventEditDialog } from "../components/PlantEventEditDialog";
 import {
   useDeletePlantEventMutation,
   useDeleteTreatmentPlanMutation,
@@ -37,6 +38,8 @@ export function TreatmentPlanDetailPage() {
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
   const [deleteEventTarget, setDeleteEventTarget] =
     useState<PlantEventResponse | null>(null);
+  const [editEventTarget, setEditEventTarget] =
+    useState<PlantEventResponse | null>(null);
 
   const planQuery = useTreatmentPlanDetail(activePlanId);
   const plan = planQuery.data;
@@ -45,6 +48,7 @@ export function TreatmentPlanDetailPage() {
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
+  const zonesQuery = useFarmZones(plan?.farmPlotId ?? "", Boolean(plan?.farmPlotId));
   const plantQuery = usePlant(plan?.plantId ?? "", Boolean(plan?.plantId));
   const updateStatus = useUpdateTreatmentPlanStatusMutation();
   const deletePlan = useDeleteTreatmentPlanMutation();
@@ -99,6 +103,10 @@ export function TreatmentPlanDetailPage() {
   const plotName = plan.farmPlotId
     ? plotById.get(plan.farmPlotId)?.name || plan.farmPlotId
     : "Chưa gắn vườn";
+  const zoneName = plan.farmZoneId
+    ? (zonesQuery.data ?? []).find((zone) => zone.id === plan.farmZoneId)
+        ?.zoneName || plan.farmZoneId
+    : "Chưa gắn khu vực";
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
@@ -178,7 +186,7 @@ export function TreatmentPlanDetailPage() {
           <div className="mt-4 space-y-3 text-sm font-semibold text-slate-600">
             <p><span className="font-black text-slate-900">Cây:</span> {plantName || "Chưa gắn cây"}</p>
             <p><span className="font-black text-slate-900">Vườn:</span> {plotName}</p>
-            <p><span className="font-black text-slate-900">Khu vực:</span> {plan.farmZoneId || "Chưa gắn khu vực"}</p>
+            <p><span className="font-black text-slate-900">Khu vực:</span> {zoneName}</p>
           </div>
           <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">
             <p className="font-black text-slate-900">Thông tin nguồn AI</p>
@@ -216,6 +224,13 @@ export function TreatmentPlanDetailPage() {
           </div>
           <Link
             to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
+            state={{
+              filters: {
+                plantId: plan.plantId,
+                farmPlotId: plan.farmPlotId,
+                farmZoneId: plan.farmZoneId,
+              },
+            }}
             className="inline-flex items-center rounded-2xl border border-[#245A34] px-4 py-3 text-sm font-bold text-[#245A34]"
           >
             <CalendarDays className="mr-2 h-4 w-4" />
@@ -266,15 +281,11 @@ export function TreatmentPlanDetailPage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() =>
-                    void updateEvent.mutateAsync({
-                      eventId: event.id,
-                      payload: { isPlanned: !event.planned },
-                    })
-                  }
+                  aria-label="Chỉnh sửa event"
+                  onClick={() => setEditEventTarget(event)}
                   className="rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"
                 >
-                  {event.planned ? "Đánh dấu đã ghi nhận" : "Đánh dấu đã lên lịch"}
+                  Chỉnh sửa event
                 </button>
                 <button
                   type="button"
@@ -305,6 +316,18 @@ export function TreatmentPlanDetailPage() {
           isDeleting={deleteEvent.isPending}
           onCancel={() => setDeleteEventTarget(null)}
           onConfirm={() => void handleDeleteEvent()}
+        />
+      ) : null}
+      {editEventTarget ? (
+        <PlantEventEditDialog
+          event={editEventTarget}
+          isSubmitting={updateEvent.isPending}
+          onClose={() => setEditEventTarget(null)}
+          onSubmit={(payload) =>
+            void updateEvent
+              .mutateAsync({ eventId: editEventTarget.id, payload })
+              .then(() => setEditEventTarget(null))
+          }
         />
       ) : null}
     </div>
