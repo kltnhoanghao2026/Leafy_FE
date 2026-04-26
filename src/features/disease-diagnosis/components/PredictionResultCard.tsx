@@ -8,12 +8,19 @@ import {
 
 interface PredictionResultCardProps {
   result: PredictResponse;
+  onAskAi?: (
+    prediction: DiseasePrediction,
+    predictions: DiseasePrediction[],
+  ) => void;
 }
 
 const sortPredictions = (items: DiseasePrediction[]) =>
   [...items].sort((a, b) => b.confidenceScore - a.confidenceScore);
 
-export function PredictionResultCard({ result }: PredictionResultCardProps) {
+export function PredictionResultCard({
+  result,
+  onAskAi,
+}: PredictionResultCardProps) {
   const predictions = sortPredictions(result.predictions ?? []);
   const topPrediction = predictions[0];
   const isHealthy = isHealthyDisease(topPrediction?.className);
@@ -25,7 +32,9 @@ export function PredictionResultCard({ result }: PredictionResultCardProps) {
         <div className="flex items-start gap-4">
           <span
             className={`rounded-2xl p-3 ${
-              isHealthy ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
+              isHealthy
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-amber-50 text-amber-700"
             }`}
           >
             <Icon className="h-6 w-6" strokeWidth={2.5} />
@@ -44,9 +53,11 @@ export function PredictionResultCard({ result }: PredictionResultCardProps) {
         </div>
         <button
           type="button"
-          disabled
-          title="Sẽ được bổ sung ở Phase 3"
-          className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-400"
+          disabled={!topPrediction || !onAskAi}
+          onClick={() => {
+            if (topPrediction) onAskAi?.(topPrediction, predictions);
+          }}
+          className="rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
         >
           Hỏi AI tư vấn cách xử lý
         </button>

@@ -31,8 +31,14 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
+    TREATMENT_PLANS: "/dashboard/treatment-plans",
+    TREATMENT_PLAN_DETAIL: (planId: string) =>
+      `/dashboard/treatment-plans/${planId}`,
+    PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
+    AI_ASSISTANT: "/dashboard/ai-assistant",
+    RAG_TREATMENT_PLANS: "/dashboard/ai-assistant/treatment-plans",
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
   },
@@ -211,8 +217,11 @@ export const API_ENDPOINTS = {
   },
 
   RAG: {
+    HEALTH: "/rag/health",
     CHAT: "/rag/v1/chat",
     CHAT_STREAM: "/rag/v1/chat/stream",
+    TREATMENT_PLANS: "/rag/v1/treatment-plans/",
+    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
   },
 
   DISEASES: {

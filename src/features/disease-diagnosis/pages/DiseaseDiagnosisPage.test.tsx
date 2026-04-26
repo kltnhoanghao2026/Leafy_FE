@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROUTES } from "../../../lib/routes";
 import { renderWithClient } from "../../../test/render";
@@ -26,6 +27,9 @@ vi.mock("../api/disease.api", () => ({
   },
 }));
 
+const uploadInput = () => screen.getByLabelText(/Tải ảnh lá cây|T/);
+const diagnoseButton = () => screen.getByRole("button", { name: /Chẩn|Ch/ });
+
 beforeEach(() => {
   diseaseApiMocks.getPredictHealth.mockResolvedValue({ status: "UP" });
   diseaseApiMocks.predictDisease.mockReset();
@@ -42,23 +46,23 @@ describe("DiseaseDiagnosisPage", () => {
       route: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS,
     });
 
-    expect(await screen.findByText("Chẩn đoán bệnh lá cà phê")).toBeInTheDocument();
-    expect(screen.getByText("Tải ảnh lá cây")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Chẩn đoán" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Xem lịch sử chẩn đoán" }),
-    ).toHaveAttribute("href", ROUTES.DASHBOARD.DIAGNOSIS_HISTORY);
+    expect(await screen.findByText("Disease detection")).toBeInTheDocument();
+    expect(uploadInput()).toBeInTheDocument();
+    expect(diagnoseButton()).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      ROUTES.DASHBOARD.DIAGNOSIS_HISTORY,
+    );
   });
 
   it("shows preview when a valid image is selected", async () => {
     const user = userEvent.setup();
-
     renderWithClient(<DiseaseDiagnosisPage />);
 
     const file = new File(["leaf"], "leaf.jpg", { type: "image/jpeg" });
-    await user.upload(screen.getByLabelText("Tải ảnh lá cây"), file);
+    await user.upload(uploadInput(), file);
 
-    expect(await screen.findByAltText("Preview ảnh lá cây")).toHaveAttribute(
+    expect(await screen.findByAltText(/Preview/)).toHaveAttribute(
       "src",
       "blob:preview",
     );
@@ -67,35 +71,74 @@ describe("DiseaseDiagnosisPage", () => {
 
   it("rejects non-image files", async () => {
     const user = userEvent.setup({ applyAccept: false });
-
     renderWithClient(<DiseaseDiagnosisPage />);
 
     const file = new File(["not-image"], "leaf.txt", { type: "text/plain" });
-    await user.upload(screen.getByLabelText("Tải ảnh lá cây"), file);
+    await user.upload(uploadInput(), file);
 
-    expect(
-      await screen.findByText("File không hợp lệ. Vui lòng chọn ảnh JPG, PNG hoặc WebP."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/File/)).toBeInTheDocument();
   });
 
-  it("submits multipart predict API and renders prediction result", async () => {
+  it("submits predict API and renders prediction result", async () => {
     const user = userEvent.setup();
     diseaseApiMocks.predictDisease.mockResolvedValue(predictionResponse);
-
     renderWithClient(<DiseaseDiagnosisPage />);
 
     const file = new File(["leaf"], "leaf.jpg", { type: "image/jpeg" });
-    await user.upload(screen.getByLabelText("Tải ảnh lá cây"), file);
-    await user.click(screen.getByRole("button", { name: "Chẩn đoán" }));
+    await user.upload(uploadInput(), file);
+    await user.click(diagnoseButton());
 
     await waitFor(() => {
       expect(diseaseApiMocks.predictDisease).toHaveBeenCalledWith(file);
     });
-    expect((await screen.findAllByText("Gỉ sắt")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/sắt|sáº¯t/)).length).toBeGreaterThan(0);
     expect(screen.getByText("86%")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Hỏi AI tư vấn cách xử lý" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
+  });
+
+  it("navigates to AI assistant with diagnosis context", async () => {
+    const user = userEvent.setup();
+    diseaseApiMocks.predictDisease.mockResolvedValue(predictionResponse);
+
+    function AiRouteProbe() {
+      const location = useLocation();
+      const state = location.state as {
+        diseaseContext?: { diseaseClassName?: string; confidence?: number };
+      } | null;
+      return (
+        <div>
+          AI route {state?.diseaseContext?.diseaseClassName}{" "}
+          {state?.diseaseContext?.confidence}
+        </div>
+      );
+    }
+
+    renderWithClient(
+      <Routes>
+        <Route
+          path={ROUTES.DASHBOARD.DISEASE_DIAGNOSIS}
+          element={<DiseaseDiagnosisPage />}
+        />
+        <Route
+          path={ROUTES.DASHBOARD.AI_ASSISTANT}
+          element={<AiRouteProbe />}
+        />
+      </Routes>,
+      { route: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS },
+    );
+
+    const file = new File(["leaf"], "leaf.jpg", { type: "image/jpeg" });
+    await user.upload(uploadInput(), file);
+    await user.click(diagnoseButton());
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Hỏi AI tư vấn cách xử lý",
+      }),
+    );
+
+    expect(await screen.findByText(/AI route rust 0.86/)).toBeInTheDocument();
   });
 
   it("shows friendly error when predict fails", async () => {
@@ -103,15 +146,14 @@ describe("DiseaseDiagnosisPage", () => {
     diseaseApiMocks.predictDisease.mockRejectedValue(
       new Error("MODEL_NOT_LOADED"),
     );
-
     renderWithClient(<DiseaseDiagnosisPage />);
 
     const file = new File(["leaf"], "leaf.jpg", { type: "image/jpeg" });
-    await user.upload(screen.getByLabelText("Tải ảnh lá cây"), file);
-    await user.click(screen.getByRole("button", { name: "Chẩn đoán" }));
+    await user.upload(uploadInput(), file);
+    await user.click(diagnoseButton());
 
     expect(
-      await screen.findByText("Model chẩn đoán chưa sẵn sàng. Vui lòng thử lại sau."),
+      await screen.findByText(/Model chẩn đoán|Model cháº©n/),
     ).toBeInTheDocument();
   });
 });

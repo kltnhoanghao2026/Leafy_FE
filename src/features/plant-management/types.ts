@@ -111,6 +111,77 @@ export interface PlantEventResponse {
   active: boolean;
 }
 
+export interface PlantEventCreateRequest {
+  plantId?: string;
+  farmPlotId?: string;
+  farmZoneId?: string;
+  eventType: PlantEventType;
+  note: string;
+  description?: string;
+  daysFromNow?: number;
+  durationDays?: number;
+  isPlanned?: boolean;
+  calculatedStartDate?: string;
+  calculatedEndDate?: string;
+  phiDays?: number;
+  ppeRequired?: string;
+  mrlNote?: string;
+  estimatedCost?: string;
+  sourcePlanId?: string;
+}
+
+export interface PlantEventUpdateRequest {
+  farmPlotId?: string;
+  farmZoneId?: string;
+  eventType?: PlantEventType;
+  note?: string;
+  description?: string;
+  daysFromNow?: number;
+  durationDays?: number;
+  isPlanned?: boolean;
+  calculatedStartDate?: string;
+  calculatedEndDate?: string;
+  phiDays?: number;
+  ppeRequired?: string;
+  mrlNote?: string;
+  estimatedCost?: string;
+  sourcePlanId?: string;
+}
+
+export interface PlantEventsCalendarParams {
+  startDate: string;
+  endDate: string;
+  farmPlotId?: string;
+  farmZoneId?: string;
+  plantId?: string;
+}
+
+export interface TreatmentPlanCreateRequest {
+  ragPlanId?: string;
+  question?: string;
+  source?: "websearch" | "documents";
+  plantId?: string;
+  farmPlotId?: string;
+  farmZoneId?: string;
+  diseaseName: string;
+  confidenceScore?: number;
+  severityLevel?: string;
+  urgency?: string;
+  requiredInputs?: string[];
+  safetyWarnings?: string[];
+  successIndicators?: string;
+  estimatedCost?: string;
+  schedule?: PlantEventCreateRequest[];
+}
+
+export interface TreatmentPlanListParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
+  status?: TreatmentStatus | "";
+}
+
 export interface TreatmentPlanResponse {
   id: string;
   userId: string | null;

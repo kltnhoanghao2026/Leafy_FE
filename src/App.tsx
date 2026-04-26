@@ -15,6 +15,11 @@ import { DiagnosisHistoryPage } from "./features/disease-diagnosis/pages/Diagnos
 import { DiseaseDiagnosisPage } from "./features/disease-diagnosis/pages/DiseaseDiagnosisPage";
 import { PlantDetailPage } from "./features/plant-management/pages/PlantDetailPage";
 import { PlantListPage } from "./features/plant-management/pages/PlantListPage";
+import { PlantEventsCalendarPage } from "./features/plant-management/pages/PlantEventsCalendarPage";
+import { TreatmentPlanDetailPage } from "./features/plant-management/pages/TreatmentPlanDetailPage";
+import { TreatmentPlansPage } from "./features/plant-management/pages/TreatmentPlansPage";
+import { AiAssistantPage } from "./features/rag-assistant/pages/AiAssistantPage";
+import { RagTreatmentPlansPage } from "./features/rag-assistant/pages/RagTreatmentPlansPage";
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
 import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
@@ -65,12 +70,29 @@ function App() {
               <Route path="plants" element={<PlantListPage />} />
               <Route path="plants/:plantId" element={<PlantDetailPage />} />
               <Route
+                path="treatment-plans"
+                element={<TreatmentPlansPage />}
+              />
+              <Route
+                path="treatment-plans/:planId"
+                element={<TreatmentPlanDetailPage />}
+              />
+              <Route
+                path="plant-events/calendar"
+                element={<PlantEventsCalendarPage />}
+              />
+              <Route
                 path="disease-diagnosis"
                 element={<DiseaseDiagnosisPage />}
               />
               <Route
                 path="disease-diagnosis/history"
                 element={<DiagnosisHistoryPage />}
+              />
+              <Route path="ai-assistant" element={<AiAssistantPage />} />
+              <Route
+                path="ai-assistant/treatment-plans"
+                element={<RagTreatmentPlansPage />}
               />
               <Route path="search" element={<SearchPage />} />
               <Route path="community" element={<CommunityView />} />

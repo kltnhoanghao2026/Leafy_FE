@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { History, Leaf } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { ImageUploadPanel } from "../components/ImageUploadPanel";
 import { PredictionResultCard } from "../components/PredictionResultCard";
 import { usePredictDiseaseMutation, usePredictHealth } from "../queries";
-import type { PredictResponse } from "../types";
+import type { DiseasePrediction, PredictResponse } from "../types";
 import { validateDiagnosisImage } from "../utils/fileValidation";
+import { getDiseaseLabel } from "../utils/diseaseLabels";
 
 const toFriendlyError = (error: unknown) => {
   const message =
@@ -36,6 +37,7 @@ export function DiseaseDiagnosisPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PredictResponse | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const navigate = useNavigate();
   const predictMutation = usePredictDiseaseMutation();
   const healthQuery = usePredictHealth();
 
@@ -97,6 +99,26 @@ export function DiseaseDiagnosisPage() {
     }
   };
 
+  const handleAskAi = (
+    prediction: DiseasePrediction,
+    predictions: DiseasePrediction[],
+  ) => {
+    navigate(ROUTES.DASHBOARD.AI_ASSISTANT, {
+      state: {
+        diseaseContext: {
+          diseaseClassName: prediction.className,
+          diseaseLabel: getDiseaseLabel(prediction.className),
+          confidence: prediction.confidenceScore,
+          topPredictions: predictions.map((item) => ({
+            className: item.className,
+            label: getDiseaseLabel(item.className),
+            confidence: item.confidenceScore,
+          })),
+        },
+      },
+    });
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -148,7 +170,9 @@ export function DiseaseDiagnosisPage() {
         }}
       />
 
-      {result ? <PredictionResultCard result={result} /> : null}
+      {result ? (
+        <PredictionResultCard result={result} onAskAi={handleAskAi} />
+      ) : null}
     </div>
   );
 }

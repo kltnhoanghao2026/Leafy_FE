@@ -10,7 +10,22 @@ export {
 } from "./plant.queries";
 export { useSpecies, useSpeciesById } from "./species.queries";
 export {
+  usePlantEvent,
   usePlantEvents,
+  usePlantEventsByPlan,
+  usePlantEventsCalendar,
   usePlannedPlantEvents,
+  useDeletePlantEventMutation,
+  useUpdatePlantEventMutation,
 } from "./plant-event.queries";
-export { useTreatmentPlansByPlant } from "./treatment-plan.queries";
+export {
+  useCreateTreatmentPlan,
+  useDeleteTreatmentPlanMutation,
+  useMyTreatmentPlans,
+  useTreatmentPlan,
+  useTreatmentPlanDetail,
+  useTreatmentPlansByFarmPlot,
+  useTreatmentPlansByFarmZone,
+  useTreatmentPlansByPlant,
+  useUpdateTreatmentPlanStatusMutation,
+} from "./treatment-plan.queries";

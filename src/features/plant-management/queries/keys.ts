@@ -16,6 +16,22 @@ export const plantManagementKeys = {
     [...plantManagementKeys.all(), "plant-events", plantId] as const,
   plannedPlantEvents: (plantId: string) =>
     [...plantManagementKeys.all(), "plant-events", plantId, "planned"] as const,
+  treatmentPlansRoot: () =>
+    [...plantManagementKeys.all(), "treatment-plans"] as const,
+  myTreatmentPlans: (params?: object) =>
+    [...plantManagementKeys.treatmentPlansRoot(), "me", params ?? {}] as const,
+  treatmentPlan: (planId: string) =>
+    [...plantManagementKeys.treatmentPlansRoot(), "detail", planId] as const,
   treatmentPlans: (plantId: string) =>
-    [...plantManagementKeys.all(), "treatment-plans", plantId] as const,
+    [...plantManagementKeys.treatmentPlansRoot(), "plant", plantId] as const,
+  treatmentPlansByFarmPlot: (farmPlotId: string) =>
+    [...plantManagementKeys.treatmentPlansRoot(), "farm-plot", farmPlotId] as const,
+  treatmentPlansByFarmZone: (farmZoneId: string) =>
+    [...plantManagementKeys.treatmentPlansRoot(), "farm-zone", farmZoneId] as const,
+  plantEvent: (eventId: string) =>
+    [...plantManagementKeys.all(), "plant-events", "detail", eventId] as const,
+  plantEventsByPlan: (sourcePlanId: string) =>
+    [...plantManagementKeys.all(), "plant-events", "plan", sourcePlanId] as const,
+  plantEventsCalendar: (params: object) =>
+    [...plantManagementKeys.all(), "plant-events", "calendar", params] as const,
 };
