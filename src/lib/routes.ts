@@ -29,6 +29,8 @@ export const ROUTES = {
     ALERT_RULES: "/dashboard/alert-rules",
     DEVICES: "/dashboard/devices",
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
+    PLANTS: "/dashboard/plants",
+    PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
     COMMUNITY: "/dashboard/community",
     SETTINGS: "/dashboard/settings",
   },

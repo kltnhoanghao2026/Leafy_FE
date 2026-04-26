@@ -5,6 +5,7 @@ import {
   Bell,
   BellRing,
   Cpu,
+  Sprout,
   Users,
   Settings,
   LogOut,
@@ -45,6 +46,7 @@ export function Sidebar() {
       activePath: ROUTES.DASHBOARD.DEVICES,
       icon: Cpu,
     },
+    { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];

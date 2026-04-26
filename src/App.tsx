@@ -11,6 +11,8 @@ import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailM
 import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
 import { DeviceIndexRedirect } from "./features/device-onboarding/pages/DeviceIndexRedirect";
 import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
+import { PlantDetailPage } from "./features/plant-management/pages/PlantDetailPage";
+import { PlantListPage } from "./features/plant-management/pages/PlantListPage";
 import { AlertsPage } from "./features/alerts/pages/AlertsPage";
 import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
 import { CommunityView } from "./features/community/pages/CommunityView";
@@ -58,6 +60,8 @@ function App() {
                 element={<DeviceOnboardingPage />}
               />
               <Route path="devices/:deviceId" element={<DeviceDetailPage />} />
+              <Route path="plants" element={<PlantListPage />} />
+              <Route path="plants/:plantId" element={<PlantDetailPage />} />
               <Route path="search" element={<SearchPage />} />
               <Route path="community" element={<CommunityView />} />
               <Route path="settings" element={<SettingsView />} />
