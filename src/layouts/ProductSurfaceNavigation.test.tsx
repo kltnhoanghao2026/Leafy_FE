@@ -43,6 +43,7 @@ const visibleProductRoutes = [
   ROUTES.DASHBOARD.ALERTS,
   ROUTES.DASHBOARD.ALERT_RULES,
   ROUTES.DASHBOARD.DEVICE_ONBOARDING,
+  ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW,
   ROUTES.DASHBOARD.PLANTS,
   ROUTES.DASHBOARD.TREATMENT_PLANS,
   ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
@@ -89,6 +90,7 @@ describe("product surface navigation", () => {
     });
 
     const nav = screen.getByRole("navigation");
+    expect(screen.getByText("Nông nghiệp thông minh")).toBeInTheDocument();
     const hrefs = within(nav)
       .getAllByRole("link")
       .map((link) => link.getAttribute("href"));

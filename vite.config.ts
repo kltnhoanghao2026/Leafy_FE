@@ -7,6 +7,27 @@ const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || "http://localhost:80
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@mui")) return "vendor-mui";
+          if (id.includes("firebase")) return "vendor-firebase";
+          if (id.includes("recharts")) return "vendor-charts";
+          if (id.includes("@tanstack")) return "vendor-query";
+          if (
+            id.includes("react") ||
+            id.includes("react-dom") ||
+            id.includes("react-router-dom")
+          ) {
+            return "vendor-react";
+          }
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       "/api": {

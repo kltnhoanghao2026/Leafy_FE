@@ -18,15 +18,37 @@ const addDays = (date: Date, days: number) => {
   return next.toISOString().slice(0, 10);
 };
 
+const toDateOnly = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const startOfWeek = (date: Date) => {
+  const next = new Date(date);
+  const day = next.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  next.setDate(next.getDate() + diff);
+  return next;
+};
+
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, (month ?? 1) - 1, day ?? 1);
+};
+
 const today = new Date();
+const initialWeekStart = startOfWeek(today);
 
 export function PlantEventsCalendarPage() {
   const location = useLocation();
   const routeFilters = (location.state as {
     filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string };
   } | null)?.filters;
-  const [startDate, setStartDate] = useState(today.toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(addDays(today, 14));
+  const [weekStart, setWeekStart] = useState(toDateOnly(initialWeekStart));
+  const [startDate, setStartDate] = useState(toDateOnly(initialWeekStart));
+  const [endDate, setEndDate] = useState(addDays(initialWeekStart, 6));
   const [farmPlotId, setFarmPlotId] = useState(routeFilters?.farmPlotId ?? "");
   const [farmZoneId, setFarmZoneId] = useState(routeFilters?.farmZoneId ?? "");
   const [plantId, setPlantId] = useState(routeFilters?.plantId ?? "");
@@ -69,6 +91,39 @@ export function PlantEventsCalendarPage() {
     });
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [events]);
+  const weekDays = useMemo(() => {
+    const base = parseDateOnly(weekStart);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(base, index);
+      return {
+        date,
+        label: formatDate(date),
+        weekday: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index],
+      };
+    });
+  }, [weekStart]);
+  const eventsByDate = useMemo(() => {
+    const groups = new Map<string, typeof events>();
+    events.forEach((event) => {
+      const key = event.calculatedStartDate || "unknown";
+      groups.set(key, [...(groups.get(key) ?? []), event]);
+    });
+    return groups;
+  }, [events]);
+
+  const moveWeek = (offset: number) => {
+    const nextWeekStart = addDays(parseDateOnly(weekStart), offset * 7);
+    setWeekStart(nextWeekStart);
+    setStartDate(nextWeekStart);
+    setEndDate(addDays(parseDateOnly(nextWeekStart), 6));
+  };
+
+  const resetToCurrentWeek = () => {
+    const currentWeekStart = toDateOnly(startOfWeek(new Date()));
+    setWeekStart(currentWeekStart);
+    setStartDate(currentWeekStart);
+    setEndDate(addDays(parseDateOnly(currentWeekStart), 6));
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
@@ -91,7 +146,10 @@ export function PlantEventsCalendarPage() {
             <input
               type="date"
               value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
+              onChange={(event) => {
+                setStartDate(event.target.value);
+                setWeekStart(toDateOnly(startOfWeek(parseDateOnly(event.target.value))));
+              }}
               className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
             />
           </label>
@@ -153,6 +211,86 @@ export function PlantEventsCalendarPage() {
               ))}
             </select>
           </label>
+        </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-[#245A34]">
+              Week view
+            </p>
+            <h3 className="mt-1 text-xl font-black text-slate-900">
+              Tuần {formatDate(startDate)} - {formatDate(endDate)}
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => moveWeek(-1)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"
+            >
+              Tuần trước
+            </button>
+            <button
+              type="button"
+              onClick={resetToCurrentWeek}
+              className="rounded-2xl border border-[#245A34] bg-green-50 px-4 py-2 text-sm font-bold text-[#245A34]"
+            >
+              Tuần này
+            </button>
+            <button
+              type="button"
+              onClick={() => moveWeek(1)}
+              className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700"
+            >
+              Tuần sau
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-7">
+          {weekDays.map((day) => {
+            const dayEvents = eventsByDate.get(day.date) ?? [];
+            return (
+              <div
+                key={day.date}
+                className="min-h-40 rounded-2xl border border-slate-100 bg-slate-50 p-3"
+              >
+                <div className="mb-3">
+                  <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                    {day.weekday}
+                  </p>
+                  <p className="mt-1 text-sm font-black text-slate-900">
+                    {day.label}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {dayEvents.length ? (
+                    dayEvents.map((event) => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => setEditEventTarget(event)}
+                        className="w-full rounded-xl bg-white p-3 text-left text-xs font-bold text-slate-700 shadow-sm hover:bg-emerald-50"
+                      >
+                        <span className="block font-black text-[#245A34]">
+                          {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
+                        </span>
+                        <span className="mt-1 block truncate">
+                          {event.note || event.description || "Không có mô tả"}
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs font-bold text-slate-400">
+                      Trống
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 

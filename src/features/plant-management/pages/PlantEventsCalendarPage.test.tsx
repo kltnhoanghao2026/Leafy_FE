@@ -88,10 +88,29 @@ describe("PlantEventsCalendarPage", () => {
       route: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
     });
 
-    expect(await screen.findByText("Kiểm tra lá")).toBeInTheDocument();
+    expect((await screen.findAllByText("Kiểm tra lá")).length).toBeGreaterThan(0);
     await screen.findByRole("option", { name: "Vườn chính" });
     await user.selectOptions(screen.getByLabelText("Vườn"), "plot-1");
     expect(await screen.findByRole("option", { name: "Khu A" })).toBeInTheDocument();
+  });
+
+  it("renders week view and moves between weeks", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<PlantEventsCalendarPage />, {
+      route: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
+    });
+
+    expect(await screen.findByText("Week view")).toBeInTheDocument();
+    expect((await screen.findAllByText("Kiểm tra lá")).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: "Tuần sau" }));
+    expect(apiMocks.getPlantEventsCalendar).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        startDate: expect.any(String),
+        endDate: expect.any(String),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Tuần trước" }));
+    await user.click(screen.getByRole("button", { name: "Tuần này" }));
   });
 
   it("renders scope names and edits event", async () => {
@@ -100,7 +119,7 @@ describe("PlantEventsCalendarPage", () => {
       route: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
     });
 
-    expect(await screen.findByText("Kiểm tra lá")).toBeInTheDocument();
+    expect((await screen.findAllByText("Kiểm tra lá")).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Chỉnh sửa event" }));
     await user.clear(screen.getByDisplayValue("Kiểm tra lá"));
     await user.type(screen.getByLabelText(/Tiêu đề\/note|TiÃªu Ä‘á»\/note/), "Kiểm tra lá cập nhật");

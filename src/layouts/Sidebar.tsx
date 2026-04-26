@@ -8,6 +8,7 @@ import {
   Bot,
   CalendarDays,
   ClipboardList,
+  LayoutDashboard,
   Sprout,
   Stethoscope,
   Users,
@@ -39,7 +40,7 @@ export function Sidebar() {
     profile?.profilePicture ||
     "https://i.pravatar.cc/150?img=11";
 
-  const navItems = [
+  const coreNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
@@ -50,9 +51,17 @@ export function Sidebar() {
       activePath: ROUTES.DASHBOARD.DEVICES,
       icon: Cpu,
     },
+  ];
+
+  const agricultureNavItems = [
+    {
+      name: "Tổng quan",
+      path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW,
+      icon: LayoutDashboard,
+    },
     { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
     {
-      name: "Kế hoạch điều trị",
+      name: "Kế hoạch",
       path: ROUTES.DASHBOARD.TREATMENT_PLANS,
       icon: ClipboardList,
     },
@@ -62,7 +71,7 @@ export function Sidebar() {
       icon: CalendarDays,
     },
     {
-      name: "Chẩn đoán bệnh",
+      name: "Chẩn đoán",
       path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS,
       icon: Stethoscope,
     },
@@ -71,9 +80,42 @@ export function Sidebar() {
       path: ROUTES.DASHBOARD.AI_ASSISTANT,
       icon: Bot,
     },
+  ];
+
+  const utilityNavItems = [
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
+
+  const renderNavItem = (
+    item: (typeof coreNavItems | typeof agricultureNavItems | typeof utilityNavItems)[number],
+  ) => (
+    <NavLink
+      key={item.name}
+      to={item.path}
+      className={() => {
+        const isHome = item.path === ROUTES.DASHBOARD.ROOT;
+        const activePath =
+          "activePath" in item && item.activePath ? item.activePath : item.path;
+        const isCurrentlyActive = isHome
+          ? location.pathname === ROUTES.DASHBOARD.ROOT ||
+            location.pathname.startsWith("/dashboard/metrics")
+          : location.pathname.startsWith(activePath);
+
+        return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
+          isCurrentlyActive
+            ? "bg-[#245A34] text-white"
+            : "text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]"
+        }`;
+      }}
+    >
+      <item.icon
+        className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
+        strokeWidth={2.5}
+      />
+      {item.name}
+    </NavLink>
+  );
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10">
@@ -106,35 +148,15 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-6 overflow-y-auto space-y-2 px-3">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={() => {
-              const isHome = item.path === ROUTES.DASHBOARD.ROOT;
-              const activePath =
-                "activePath" in item && item.activePath
-                  ? item.activePath
-                  : item.path;
-              const isCurrentlyActive = isHome
-                ? location.pathname === ROUTES.DASHBOARD.ROOT ||
-                  location.pathname.startsWith("/dashboard/metrics")
-                : location.pathname.startsWith(activePath);
-
-              return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
-                isCurrentlyActive
-                  ? "bg-[#245A34] text-white"
-                  : "text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]"
-              }`;
-            }}
-          >
-            <item.icon
-              className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
-              strokeWidth={2.5}
-            />
-            {item.name}
-          </NavLink>
-        ))}
+        {coreNavItems.map(renderNavItem)}
+        <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Nông nghiệp thông minh
+        </div>
+        {agricultureNavItems.map(renderNavItem)}
+        <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Khác
+        </div>
+        {utilityNavItems.map(renderNavItem)}
       </nav>
 
       {/* User Profile & Logout */}

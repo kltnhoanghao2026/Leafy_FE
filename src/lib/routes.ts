@@ -22,6 +22,7 @@ export const ROUTES = {
   // Main app routes (JWT required)
   DASHBOARD: {
     ROOT: "/dashboard",
+    AGRICULTURE_OVERVIEW: "/dashboard/agriculture-overview",
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
