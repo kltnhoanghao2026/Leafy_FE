@@ -39,3 +39,16 @@ export const useDeviceConfig = (deviceId: string, enabled = true) =>
     select: (response) => response.data,
     enabled: enabled && !!deviceId,
   });
+
+export const useDeviceMedia = (
+  deviceId: string,
+  enabled = true,
+  refetchInterval?: number | false,
+) =>
+  useQuery({
+    queryKey: deviceKeys.media(deviceId),
+    queryFn: () => collectorApi.getDeviceMedia(deviceId),
+    select: (response) => response.data,
+    enabled: enabled && !!deviceId,
+    refetchInterval,
+  });

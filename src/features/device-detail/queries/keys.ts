@@ -10,4 +10,6 @@ export const deviceKeys = {
     [...deviceKeys.all(), "chart", deviceId, sensorCode, range] as const,
   config: (deviceId: string) =>
     [...deviceKeys.all(), "config", deviceId] as const,
+  media: (deviceId: string) =>
+    [...deviceKeys.all(), "media", deviceId] as const,
 };

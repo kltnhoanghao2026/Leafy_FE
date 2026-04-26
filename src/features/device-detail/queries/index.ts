@@ -4,5 +4,10 @@ export {
   useDeviceConfig,
   useDeviceDetail,
   useDeviceLatestReadings,
+  useDeviceMedia,
 } from "./queries";
-export { usePushDeviceConfig, useUpdateDeviceConfig } from "./mutations";
+export {
+  useCaptureDeviceImage,
+  usePushDeviceConfig,
+  useUpdateDeviceConfig,
+} from "./mutations";

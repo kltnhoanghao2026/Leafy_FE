@@ -1,14 +1,31 @@
 @import "tailwindcss";
 
+:root {
+  --app-bg: #f8faf9;
+  --app-text: #0f172a;
+  --app-card: #ffffff;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --app-bg: #0f172a;
+  --app-text: #e5e7eb;
+  --app-card: #111827;
+  color-scheme: dark;
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: var(--app-bg);
+  color: var(--app-text);
 }
 
 #root {
   width: 100%;
+  min-height: 100vh;
+  background-color: var(--app-bg);
 }
 
 /* Admin sidebar scrollbar */

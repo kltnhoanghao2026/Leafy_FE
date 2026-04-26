@@ -6,12 +6,15 @@ import type {
   AlertEventsParams,
   AlertRuleResponse,
   AlertRulesParams,
+  CameraCaptureRequest,
+  CameraCaptureResponse,
   ChartRange,
   ClaimDeviceRequest,
   CreateAlertRuleRequest,
   DashboardOverviewResponse,
   DeviceConfigResponse,
   DeviceDetailResponse,
+  DeviceMediaEventResponse,
   DeviceResponse,
   GenerateClaimCodeResponse,
   LatestReadingItemResponse,
@@ -68,6 +71,21 @@ export const collectorApi = {
       },
     ),
 
+  getAlertEvent: (alertEventId: string) =>
+    apiClient.get<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT(alertEventId),
+    ),
+
+  acknowledgeAlert: (alertEventId: string) =>
+    apiClient.post<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT_ACKNOWLEDGE(alertEventId),
+    ),
+
+  resolveAlert: (alertEventId: string) =>
+    apiClient.post<AlertEventItemResponse>(
+      API_ENDPOINTS.IOT.ALERT_EVENT_RESOLVE(alertEventId),
+    ),
+
   getDeviceDetail: (deviceId: string) =>
     apiClient.get<DeviceDetailResponse>(
       API_ENDPOINTS.IOT.DEVICE_DETAIL(deviceId),
@@ -97,6 +115,20 @@ export const collectorApi = {
   pushDeviceConfig: (deviceId: string) =>
     apiClient.post<DeviceConfigResponse>(
       API_ENDPOINTS.IOT.DEVICE_CONFIG_PUSH(deviceId),
+    ),
+
+  captureDeviceImage: (
+    deviceId: string,
+    payload: CameraCaptureRequest = { quality: "MEDIUM", resolution: "VGA" },
+  ) =>
+    apiClient.post<CameraCaptureResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE(deviceId),
+      payload,
+    ),
+
+  getDeviceMedia: (deviceId: string) =>
+    apiClient.get<DeviceMediaEventResponse[]>(
+      API_ENDPOINTS.IOT.DEVICE_MEDIA(deviceId),
     ),
 
   getAlertRules: (params: AlertRulesParams = {}) =>

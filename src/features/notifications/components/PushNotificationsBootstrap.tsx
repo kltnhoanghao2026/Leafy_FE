@@ -11,7 +11,7 @@ import {
   registerMessagingServiceWorker,
   subscribeToForegroundMessages,
 } from "../services/firebaseMessaging";
-import { apiRegisterPushToken } from "../services/pushApi";
+import { pushApi } from "../api/push.api";
 import { usePushNotificationsStore } from "../store/usePushNotificationsStore";
 
 function getPushErrorMessage(error: unknown) {
@@ -94,7 +94,8 @@ export function PushNotificationsBootstrap() {
           return;
         }
 
-        await apiRegisterPushToken({
+        await pushApi.registerToken({
+          userId,
           platform: "WEB",
           deviceIdentifier: buildWebDeviceIdentifier(),
           fcmToken,

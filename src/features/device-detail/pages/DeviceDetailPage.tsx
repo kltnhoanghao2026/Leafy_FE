@@ -3,17 +3,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
+  Camera,
   CheckCircle2,
   Cpu,
   Droplet,
+  ImageOff,
   RefreshCw,
   Save,
   Send,
   Sun,
   Thermometer,
+  WifiOff,
   Wind,
 } from "lucide-react";
 import { IoTMetricCard } from "../../metrics-view/components/IoTMetricCard";
+import { MediaImage } from "../../community/components/MediaImage";
 import {
   compactId,
   formatDateTime,
@@ -24,6 +28,8 @@ import {
   useDeviceConfig,
   useDeviceDetail,
   useDeviceLatestReadings,
+  useDeviceMedia,
+  useCaptureDeviceImage,
   usePushDeviceConfig,
   useUpdateDeviceConfig,
 } from "../queries";
@@ -31,6 +37,8 @@ import { ROUTES } from "../../../lib/routes";
 import type {
   ChartRange,
   DeviceConfigResponse,
+  DeviceDetailResponse,
+  DeviceMediaEventResponse,
   LatestReadingItemResponse,
   SensorChartResponse,
   UpdateDeviceConfigRequest,
@@ -117,6 +125,14 @@ const statusTone = (status?: string | null): "green" | "red" | "orange" | "slate
   return "slate";
 };
 
+const isOfflineClaimedDevice = (device?: DeviceDetailResponse) =>
+  device?.provisioningStatus === "CLAIMED" && device?.status === "OFFLINE";
+
+const isMediaWaiting = (media?: DeviceMediaEventResponse) =>
+  media?.status === "REQUESTED" ||
+  media?.status === "COMMAND_SENT" ||
+  media?.status === "UPLOADING";
+
 const validateConfig = (payload: UpdateDeviceConfigRequest): string | null => {
   if (payload.samplingIntervalSec <= 0) {
     return "Sampling interval must be greater than 0.";
@@ -179,6 +195,126 @@ function DeviceSensorCard({ deviceId, range, reading }: DeviceSensorCardProps) {
       isLoading={chartQuery.isLoading}
       isError={chartQuery.isError}
     />
+  );
+}
+
+interface DeviceMediaPanelProps {
+  mediaEvents: DeviceMediaEventResponse[];
+  canCapture: boolean;
+  isCapturing: boolean;
+  isPolling: boolean;
+  onCapture: () => Promise<void>;
+}
+
+function DeviceMediaPanel({
+  mediaEvents,
+  canCapture,
+  isCapturing,
+  isPolling,
+  onCapture,
+}: DeviceMediaPanelProps) {
+  const latestMedia = mediaEvents[0];
+  const latestUploaded = mediaEvents.find(
+    (event) => event.status === "UPLOADED" && event.fileId,
+  );
+  const isWaiting = isCapturing || isPolling || isMediaWaiting(latestMedia);
+  const failedLatest =
+    latestMedia?.status === "FAILED" || latestMedia?.status === "TIMEOUT"
+      ? latestMedia
+      : null;
+
+  return (
+    <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
+        <div>
+          <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
+            Camera capture
+          </h3>
+          <p className="text-sm font-semibold text-slate-500">
+            User-triggered ESP32-CAM snapshots uploaded through file-service.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void onCapture()}
+          disabled={!canCapture || isCapturing}
+          className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
+          {isCapturing ? "Đang gửi lệnh chụp..." : "Chụp ảnh hiện tại"}
+        </button>
+      </div>
+
+      {!canCapture ? (
+        <p className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
+          Thiết bị cần active và CLAIMED trước khi chụp ảnh.
+        </p>
+      ) : null}
+
+      {isWaiting ? (
+        <p className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
+          {isCapturing
+            ? "Đang gửi lệnh chụp..."
+            : "Đang chờ thiết bị upload ảnh..."}
+        </p>
+      ) : null}
+
+      {failedLatest ? (
+        <p role="alert" className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+          {failedLatest.status === "TIMEOUT"
+            ? "Thiết bị không gửi ảnh trong thời gian chờ."
+            : failedLatest.error || "Chụp ảnh thất bại."}
+        </p>
+      ) : null}
+
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
+        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
+          {latestUploaded?.fileId ? (
+            <MediaImage
+              source={latestUploaded.fileId}
+              alt="Latest device capture"
+              className="h-[320px] w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-[320px] flex-col items-center justify-center gap-3 text-slate-500">
+              <ImageOff className="h-8 w-8" strokeWidth={2.5} />
+              <span className="text-sm font-bold">Chưa có ảnh upload thành công.</span>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
+            Media history
+          </h4>
+          {mediaEvents.length === 0 ? (
+            <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
+              Chưa có lần chụp nào.
+            </p>
+          ) : null}
+          {mediaEvents.slice(0, 6).map((event) => (
+            <div
+              key={event.id}
+              className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className={badgeClass(statusTone(event.status))}>
+                  {event.status}
+                </span>
+                <span className="text-xs font-bold text-slate-500">
+                  {formatDateTime(event.uploadedAt || event.requestedAt)}
+                </span>
+              </div>
+              <p className="mt-2 text-xs font-semibold text-slate-500">
+                {event.fileId
+                  ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
+                  : event.error || event.requestId || "Waiting for upload"}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -301,13 +437,17 @@ export function DeviceDetailPage() {
   const { deviceId } = useParams();
   const resolvedDeviceId = deviceId ?? "";
   const [range, setRange] = useState<ChartRange>("H24");
+  const [captureRequestId, setCaptureRequestId] = useState<string | null>(null);
   const pushWatchUntilRef = useRef(0);
+  const completedCaptureRef = useRef<string | null>(null);
 
   const deviceDetailQuery = useDeviceDetail(resolvedDeviceId, !!deviceId);
   const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
   const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
+  const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId);
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
+  const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
 
   useEffect(() => {
     if (!deviceId) return undefined;
@@ -327,8 +467,62 @@ export function DeviceDetailPage() {
 
   const device = deviceDetailQuery.data;
   const config = configQuery.data;
+  const mediaEvents = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
+  const watchedCaptureEvent = useMemo(
+    () =>
+      captureRequestId
+        ? mediaEvents.find((event) => event.requestId === captureRequestId)
+        : null,
+    [captureRequestId, mediaEvents],
+  );
+  const isMediaPolling =
+    captureRequestId !== null &&
+    (!watchedCaptureEvent || isMediaWaiting(watchedCaptureEvent));
   const canManageConfig =
     device?.isActive === true && device?.provisioningStatus === "CLAIMED";
+
+  useEffect(() => {
+    if (!isMediaPolling) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void mediaQuery.refetch();
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [isMediaPolling, mediaQuery]);
+
+  useEffect(() => {
+    if (
+      !captureRequestId ||
+      !watchedCaptureEvent ||
+      isMediaWaiting(watchedCaptureEvent) ||
+      completedCaptureRef.current === captureRequestId
+    ) {
+      return;
+    }
+
+    completedCaptureRef.current = captureRequestId;
+    void deviceDetailQuery.refetch();
+  }, [captureRequestId, deviceDetailQuery, watchedCaptureEvent]);
+
+  useEffect(() => {
+    if (!captureRequestId) {
+      return;
+    }
+
+    const latest = mediaEvents[0];
+    if (
+      latest &&
+      !latest.requestId &&
+      !isMediaWaiting(latest) &&
+      completedCaptureRef.current !== captureRequestId
+    ) {
+      completedCaptureRef.current = captureRequestId;
+      void deviceDetailQuery.refetch();
+    }
+  }, [captureRequestId, deviceDetailQuery, mediaEvents]);
 
   const visibleReadings = useMemo(() => {
     const latestReadings =
@@ -360,6 +554,13 @@ export function DeviceDetailPage() {
     await pushConfigMutation.mutateAsync();
     await configQuery.refetch();
     await deviceDetailQuery.refetch();
+  };
+
+  const handleCaptureImage = async () => {
+    const response = await captureImageMutation.mutateAsync();
+    completedCaptureRef.current = null;
+    setCaptureRequestId(response.data.requestId);
+    await mediaQuery.refetch();
   };
 
   const isPageLoading = deviceDetailQuery.isLoading || configQuery.isLoading;
@@ -454,7 +655,7 @@ export function DeviceDetailPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <InfoTile label="Type" value={device.deviceType} />
               <InfoTile
                 label="Firmware"
@@ -463,6 +664,32 @@ export function DeviceDetailPage() {
               <InfoTile label="Farm plot" value={compactId(device.farmPlotId)} />
               <InfoTile label="Zone" value={compactId(device.zoneId)} />
             </div>
+
+            {isOfflineClaimedDevice(device) ? (
+              <div className="mt-6 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5">
+                <div className="flex items-start gap-3">
+                  <WifiOff className="mt-0.5 h-5 w-5 text-amber-700" />
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-sm font-black text-amber-800">
+                        Thiết bị đã liên kết nhưng chưa online
+                      </h3>
+                      <p className="mt-1 text-sm font-semibold text-amber-700">
+                        Không cần nhập Wi-Fi trong form claim. Hãy hoàn tất cấu
+                        hình mạng trực tiếp trên thiết bị.
+                      </p>
+                    </div>
+                    <ol className="space-y-2 text-sm font-semibold text-amber-800">
+                      <li>1. Bật nguồn thiết bị.</li>
+                      <li>2. Kết nối Wi-Fi "Leafy-Setup-xxxx".</li>
+                      <li>3. Mở http://192.168.4.1.</li>
+                      <li>4. Nhập Wi-Fi của vườn hoặc nhà.</li>
+                      <li>5. Chờ thiết bị online.</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </section>
 
           <section>
@@ -525,6 +752,14 @@ export function DeviceDetailPage() {
               </div>
             ) : null}
           </section>
+
+          <DeviceMediaPanel
+            mediaEvents={mediaEvents}
+            canCapture={canManageConfig}
+            isCapturing={captureImageMutation.isPending}
+            isPolling={isMediaPolling}
+            onCapture={handleCaptureImage}
+          />
 
           <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-6">
