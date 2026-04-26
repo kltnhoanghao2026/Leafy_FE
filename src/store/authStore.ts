@@ -1,36 +1,42 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { User } from '../features/auth/types'
+import { create } from "zustand";
+import type { User } from "../features/auth/types";
 
 interface AuthState {
-  user: User | null
-  accessToken: string | null
-  refreshToken: string | null
-  isLoading: boolean
-  rememberMe: boolean
-  setUser: (user: User | null) => void
-  setTokens: (accessToken: string, refreshToken: string) => void
-  setIsLoading: (isLoading: boolean) => void
-  setRememberMe: (rememberMe: boolean) => void
-  logout: () => void
+  user: User | null;
+  accessToken: string | null;
+  accountRole: "USER" | "ADMIN" | null;
+  isLoading: boolean;
+  rememberMe: boolean;
+  /** True while the app is attempting a silent token refresh on startup */
+  isInitializing: boolean;
+  setUser: (user: User | null) => void;
+  setTokens: (accessToken: string) => void;
+  setAccountRole: (role: "USER" | "ADMIN" | null) => void;
+  setIsLoading: (isLoading: boolean) => void;
+  setRememberMe: (rememberMe: boolean) => void;
+  setIsInitializing: (isInitializing: boolean) => void;
+  logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  accessToken: null,
+  accountRole: null,
+  isLoading: false,
+  rememberMe: false,
+  isInitializing: true,
+  setUser: (user) => set({ user }),
+  setTokens: (accessToken) => set({ accessToken }),
+  setAccountRole: (accountRole) => set({ accountRole }),
+  setIsLoading: (isLoading) => set({ isLoading }),
+  setRememberMe: (rememberMe) => set({ rememberMe }),
+  setIsInitializing: (isInitializing) => set({ isInitializing }),
+  logout: () =>
+    set({
       user: null,
       accessToken: null,
-      refreshToken: null,
-      isLoading: false,
+      accountRole: null,
       rememberMe: false,
-      setUser: (user) => set({ user }),
-      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      setRememberMe: (rememberMe) => set({ rememberMe }),
-      logout: () => set({ user: null, accessToken: null, refreshToken: null, rememberMe: false })
+      isInitializing: false,
     }),
-    {
-      name: 'auth-storage'
-    }
-  )
-)
+}));

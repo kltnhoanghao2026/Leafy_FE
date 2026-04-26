@@ -31,6 +31,8 @@ export interface CertificateDto {
   title: string;
   issuedBy: string;
   proofUrl: string;
+  proofFileId?: string;
+  fileType?: string;
   issueDate: string;
   expired: boolean;
 }

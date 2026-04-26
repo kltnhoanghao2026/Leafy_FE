@@ -4,7 +4,6 @@ import type {
   InitialRegisterRequest,
   VerifyOtpRequest,
   ResendOtpRequest,
-  RefreshTokenRequest,
   LogoutDeviceRequest,
 } from "../schema/requests";
 import type {
@@ -36,8 +35,9 @@ export const authApi = {
       body,
     ),
 
-  refreshAccessToken: (body: RefreshTokenRequest) =>
-    apiClient.post<ApiEnvelope<AuthResponse>>(API_ENDPOINTS.AUTH.REFRESH, body),
+  // WEB: reads HttpOnly refresh cookie; returns only accessToken in body
+  refreshAccessToken: () =>
+    apiClient.post<ApiEnvelope<AuthResponse>>(API_ENDPOINTS.AUTH.REFRESH),
 
   logout: () => apiClient.post<ApiEnvelope<void>>(API_ENDPOINTS.AUTH.LOGOUT),
 

@@ -1,23 +1,20 @@
-import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
-import { Sidebar } from './Sidebar'
-import { Header } from './Header'
-import { AuthSessionBootstrap } from '../features/auth/components/AuthSessionBootstrap'
-import { PushNotificationsBootstrap } from '../features/notifications/components/PushNotificationsBootstrap'
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import { Sidebar } from "./Sidebar";
+import { Header } from "./Header";
+import { PushNotificationsBootstrap } from "../features/notifications/components/PushNotificationsBootstrap";
 
 export function DashboardLayout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex bg-[var(--app-bg)] min-h-screen font-sans transition-colors">
-      <AuthSessionBootstrap />
-
       {/* Sidebar - Desktop is handled by CSS, Mobile needs state */}
       <Sidebar />
-      
+
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-20 bg-black/50 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
@@ -26,12 +23,12 @@ export function DashboardLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
-        
+
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
           <PushNotificationsBootstrap />
           <Outlet />
         </main>
       </div>
     </div>
-  )
+  );
 }
