@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import {
-  AlertTriangle,
   ArrowRight,
   Bot,
   BookOpenText,
-  CalendarCheck2,
-  ChevronDown,
-  ChevronUp,
   Clock3,
   FlaskConical,
   Globe,
@@ -16,7 +12,6 @@ import {
   MessageCircle,
   RefreshCcw,
   SendHorizontal,
-  ShieldAlert,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -955,16 +950,6 @@ export function RagChatPage() {
             const severity = asPlanString(plan.severityLevel).toUpperCase();
             const urgency = asPlanString(plan.urgency).toUpperCase();
             const confidence = asPlanNumber(plan.confidenceScore);
-            const schedule = asPlanArray(plan.schedule).map(asPlanRecord);
-            const requiredInputs = asPlanArray(plan.requiredInputs).filter(
-              (s): s is string => typeof s === "string" && s.length > 0,
-            );
-            const safetyWarnings = asPlanArray(plan.safetyWarnings).filter(
-              (s): s is string => typeof s === "string" && s.length > 0,
-            );
-            const successIndicators = asPlanString(plan.successIndicators);
-            const planCost = asPlanString(plan.estimatedCost);
-            const source = asPlanString(plan.source);
 
             return (
               <div

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, List, Info } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays, Info } from "lucide-react";
 
 type JsonRecord = Record<string, unknown>;
 

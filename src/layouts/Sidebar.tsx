@@ -49,7 +49,7 @@ export function Sidebar() {
   const navItems = baseNavItems.map((item) => {
     if (item.name === "Chuyên gia" && profile?.role === "EXPERT") {
       return {
-        name: "Yêu cầu tư vấn",
+        name: "Tư vấn",
         path: "/dashboard/pending-requests",
         icon: UserSquare,
       };

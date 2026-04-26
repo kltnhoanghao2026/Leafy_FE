@@ -3,7 +3,6 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { PushNotificationsBootstrap } from "../features/notifications/components/PushNotificationsBootstrap";
-import { ExpertPendingRequests } from "../features/community/components/ExpertPendingRequests";
 
 export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,7 +35,6 @@ export function DashboardLayout() {
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
           <PushNotificationsBootstrap />
-          <ExpertPendingRequests />
           <Outlet />
         </main>
       </div>

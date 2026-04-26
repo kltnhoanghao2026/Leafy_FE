@@ -1,6 +1,6 @@
 import { CreatePostArea } from '../components/CreatePostArea'
 import { HotTopicsWidget } from '../components/HotTopicsWidget'
-import { OnlineExpertsWidget } from '../components/OnlineExpertsWidget'
+import { OnlineExpertsWidget } from '../../profiles/components/OnlineExpertsWidget'
 import { PostCard } from '../components/PostCard'
 import { useCommunityStore } from '../../../store/useCommunityStore'
 

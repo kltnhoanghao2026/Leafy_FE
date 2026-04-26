@@ -147,7 +147,7 @@ export const API_ENDPOINTS = {
     ME: "/profiles/me",
     GET: (profileId: string) => `/profiles/${profileId}`,
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
-    PUBLIC_EXPERTS: "/profiles/public/experts",
+    PUBLIC_EXPERTS: "/profiles/experts",
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
     PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
@@ -158,6 +158,7 @@ export const API_ENDPOINTS = {
       `/profiles/${profileId}/approval-requests/${requestId}/revoke`,
     // Admin-only endpoints
     LIST: "/profiles",
+    SEARCH_EXPERTS: "/profiles/search/experts",
     SEARCH: "/profiles/search",
     DETAILS: (profileId: string) => `/profiles/${profileId}/details`,
     ACTIVATE: (profileId: string) => `/profiles/${profileId}/activate`,

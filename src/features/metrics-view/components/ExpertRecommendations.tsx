@@ -1,11 +1,11 @@
 import { MessageSquare } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
-import { communityProfilesApi } from '../../community/api/communityProfilesApi'
+import { profilesApi } from '../../profiles/api/profilesApi'
 
 export function ExpertRecommendations() {
   const { data, isLoading } = useQuery({
     queryKey: ['public-experts', 'recommendations'],
-    queryFn: () => communityProfilesApi.getPublicExperts({ size: 3 }),
+    queryFn: () => profilesApi.getPublicExperts({ size: 3 }),
   })
 
   const experts = data?.data?.data?.content || []

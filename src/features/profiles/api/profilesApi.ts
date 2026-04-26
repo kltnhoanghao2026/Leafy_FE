@@ -13,6 +13,8 @@ export interface ProfileResponse {
   isVerified: boolean;
   active: boolean;
   bio: string;
+  isFollowing?: boolean;
+  hasPendingConsultRequest?: boolean;
 }
 
 export interface SpringPage<T> {
@@ -39,7 +41,7 @@ export interface ConsultationRequestResponse {
   status: string;
 }
 
-export const communityProfilesApi = {
+export const profilesApi = {
   getPublicExperts: (params: { page?: number; size?: number; searchTerm?: string } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(
       API_ENDPOINTS.PROFILES.PUBLIC_EXPERTS,
@@ -54,7 +56,7 @@ export const communityProfilesApi = {
     
   searchExpertsES: (params: { page?: number; size?: number; searchTerm?: string; specialty?: string } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(
-      API_ENDPOINTS.SEARCH.PROFILES,
+      API_ENDPOINTS.PROFILES.SEARCH_EXPERTS,
       {
         params: {
           page: params.page ?? 0,
@@ -76,8 +78,19 @@ export const communityProfilesApi = {
   requestConsultation: (expertId: string) =>
     apiClient.post<ApiEnvelope<any>>(`/profiles/experts/${expertId}/consult/request`),
 
+  cancelConsultation: (expertId: string) =>
+    apiClient.post<ApiEnvelope<any>>(`/profiles/experts/${expertId}/consult/cancel`),
+
   getPendingConsultations: (params: { page?: number; size?: number } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ConsultationRequestResponse>>>(`/profiles/experts/consult/pending`, {
+      params: {
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+      },
+    }),
+
+  getAcceptedConsultations: (params: { page?: number; size?: number } = {}) =>
+    apiClient.get<ApiEnvelope<SpringPage<ConsultationRequestResponse>>>(`/profiles/experts/consult/accepted`, {
       params: {
         page: params.page ?? 0,
         size: params.size ?? 20,

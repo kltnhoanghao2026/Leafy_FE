@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -8,8 +7,6 @@ import {
   Clock,
   Hash,
   FileText,
-  ChevronDown,
-  ChevronUp,
   Trash2,
   Loader2,
   AlertCircle,

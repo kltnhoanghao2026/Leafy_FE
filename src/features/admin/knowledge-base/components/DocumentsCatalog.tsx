@@ -1,11 +1,9 @@
 import {
   FileText,
   Trash2,
-  Layers,
   Calendar,
   Tag,
   Database,
-  ExternalLink,
 } from "lucide-react";
 import type { DocumentSummary } from "../api/knowledgeBaseApi";
 import { useDeleteDocument } from "../hooks/useKnowledgeBase";
@@ -36,13 +34,6 @@ function SkeletonRow() {
     </div>
   );
 }
-
-const SECTION_COLORS: Record<string, string> = {
-  summary: "bg-violet-100 text-violet-700",
-  methodology: "bg-blue-100 text-blue-700",
-  results: "bg-amber-100 text-amber-700",
-  general: "bg-slate-100 text-slate-600",
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
   agronomy: "Nông học",

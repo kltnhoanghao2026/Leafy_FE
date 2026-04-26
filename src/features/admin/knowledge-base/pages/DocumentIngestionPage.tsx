@@ -342,7 +342,7 @@ export function DocumentIngestionPage() {
                       <div className="w-8 h-8 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
                     </div>
                   ) : (
-                    <IngestionTasksList tasks={tasks || []} />
+                    <IngestionTasksList tasks={tasks || []} isLoading={isTasksLoading} />
                   )}
                 </div>
               )}
