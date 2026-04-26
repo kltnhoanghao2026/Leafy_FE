@@ -136,6 +136,21 @@ describe("PlantEventsCalendarPage", () => {
     );
   });
 
+  it("blocks event update when note is empty", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<PlantEventsCalendarPage />, {
+      route: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
+    });
+
+    expect((await screen.findAllByText(/Kiểm tra lá|Kiá»ƒm tra lÃ¡/)).length).toBeGreaterThan(0);
+    await user.click(screen.getByRole("button", { name: /Chỉnh sửa event|Chá»‰nh sá»­a event/ }));
+    await user.clear(screen.getByDisplayValue(/Kiểm tra lá|Kiá»ƒm tra lÃ¡/));
+    await user.click(screen.getByRole("button", { name: /Lưu thay đổi|LÆ°u thay Ä‘á»•i|LÃ†Â°u thay Ã„â€˜Ã¡Â»â€¢i/ }));
+
+    expect(await screen.findByText("Vui lòng nhập tiêu đề/note cho lịch chăm sóc.")).toBeInTheDocument();
+    expect(apiMocks.updatePlantEvent).not.toHaveBeenCalled();
+  });
+
   it("renders empty state", async () => {
     apiMocks.getPlantEventsCalendar.mockResolvedValueOnce([]);
     renderWithClient(<PlantEventsCalendarPage />, {

@@ -5,6 +5,13 @@ import type {
 } from "../../plant-management/types";
 import type { RagTreatmentPlan } from "../types";
 import { getPlanTitle } from "./ragResponse";
+import {
+  addLocalDays,
+  daysBetweenDateOnly,
+  getTodayDateOnly,
+  isValidDateOnly,
+  toLocalDateOnly,
+} from "../../plant-management/utils/dateOnly";
 
 export interface ReviewScheduleItem {
   id: string;
@@ -55,29 +62,13 @@ const toStringArray = (value: unknown): string[] | undefined => {
   return result.length ? result : undefined;
 };
 
-const addDays = (isoDate: string, days: number) => {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  if (!year || !month || !day) return isoDate;
-  const date = new Date(Date.UTC(year, month - 1, day + days));
-  return date.toISOString().slice(0, 10);
-};
-
-const daysBetween = (startDate: string, targetDate: string) => {
-  const start = new Date(`${startDate}T00:00:00Z`);
-  const target = new Date(`${targetDate}T00:00:00Z`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(target.getTime())) return 0;
-  return Math.max(
-    0,
-    Math.round((target.getTime() - start.getTime()) / 86_400_000),
-  );
-};
-
 const normalizeDate = (value: unknown, startDate: string) => {
   const raw = toString(value);
   if (!raw) return startDate;
+  if (isValidDateOnly(raw)) return raw;
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) return startDate;
-  return parsed.toISOString().slice(0, 10);
+  return toLocalDateOnly(parsed);
 };
 
 const normalizeEventType = (value: unknown): PlantEventType => {
@@ -119,7 +110,7 @@ const getScheduleCandidates = (plan: RagTreatmentPlan): unknown[] => {
   return [];
 };
 
-export const getTodayDate = () => new Date().toISOString().slice(0, 10);
+export const getTodayDate = getTodayDateOnly;
 
 export const buildInitialTreatmentPlanFormValues = (
   plan: RagTreatmentPlan,
@@ -165,11 +156,11 @@ export const mapRagPlanToReviewSchedule = (
     const scheduledDate =
       normalizeDate(
         record.scheduledDate ??
-          record.scheduled_at ??
+        record.scheduled_at ??
           record.date ??
           record.calculatedStartDate,
-        addDays(startDate, dayOffset),
-      ) || addDays(startDate, dayOffset);
+        addLocalDays(startDate, dayOffset),
+      ) || addLocalDays(startDate, dayOffset);
     const note =
       toString(record.note) ||
       toString(record.title) ||
@@ -210,11 +201,11 @@ export const buildCreateTreatmentPlanRequest = (
       eventType: item.eventType,
       note: item.note.trim() || "Lịch điều trị",
       description: item.description.trim() || undefined,
-      daysFromNow: daysBetween(values.startDate, item.scheduledDate),
+      daysFromNow: daysBetweenDateOnly(values.startDate, item.scheduledDate),
       durationDays: item.durationDays,
       isPlanned: true,
       calculatedStartDate: item.scheduledDate,
-      calculatedEndDate: addDays(
+      calculatedEndDate: addLocalDays(
         item.scheduledDate,
         Math.max(0, item.durationDays - 1),
       ),

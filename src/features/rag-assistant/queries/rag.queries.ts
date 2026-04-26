@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ragApi } from "../api/rag.api";
 import type { RagChatRequest } from "../types";
 import { ragAssistantKeys } from "./keys";
@@ -10,10 +10,20 @@ export const useRagHealth = () =>
     staleTime: 60_000,
   });
 
-export const useSendRagChatMutation = () =>
-  useMutation({
+export const useSendRagChatMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
     mutationFn: (payload: RagChatRequest) => ragApi.sendRagChat(payload),
+    onSuccess: async (result) => {
+      if (result.treatmentPlan || result.treatment_plan || result.plan) {
+        await queryClient.invalidateQueries({
+          queryKey: [...ragAssistantKeys.all, "treatment-plans"],
+        });
+      }
+    },
   });
+};
 
 export const useRagTreatmentPlans = (
   params: { page?: number; size?: number } = {},

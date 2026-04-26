@@ -9,6 +9,7 @@ import type {
   PlantResponse,
   TreatmentPlanResponse,
 } from "../../plant-management/types";
+import { isValidDateOnly } from "../../plant-management/utils/dateOnly";
 import { useMyProfile } from "../../settings/queries";
 import type { DiseaseDiagnosisChatContext, RagTreatmentPlan } from "../types";
 import { getPlanTitle } from "../utils/ragResponse";
@@ -109,11 +110,20 @@ export function CreateTreatmentPlanFromRagDialog({
   }, [selectedPlant]);
 
   const activeSchedule = values.schedule.filter((item) => item.enabled);
+  const activeScheduleIsValid =
+    activeSchedule.length > 0 &&
+    activeSchedule.every(
+      (item) =>
+        item.note.trim() &&
+        item.eventType &&
+        isValidDateOnly(item.scheduledDate) &&
+        item.durationDays >= 0,
+    );
   const canSubmit =
     Boolean(values.diseaseName.trim()) &&
+    isValidDateOnly(values.startDate) &&
     Boolean(values.farmPlotId || values.plantId) &&
-    activeSchedule.length > 0 &&
-    activeSchedule.every((item) => item.note.trim() && item.eventType) &&
+    activeScheduleIsValid &&
     !createMutation.isPending;
 
   const handlePlantChange = (plantId: string) => {
@@ -147,12 +157,28 @@ export function CreateTreatmentPlanFromRagDialog({
       setError("Vui lòng chọn cây trồng hoặc vườn áp dụng kế hoạch.");
       return;
     }
+    if (!isValidDateOnly(values.startDate)) {
+      setError("Ngày bắt đầu không hợp lệ. Vui lòng chọn lại ngày.");
+      return;
+    }
     if (!activeSchedule.length) {
       setError("Kế hoạch AI chưa có lịch. Vui lòng thêm ít nhất một bước hoặc bật lại một bước.");
       return;
     }
     if (activeSchedule.some((item) => !item.note.trim())) {
       setError("Mỗi bước điều trị cần có tiêu đề/nội dung ngắn.");
+      return;
+    }
+    if (activeSchedule.some((item) => !item.eventType)) {
+      setError("Mỗi bước điều trị cần có loại lịch chăm sóc.");
+      return;
+    }
+    if (activeSchedule.some((item) => !isValidDateOnly(item.scheduledDate))) {
+      setError("Ngày dự kiến của từng bước phải hợp lệ.");
+      return;
+    }
+    if (activeSchedule.some((item) => item.durationDays < 0)) {
+      setError("Số ngày kéo dài của từng bước phải là số không âm.");
       return;
     }
 

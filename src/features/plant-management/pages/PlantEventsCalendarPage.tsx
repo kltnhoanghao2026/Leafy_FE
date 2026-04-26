@@ -11,44 +11,24 @@ import {
 import { PlantEventEditDialog } from "../components/PlantEventEditDialog";
 import { EVENT_TYPE_LABELS, formatDate } from "../components/displayUtils";
 import type { PlantEventResponse } from "../types";
-
-const addDays = (date: Date, days: number) => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next.toISOString().slice(0, 10);
-};
-
-const toDateOnly = (date: Date) => {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const startOfWeek = (date: Date) => {
-  const next = new Date(date);
-  const day = next.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  next.setDate(next.getDate() + diff);
-  return next;
-};
-
-const parseDateOnly = (value: string) => {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, (month ?? 1) - 1, day ?? 1);
-};
+import {
+  addLocalDays,
+  parseLocalDateOnly,
+  startOfLocalWeek,
+  toLocalDateOnly,
+} from "../utils/dateOnly";
 
 const today = new Date();
-const initialWeekStart = startOfWeek(today);
+const initialWeekStart = startOfLocalWeek(today);
 
 export function PlantEventsCalendarPage() {
   const location = useLocation();
   const routeFilters = (location.state as {
     filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string };
   } | null)?.filters;
-  const [weekStart, setWeekStart] = useState(toDateOnly(initialWeekStart));
-  const [startDate, setStartDate] = useState(toDateOnly(initialWeekStart));
-  const [endDate, setEndDate] = useState(addDays(initialWeekStart, 6));
+  const [weekStart, setWeekStart] = useState(toLocalDateOnly(initialWeekStart));
+  const [startDate, setStartDate] = useState(toLocalDateOnly(initialWeekStart));
+  const [endDate, setEndDate] = useState(addLocalDays(initialWeekStart, 6));
   const [farmPlotId, setFarmPlotId] = useState(routeFilters?.farmPlotId ?? "");
   const [farmZoneId, setFarmZoneId] = useState(routeFilters?.farmZoneId ?? "");
   const [plantId, setPlantId] = useState(routeFilters?.plantId ?? "");
@@ -92,9 +72,9 @@ export function PlantEventsCalendarPage() {
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [events]);
   const weekDays = useMemo(() => {
-    const base = parseDateOnly(weekStart);
+    const base = parseLocalDateOnly(weekStart) ?? new Date();
     return Array.from({ length: 7 }, (_, index) => {
-      const date = addDays(base, index);
+      const date = addLocalDays(base, index);
       return {
         date,
         label: formatDate(date),
@@ -112,17 +92,18 @@ export function PlantEventsCalendarPage() {
   }, [events]);
 
   const moveWeek = (offset: number) => {
-    const nextWeekStart = addDays(parseDateOnly(weekStart), offset * 7);
+    const currentWeekStart = parseLocalDateOnly(weekStart) ?? new Date();
+    const nextWeekStart = addLocalDays(currentWeekStart, offset * 7);
     setWeekStart(nextWeekStart);
     setStartDate(nextWeekStart);
-    setEndDate(addDays(parseDateOnly(nextWeekStart), 6));
+    setEndDate(addLocalDays(nextWeekStart, 6));
   };
 
   const resetToCurrentWeek = () => {
-    const currentWeekStart = toDateOnly(startOfWeek(new Date()));
+    const currentWeekStart = toLocalDateOnly(startOfLocalWeek(new Date()));
     setWeekStart(currentWeekStart);
     setStartDate(currentWeekStart);
-    setEndDate(addDays(parseDateOnly(currentWeekStart), 6));
+    setEndDate(addLocalDays(currentWeekStart, 6));
   };
 
   return (
@@ -148,7 +129,8 @@ export function PlantEventsCalendarPage() {
               value={startDate}
               onChange={(event) => {
                 setStartDate(event.target.value);
-                setWeekStart(toDateOnly(startOfWeek(parseDateOnly(event.target.value))));
+                const selectedDate = parseLocalDateOnly(event.target.value) ?? new Date();
+                setWeekStart(toLocalDateOnly(startOfLocalWeek(selectedDate)));
               }}
               className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
             />

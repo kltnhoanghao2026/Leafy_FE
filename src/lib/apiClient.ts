@@ -19,6 +19,8 @@ const apiClient = axios.create({
 // ---------------------------------------------------------------------------
 
 apiClient.interceptors.request.use((config) => {
+  if (!import.meta.env.DEV) return config;
+
   const { method, url, params, data } = config;
   console.groupCollapsed(
     `%c⬆ ${method?.toUpperCase()} ${url}`,
@@ -33,6 +35,8 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => {
+    if (!import.meta.env.DEV) return response;
+
     const { status, config, data } = response;
     console.groupCollapsed(
       `%c⬇ ${status} ${config.method?.toUpperCase()} ${config.url}`,
@@ -43,6 +47,8 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError) => {
+    if (!import.meta.env.DEV) return Promise.reject(error);
+
     const { response, config } = error;
     console.groupCollapsed(
       `%c✖ ${response?.status ?? "ERR"} ${config?.method?.toUpperCase()} ${config?.url}`,

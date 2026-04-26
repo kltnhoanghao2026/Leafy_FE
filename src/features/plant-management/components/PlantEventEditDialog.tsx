@@ -6,6 +6,7 @@ import type {
   PlantEventUpdateRequest,
 } from "../types";
 import { EVENT_TYPE_LABELS } from "./displayUtils";
+import { compareDateOnly, isValidDateOnly } from "../utils/dateOnly";
 
 interface PlantEventEditDialogProps {
   event: PlantEventResponse;
@@ -49,22 +50,63 @@ export function PlantEventEditDialog({
     planned: event.planned,
     showAdvanced: false,
   });
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const optionalNumber = (value: string) => {
+  const parseOptionalNumber = (value: string, label: string) => {
     if (!value.trim()) return undefined;
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : undefined;
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      throw new Error(`${label} phải là số không âm.`);
+    }
+    return parsed;
   };
 
   const submit = () => {
+    setValidationError(null);
+
+    if (!form.eventType) {
+      setValidationError("Vui lòng chọn loại lịch chăm sóc.");
+      return;
+    }
+    if (!form.note.trim()) {
+      setValidationError("Vui lòng nhập tiêu đề/note cho lịch chăm sóc.");
+      return;
+    }
+    if (form.calculatedStartDate && !isValidDateOnly(form.calculatedStartDate)) {
+      setValidationError("Ngày bắt đầu không hợp lệ.");
+      return;
+    }
+    if (form.calculatedEndDate && !isValidDateOnly(form.calculatedEndDate)) {
+      setValidationError("Ngày kết thúc không hợp lệ.");
+      return;
+    }
+    if (
+      form.calculatedStartDate &&
+      form.calculatedEndDate &&
+      compareDateOnly(form.calculatedEndDate, form.calculatedStartDate) < 0
+    ) {
+      setValidationError("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.");
+      return;
+    }
+
+    let durationDays: number | undefined;
+    let phiDays: number | undefined;
+    try {
+      durationDays = parseOptionalNumber(form.durationDays, "Số ngày kéo dài");
+      phiDays = parseOptionalNumber(form.phiDays, "PHI days");
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "Trường số không hợp lệ.");
+      return;
+    }
+
     onSubmit({
       eventType: form.eventType,
-      note: form.note.trim() || undefined,
+      note: form.note.trim(),
       description: form.description.trim() || undefined,
       calculatedStartDate: form.calculatedStartDate || undefined,
       calculatedEndDate: form.calculatedEndDate || undefined,
-      durationDays: optionalNumber(form.durationDays),
-      phiDays: optionalNumber(form.phiDays),
+      durationDays,
+      phiDays,
       ppeRequired: form.ppeRequired.trim() || undefined,
       mrlNote: form.mrlNote.trim() || undefined,
       estimatedCost: form.estimatedCost.trim() || undefined,
@@ -289,6 +331,12 @@ export function PlantEventEditDialog({
                 className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
               />
             </label>
+          </div>
+        ) : null}
+
+        {validationError ? (
+          <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+            {validationError}
           </div>
         ) : null}
 

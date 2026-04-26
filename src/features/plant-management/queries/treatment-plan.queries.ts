@@ -57,6 +57,9 @@ const invalidatePlanCaches = async (
     queryClient.invalidateQueries({
       queryKey: plantManagementKeys.treatmentPlansRoot(),
     }),
+    queryClient.invalidateQueries({
+      queryKey: [...plantManagementKeys.all(), "plant-events"],
+    }),
     plan?.id
       ? queryClient.invalidateQueries({
           queryKey: plantManagementKeys.treatmentPlan(plan.id),
@@ -85,6 +88,11 @@ const invalidatePlanCaches = async (
     plan?.plantId
       ? queryClient.invalidateQueries({
           queryKey: plantManagementKeys.plannedPlantEvents(plan.plantId),
+        })
+      : Promise.resolve(),
+    plan?.id
+      ? queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plantEventsByPlan(plan.id),
         })
       : Promise.resolve(),
   ]);
@@ -131,9 +139,14 @@ export const useDeleteTreatmentPlanMutation = () => {
   return useMutation({
     mutationFn: (planId: string) => treatmentPlanApi.deleteTreatmentPlan(planId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: plantManagementKeys.treatmentPlansRoot(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.treatmentPlansRoot(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
     },
     meta: {
       successMessage: "Đã xóa kế hoạch điều trị.",
