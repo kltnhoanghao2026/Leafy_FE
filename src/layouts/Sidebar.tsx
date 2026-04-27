@@ -12,6 +12,7 @@ import {
   Users,
   Settings,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
 import { useLogout } from "../features/auth/hooks/useLogout";
@@ -42,6 +43,7 @@ export function Sidebar() {
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
     { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, icon: Cpu },
     { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
+    { name: "Nhắn tin", path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];

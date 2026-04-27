@@ -19,6 +19,7 @@ import { DiseasePredictionPage } from "./features/disease-detection";
 import { CommunityView } from "./features/community/pages/CommunityView";
 import { ExpertsPage } from "./features/profiles/pages/ExpertsPage";
 import { PendingRequestsPage } from "./features/profiles/pages/PendingRequestsPage";
+import { ChatPage } from "./features/chat";
 import { SettingsView } from "./features/settings/pages/SettingsView";
 import { AdminOverviewPage } from "./features/admin/overview";
 import { UserManagementPage } from "./features/admin/users";
@@ -96,6 +97,7 @@ function App() {
               <Route path="community" element={<CommunityView />} />
               <Route path="experts" element={<ExpertsPage />} />
               <Route path="pending-requests" element={<PendingRequestsPage />} />
+              <Route path="chat" element={<ChatPage />} />
               <Route path="settings" element={<SettingsView />} />
             </Route>
           </Route>

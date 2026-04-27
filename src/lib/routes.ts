@@ -38,6 +38,7 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     REPORTS: "/dashboard/reports",
     COMMUNITY: "/dashboard/community",
+    CHAT: "/dashboard/chat",
     SETTINGS: "/dashboard/settings",
   },
 
@@ -324,8 +325,8 @@ export const API_ENDPOINTS = {
     CONVERSATIONS: "/conversations",
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>
-      `/messages/conversation/${conversationId}`,
-    SEND: "/messages",
+      `/conversations/${conversationId}/messages`,
+    SEND: (conversationId: string) => `/conversations/${conversationId}/messages`,
   },
 
   ADMIN: {
