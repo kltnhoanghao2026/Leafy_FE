@@ -89,6 +89,7 @@ export interface SendMessageRequest {
 
 export interface CreateGroupRequest {
   name: string;
+  avatar?: string;
   memberIds: string[];
 }
 
@@ -157,13 +158,9 @@ export const chatApi = {
     return response.data.data!;
   },
 
-  updateGroupAvatar: async (conversationId: string, file: File): Promise<ConversationResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
+  updateGroupAvatar: async (conversationId: string, avatarUrl: string): Promise<ConversationResponse> => {
     const response = await apiClient.patch<ApiEnvelope<ConversationResponse>>(
-      `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}/avatar`,
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
+      `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}/avatar?avatarUrl=${encodeURIComponent(avatarUrl)}`
     );
     return response.data.data!;
   },

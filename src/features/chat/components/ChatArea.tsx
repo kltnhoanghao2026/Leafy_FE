@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api/chatApi';
 import type { ConversationResponse, MessageResponse } from '../api/chatApi';
+import { Avatar } from '../../../components/ui/Avatar';
+import { Send, Paperclip, Image as ImageIcon, Smile, Mic } from 'lucide-react';
 
 interface ChatAreaProps {
   conversation: ConversationResponse | null;
@@ -43,7 +45,6 @@ interface BubbleProps {
 
 function MessageBubble({ msg, isMe, isFirstInGroup, showSenderInfo }: BubbleProps) {
   const ts = msg.timestamp || msg.createdAt || '';
-  const fallbackAvatar = `https://i.pravatar.cc/150?u=${msg.senderId}`;
 
   return (
     <div className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${!isFirstInGroup ? 'mt-0.5' : 'mt-4'}`}>
@@ -51,10 +52,10 @@ function MessageBubble({ msg, isMe, isFirstInGroup, showSenderInfo }: BubbleProp
       {!isMe && (
         <div className="w-8 shrink-0 mr-2 self-end">
           {isFirstInGroup ? (
-            <img
-              src={msg.senderAvatar || fallbackAvatar}
-              alt=""
-              className="w-8 h-8 rounded-full object-cover border border-gray-200"
+            <Avatar
+              src={msg.senderAvatar}
+              name={msg.senderName}
+              className="!w-8 !h-8 text-[10px] border border-gray-200"
             />
           ) : null}
         </div>
@@ -90,7 +91,22 @@ function MessageBubble({ msg, isMe, isFirstInGroup, showSenderInfo }: BubbleProp
 export function ChatArea({ conversation, currentUserId, onToggleInfo, isInfoOpen }: ChatAreaProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
+    }
+  };
+
+  useEffect(() => {
+    if (input === '' && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [input]);
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['chat-messages', conversation?.id],
@@ -131,7 +147,6 @@ export function ChatArea({ conversation, currentUserId, onToggleInfo, isInfoOpen
 
   const { name, avatar, isGroup, isDisbanded, members } = conversation;
   const memberCount = members?.length ?? 0;
-  const fallbackAvatar = `https://i.pravatar.cc/150?u=${isGroup ? conversation.id : conversation.recipientId}`;
 
   // Display status subtitle
   const subtitle = isDisbanded
@@ -150,10 +165,11 @@ export function ChatArea({ conversation, currentUserId, onToggleInfo, isInfoOpen
       {/* ── Header ── */}
       <div className="px-4 py-3 border-b border-gray-100 bg-white/80 backdrop-blur-md flex items-center gap-3 shrink-0 z-10 sticky top-0">
         <div className="relative">
-          <img
-            src={avatar || fallbackAvatar}
-            alt={name}
-            className="w-10 h-10 rounded-full object-cover border border-gray-200"
+          <Avatar
+            src={avatar}
+            name={name}
+            size="lg"
+            className="border border-gray-200"
           />
           {isGroup && (
             <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-600 rounded-full flex items-center justify-center border border-white">
@@ -225,12 +241,24 @@ export function ChatArea({ conversation, currentUserId, onToggleInfo, isInfoOpen
       </div>
 
       {/* ── Input ── */}
-      <div className={`p-4 bg-white border-t border-gray-100 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)] z-10 ${isDisbanded ? 'pointer-events-none opacity-50' : ''}`}>
-        <form onSubmit={handleSend} className="flex gap-3 items-end max-w-4xl mx-auto">
-          <div className="flex-1 relative">
+      <div className={`p-4 bg-white border-t border-gray-100 shrink-0 z-10 ${isDisbanded ? 'pointer-events-none opacity-50' : ''}`}>
+        <form onSubmit={handleSend} className="flex gap-2 items-end max-w-4xl mx-auto w-full">
+          {/* Quick Actions (outside input) */}
+          <div className="flex gap-1 pb-1 shrink-0">
+            <button type="button" className="p-2.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-all">
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <button type="button" className="p-2.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-all hidden sm:block">
+              <ImageIcon className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Input Area */}
+          <div className="flex-1 relative flex items-end bg-gray-100 rounded-[24px] border border-transparent focus-within:border-green-500 focus-within:bg-white focus-within:shadow-sm transition-all overflow-hidden">
             <textarea
+              ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -240,25 +268,36 @@ export function ChatArea({ conversation, currentUserId, onToggleInfo, isInfoOpen
               placeholder={isDisbanded ? 'Nhóm đã giải tán' : 'Nhập tin nhắn...'}
               disabled={isDisbanded}
               rows={1}
-              className="w-full rounded-2xl border-gray-200 bg-gray-50 px-4 py-3 pr-12 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 text-[15px] resize-none max-h-32 custom-scrollbar transition-all"
+              className="w-full bg-transparent px-4 py-3 min-h-[46px] max-h-32 focus:outline-none text-[15px] resize-none custom-scrollbar"
             />
-            <div className="absolute right-3 bottom-3 flex items-center">
-              <button type="button" className="text-gray-400 hover:text-green-600 transition-colors">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            
+            <div className="flex items-center pr-2 pb-1.5 shrink-0">
+              <button type="button" className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-all">
+                <Smile className="w-5 h-5" />
               </button>
             </div>
           </div>
-          <button
-            type="submit"
-            disabled={!input.trim() || sendMutation.isPending || isDisbanded}
-            className="bg-green-600 text-white rounded-full p-3 flex items-center justify-center hover:bg-green-700 disabled:opacity-50 disabled:hover:bg-green-600 transition-all hover:shadow-md active:scale-95 shrink-0 mb-1"
-          >
-            <svg className="w-5 h-5 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-          </button>
+
+          {/* Send / Mic button */}
+          <div className="pb-1 shrink-0 ml-1">
+            {input.trim() ? (
+              <button
+                type="submit"
+                disabled={sendMutation.isPending || isDisbanded}
+                className="bg-green-600 text-white rounded-full p-2.5 flex items-center justify-center hover:bg-green-700 transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+              >
+                <Send className="w-5 h-5 ml-0.5" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isDisbanded}
+                className="bg-gray-100 text-gray-500 rounded-full p-2.5 flex items-center justify-center hover:bg-gray-200 hover:text-gray-700 transition-all"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>

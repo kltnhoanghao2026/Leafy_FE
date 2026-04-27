@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
+import { fileApi } from '../../../lib/api/fileApi';
 import { chatApi } from '../api/chatApi';
 
 interface Profile {
@@ -23,6 +24,9 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
   const [groupName, setGroupName] = useState('');
   const [memberSearch, setMemberSearch] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<Profile[]>([]);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Search via PROFILES.SEARCH (same as DM modal)
   const { data: searchResults = [], isLoading: memberLoading } = useQuery({
@@ -38,11 +42,23 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
   });
 
   const createGroupMutation = useMutation({
-    mutationFn: () =>
-      chatApi.createGroup({
+    mutationFn: async () => {
+      let avatarUrl: string | undefined;
+      if (avatarFile) {
+        setIsUploadingAvatar(true);
+        try {
+          const res = await fileApi.uploadFileDirectToS3(avatarFile);
+          avatarUrl = res.s3Key;
+        } finally {
+          setIsUploadingAvatar(false);
+        }
+      }
+      return chatApi.createGroup({
         name: groupName.trim(),
+        avatar: avatarUrl,
         memberIds: selectedMembers.map((m) => m.userId),
-      }),
+      });
+    },
     onSuccess: (conv) => {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       onGroupCreated(conv.id);
@@ -64,6 +80,9 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
     setGroupName('');
     setMemberSearch('');
     setSelectedMembers([]);
+    setAvatarFile(null);
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    setAvatarPreview(null);
     onClose();
   };
 
@@ -85,19 +104,54 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
           </button>
         </div>
 
-        {/* Group name */}
+        {/* Group name and Avatar */}
         <div className="px-5 pt-4 pb-3 border-b border-gray-100 shrink-0">
-          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tên nhóm</label>
-          <input
-            type="text"
-            placeholder="VD: Nhóm Nông nghiệp xanh..."
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            maxLength={50}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 text-sm transition-all"
-            autoFocus
-          />
-          <p className="text-xs text-gray-400 mt-1.5">Tối thiểu 2 ký tự. Cần chọn ít nhất 2 thành viên.</p>
+          <div className="flex gap-4 items-center">
+            <div className="relative shrink-0">
+              <label className="cursor-pointer group block">
+                <div className="w-16 h-16 rounded-full overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center relative">
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Group Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center transition-all">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setAvatarFile(file);
+                      setAvatarPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Tên nhóm</label>
+              <input
+                type="text"
+                placeholder="VD: Nhóm Nông nghiệp xanh..."
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                maxLength={50}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-500/20 text-sm transition-all"
+                autoFocus
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">Tối thiểu 2 ký tự. Cần chọn ít nhất 2 thành viên.</p>
         </div>
 
         {/* Selected chips */}
@@ -187,11 +241,11 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
         {/* Create button */}
         <div className="p-4 border-t border-gray-100 shrink-0">
           <button
-            disabled={!canCreate || createGroupMutation.isPending}
+            disabled={!canCreate || createGroupMutation.isPending || isUploadingAvatar}
             onClick={() => createGroupMutation.mutate()}
             className="w-full py-3 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:hover:bg-green-600 transition-all flex items-center justify-center gap-2"
           >
-            {createGroupMutation.isPending ? (
+            {createGroupMutation.isPending || isUploadingAvatar ? (
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
             ) : (
               <>

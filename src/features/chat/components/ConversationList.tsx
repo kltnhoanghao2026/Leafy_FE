@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api/chatApi';
 import type { ConversationResponse } from '../api/chatApi';
+import { Avatar } from '../../../components/ui/Avatar';
 
 interface ConversationListProps {
   conversations: ConversationResponse[];
@@ -127,7 +128,6 @@ export function ConversationList({ conversations, activeId, onSelect, onNewChat,
               const isSelected = activeId === conv.id;
               const isDisbanded = conv.isDisbanded;
               const memberCount = conv.members?.length ?? 0;
-              const fallbackAvatar = `https://i.pravatar.cc/150?u=${conv.isGroup ? conv.id : conv.recipientId}`;
 
               // Last message preview text
               let lastText = 'Bắt đầu trò chuyện...';
@@ -150,10 +150,11 @@ export function ConversationList({ conversations, activeId, onSelect, onNewChat,
                 >
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                    <img
-                      src={conv.avatar || fallbackAvatar}
-                      alt={conv.name}
-                      className={`w-12 h-12 rounded-full object-cover border-2 transition-colors ${
+                    <Avatar
+                      src={conv.avatar}
+                      name={conv.name}
+                      size="xl"
+                      className={`border-2 transition-colors ${
                         isSelected ? 'border-green-200' : 'border-transparent group-hover:border-gray-200'
                       }`}
                     />

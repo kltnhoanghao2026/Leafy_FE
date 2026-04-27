@@ -177,6 +177,8 @@ export const API_ENDPOINTS = {
   FILES: {
     UPLOAD: "/files/upload",
     PRESIGNED_URL: (fileId: string) => `/files/presigned-url/${fileId}`,
+    PRESIGNED_UPLOAD_URL: "/files/presigned-upload-url",
+    CREATE: "/files",
   },
 
   PREFERENCES: {
@@ -349,6 +351,7 @@ export const API_ENDPOINTS = {
   },
 
   MESSAGES: {
+    ROOT: "/conversations",
     CONVERSATIONS: "/conversations",
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>

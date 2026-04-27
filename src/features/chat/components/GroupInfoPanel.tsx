@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
+import { fileApi } from '../../../lib/api/fileApi';
 import { chatApi } from '../api/chatApi';
 import type { ConversationResponse, ConversationMember } from '../api/chatApi';
+import { Avatar } from '../../../components/ui/Avatar';
 
 interface Profile { id: string; userId: string; fullName: string; avatar: string; role: string; }
 interface GroupInfoPanelProps { conversation: ConversationResponse; currentUserId: string; onClose: () => void; }
@@ -179,7 +181,13 @@ export function GroupInfoPanel({ conversation, currentUserId, onClose }: GroupIn
   const genLink     = useMutation({ mutationFn: () => chatApi.generateJoinLink(conversation.id), onSuccess: (token) => { copyText(`${window.location.origin}/chat/join/${token}`); } });
 
   const updateName  = useMutation({ mutationFn: (name: string) => chatApi.updateGroupName(conversation.id, name), onSuccess: () => { qc.invalidateQueries({ queryKey: ['conversations'] }); setIsEditingName(false); } });
-  const updateAvatar = useMutation({ mutationFn: (file: File) => chatApi.updateGroupAvatar(conversation.id, file), onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }) });
+  const updateAvatar = useMutation({ 
+    mutationFn: async (file: File) => {
+      const res = await fileApi.uploadFileDirectToS3(file);
+      return chatApi.updateGroupAvatar(conversation.id, res.s3Key);
+    }, 
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }) 
+  });
   const updateSettings = useMutation({ mutationFn: (s: Partial<GroupSettings>) => chatApi.updateGroupSettings(conversation.id, s), onSuccess: () => qc.invalidateQueries({ queryKey: ['conversations'] }) });
 
   const copyText = (text: string) => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); };
@@ -374,7 +382,7 @@ export function GroupInfoPanel({ conversation, currentUserId, onClose }: GroupIn
                       onClick={() => !already && !addMember.isPending && addMember.mutate(p.userId)}
                       className={`flex items-center gap-2.5 px-3 py-2 transition-colors ${already ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'}`}
                     >
-                      <img src={p.avatar || `https://i.pravatar.cc/40?u=${p.userId}`} alt={p.fullName} className="w-7 h-7 rounded-full object-cover shrink-0"/>
+                      <Avatar src={p.avatar} name={p.fullName} size="sm" />
                       <span className="flex-1 text-sm font-medium text-gray-800 truncate">{p.fullName}</span>
                       {already ? <span className="text-[10px] text-gray-400 shrink-0">Đã có</span>
                         : <span className="text-[10px] font-semibold text-emerald-600 shrink-0">+ Thêm</span>}
@@ -392,10 +400,11 @@ export function GroupInfoPanel({ conversation, currentUserId, onClose }: GroupIn
               return (
                 <div key={member.userId} className="flex items-center gap-2.5 px-2 py-2 rounded-xl hover:bg-gray-50 transition-colors group">
                   <div className="relative shrink-0">
-                    <img
-                      src={member.avatar || `https://i.pravatar.cc/40?u=${member.userId}`}
-                      alt={member.fullName}
-                      className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm"
+                    <Avatar
+                      src={member.avatar}
+                      name={member.fullName}
+                      size="md"
+                      className="border-2 border-white shadow-sm"
                     />
                     {member.role === 'OWNER' && (
                       <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-amber-400 rounded-full border-2 border-white flex items-center justify-center">
