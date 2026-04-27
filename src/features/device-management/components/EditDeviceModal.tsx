@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
 
 interface EditDeviceModalProps {
@@ -10,16 +10,10 @@ interface EditDeviceModalProps {
 }
 
 export function EditDeviceModal({ isOpen, onClose, onEdit, device, zones }: EditDeviceModalProps) {
-  const [formData, setFormData] = useState({ name: '', zone: '' })
-
-  useEffect(() => {
-    if (device) {
-      setFormData({
-        name: device.name || '',
-        zone: device.zone || zones[0]?.id || ''
-      })
-    }
-  }, [device, zones])
+  const [formData, setFormData] = useState(() => ({
+    name: device?.name || '',
+    zone: device?.zone || zones[0]?.id || ''
+  }))
 
   if (!isOpen || !device) return null
 

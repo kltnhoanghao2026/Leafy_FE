@@ -22,6 +22,7 @@ export const ROUTES = {
   // Main app routes (JWT required)
   DASHBOARD: {
     ROOT: "/dashboard",
+    AGRICULTURE_OVERVIEW: "/dashboard/agriculture-overview",
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
@@ -29,14 +30,21 @@ export const ROUTES = {
     RAG_PANEL: "/dashboard/rag-panel",
     RAG_TREATMENT_PLAN: (planId: string) =>
       `/dashboard/rag-panel/treatment-plans/${planId}`,
-    MONITOR: "/dashboard/monitor",
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
-    EXPERTS: "/dashboard/experts",
     PENDING_REQUESTS: "/dashboard/pending-requests",
     DEVICES: "/dashboard/devices",
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
-    REPORTS: "/dashboard/reports",
+    PLANTS: "/dashboard/plants",
+    PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
+    TREATMENT_PLANS: "/dashboard/treatment-plans",
+    TREATMENT_PLAN_DETAIL: (planId: string) =>
+      `/dashboard/treatment-plans/${planId}`,
+    PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
+    DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
+    DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
+    AI_ASSISTANT: "/dashboard/ai-assistant",
+    RAG_TREATMENT_PLANS: "/dashboard/ai-assistant/treatment-plans",
     COMMUNITY: "/dashboard/community",
     CHAT: "/dashboard/chat",
     SETTINGS: "/dashboard/settings",
@@ -173,6 +181,11 @@ export const API_ENDPOINTS = {
     PRESIGNED_URL: (fileId: string) => `/files/presigned-url/${fileId}`,
   },
 
+  PREFERENCES: {
+    ME: "/preferences/me",
+    APPEARANCE: "/preferences/appearance",
+  },
+
   USERS: {
     ME: "/users/me",
     CREATE: "/users",
@@ -264,6 +277,7 @@ export const API_ENDPOINTS = {
   },
 
   RAG: {
+    HEALTH: "/rag/health",
     CHAT: "/rag/v1/chat",
     CHAT_STREAM: "/rag/v1/chat/stream",
     CONVERSATIONS: "/rag/v1/conversations",
@@ -276,22 +290,29 @@ export const API_ENDPOINTS = {
     DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
+    TREATMENT_PLANS: "/rag/v1/treatment-plans/",
+    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
   },
 
   DISEASES: {
     DETECT_LEAF: "/diseases/detect-leaf",
+    DETECT_LEAF_HEALTH: "/diseases/detect-leaf/health",
+    DETECT_LEAF_VISUALIZE: "/diseases/detect-leaf/visualize",
+    DETECT_LEAF_CROP: "/diseases/detect-leaf/crop",
     PREDICT: "/diseases/predict",
+    PREDICT_HEALTH: "/diseases/predict/health",
     PREDICT_TFLITE: "/diseases/predict/tflite",
     DIAGNOSE_REQUESTS: "/diseases/diagnose/requests",
+    DIAGNOSE_REQUEST: (requestId: string) =>
+      `/diseases/diagnose/requests/${requestId}`,
     DIAGNOSE_RESULTS: "/diseases/diagnose/results",
     DIAGNOSE_RESULT_BY_REQUEST: (requestId: string) =>
       `/diseases/diagnose/results/by-request/${requestId}`,
   },
 
-  NOTIFICATIONS: {
-    LIST: "/notifications",
-    MARK_READ: (id: string) => `/notifications/${id}/read`,
-    MARK_ALL_READ: "/notifications/read-all",
+  PUSH_TOKENS: {
+    REGISTER: "/push-tokens",
+    DEACTIVATE: "/push-tokens/deactivate",
   },
 
   IOT: {
@@ -310,11 +331,20 @@ export const API_ENDPOINTS = {
     DEVICE_CONFIG: (deviceId: string) => `/iot/devices/${deviceId}/config`,
     DEVICE_CONFIG_PUSH: (deviceId: string) =>
       `/iot/devices/${deviceId}/config/push`,
+    DEVICE_CAMERA_CAPTURE: (deviceId: string) =>
+      `/iot/devices/${deviceId}/camera/capture`,
+    DEVICE_MEDIA: (deviceId: string) => `/iot/devices/${deviceId}/media`,
+    MEDIA_EVENT: (mediaEventId: string) => `/iot/media-events/${mediaEventId}`,
     DASHBOARD_OVERVIEW: "/iot/dashboard/overview",
     FARM_ZONE_OVERVIEW: (zoneId: string) =>
       `/iot/farm-zones/${zoneId}/overview`,
     FARM_ZONE_CHARTS: (zoneId: string) => `/iot/farm-zones/${zoneId}/charts`,
     ALERT_EVENTS: "/iot/alert-events",
+    ALERT_EVENT: (alertEventId: string) => `/iot/alert-events/${alertEventId}`,
+    ALERT_EVENT_ACKNOWLEDGE: (alertEventId: string) =>
+      `/iot/alert-events/${alertEventId}/acknowledge`,
+    ALERT_EVENT_RESOLVE: (alertEventId: string) =>
+      `/iot/alert-events/${alertEventId}/resolve`,
     ALERT_RULES: "/iot/alert-rules",
     ALERT_RULE: (ruleId: string) => `/iot/alert-rules/${ruleId}`,
     ALERT_RULE_ENABLED: (ruleId: string) =>

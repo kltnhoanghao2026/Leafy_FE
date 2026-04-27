@@ -1,16 +1,18 @@
 import { useState } from "react";
 import {
-  X,
-  Link2,
-  Share2,
-  RotateCcw,
   Check,
+  Link2,
   MessageSquare,
+  RotateCcw,
+  Share2,
+  X,
 } from "lucide-react";
-import { useCommunityStore } from "../../../store/useCommunityStore";
-import type { Post } from "../types";
 import { toast } from "react-hot-toast";
 import { ROUTES } from "../../../lib/routes";
+import { useCreateCommunityPost } from "../queries";
+import type { Post } from "../types";
+import { CommunityAvatar } from "./CommunityAvatar";
+import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface ShareModalProps {
   isOpen: boolean;
@@ -19,89 +21,73 @@ interface ShareModalProps {
 }
 
 export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
-  const { incrementShares, addPost } = useCommunityStore();
+  const sharePost = useCreateCommunityPost();
+  const currentUser = useCommunityCurrentUser();
   const [linkCopied, setLinkCopied] = useState(false);
   const [repostMessage, setRepostMessage] = useState("");
-
-  // Mock share link
   const shareLink = `${window.location.origin}${ROUTES.DASHBOARD.COMMUNITY}?post=${post.id}`;
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(shareLink);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
-    toast.success("Đã sao chép liên kết!");
+    toast.success("Link copied.");
   };
 
-  const handleRepost = () => {
-    // Create a new "shared" post with the full original embedded
-    const newSharedPost: Post = {
-      id: `p${Date.now()}`,
-      author: {
-        id: "currentUser",
-        name: "Lê Văn Tám",
-        avatar: "https://i.pravatar.cc/150?img=11",
-      },
-      timestamp: "Vừa xong",
-      content: repostMessage, // user's own caption (can be empty)
-      likes: 0,
-      comments: 0,
-      commentsList: [],
-      shares: 0,
-      // Embed the full original post as a snapshot
-      sharedPost: {
-        id: post.id,
-        author: post.author,
-        timestamp: post.timestamp,
-        location: post.location,
-        content: post.content,
-        images: post.images,
-        isUrgent: post.isUrgent,
-        likes: post.likes,
-        comments: post.comments,
-        shares: post.shares,
-        commentsList: post.commentsList,
-      },
-    };
-
-    addPost(newSharedPost);
-    incrementShares(post.id);
-    toast.success("Đã chia sẻ bài viết lên trang của bạn!");
-    setRepostMessage("");
-    onClose();
+  const handleRepost = async () => {
+    try {
+      await sharePost.mutateAsync({
+        content: {
+          caption: repostMessage.trim(),
+        },
+        postType: "SHARE",
+        sharedPostId: post.id,
+        originalAuthorId: post.author.id,
+        sharedCaption: {
+          caption: repostMessage.trim(),
+        },
+        rootPostId: post.sharedPost?.id || post.id,
+        media: [],
+        visibility: "ALL",
+      });
+      setRepostMessage("");
+      onClose();
+    } catch {
+      // Mutation error state is rendered below.
+    }
   };
 
-  const handleShareOptions = [
+  const shareOptions = [
     {
       id: "copyLink",
       icon: linkCopied ? Check : Link2,
-      label: linkCopied ? "Đã sao chép!" : "Sao chép liên kết",
+      label: linkCopied ? "Copied" : "Copy link",
       color: linkCopied ? "#10B981" : "#245A34",
       action: handleCopyLink,
     },
     {
       id: "messenger",
       icon: MessageSquare,
-      label: "Nhắn tin cho bạn bè",
+      label: "Send to a friend",
       color: "#245A34",
       action: () => {
-        toast("Tính năng nhắn tin sẽ sớm ra mắt!", { icon: "💬" });
+        toast("Messaging is not available yet.");
         onClose();
       },
     },
     {
       id: "external",
       icon: Share2,
-      label: "Chia sẻ ra ngoài",
+      label: "Share externally",
       color: "#245A34",
       action: () => {
         if (navigator.share) {
-          navigator.share({
-            title: `Bài viết từ ${post.author.name}`,
+          void navigator.share({
+            title: `Post from ${post.author.name}`,
             url: shareLink,
           });
         } else {
-          handleCopyLink();
+          void handleCopyLink();
         }
       },
     },
@@ -111,21 +97,17 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
       <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-md mx-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div className="w-8" />
-          <h2 className="text-[17px] font-bold text-gray-900">
-            Chia sẻ bài viết
-          </h2>
+          <h2 className="text-[17px] font-bold text-gray-900">Share post</h2>
           <button
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
           >
@@ -134,10 +116,10 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
         </div>
 
         <div className="px-6 pt-5 pb-2">
-          {/* Post Preview Snippet */}
           <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-5">
-            <img
-              src={post.author.avatar}
+            <CommunityAvatar
+              source={post.author.avatar}
+              name={post.author.name}
               alt={post.author.name}
               className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
             />
@@ -151,56 +133,62 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
             </div>
           </div>
 
-          {/* Repost Section */}
           <div className="mb-5">
             <div className="flex items-center gap-2 mb-3">
               <RotateCcw className="w-4 h-4 text-[#245A34]" strokeWidth={2.5} />
               <p className="text-[14px] font-bold text-gray-900">
-                Chia sẻ lên trang của bạn
+                Repost to your feed
               </p>
             </div>
             <div className="flex gap-3">
-              <img
-                src="https://i.pravatar.cc/150?img=11"
-                alt="Current User"
+              <CommunityAvatar
+                source={currentUser.avatar}
+                name={currentUser.name}
+                alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
               />
               <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-2xl px-4 py-2.5 focus-within:ring-2 focus-within:ring-[#245A34]/20 focus-within:border-[#245A34] transition-all">
                 <input
                   type="text"
                   value={repostMessage}
-                  onChange={(e) => setRepostMessage(e.target.value)}
-                  placeholder="Thêm một dòng suy nghĩ..."
+                  onChange={(event) => setRepostMessage(event.target.value)}
+                  placeholder="Add a thought..."
                   className="w-full bg-transparent text-[14px] text-gray-900 placeholder:text-slate-400 outline-none"
                 />
               </div>
             </div>
             <button
-              onClick={handleRepost}
-              className="w-full mt-3 py-2.5 bg-[#245A34] text-white text-[14px] font-bold rounded-full hover:bg-green-800 transition-colors"
+              type="button"
+              onClick={() => void handleRepost()}
+              disabled={sharePost.isPending}
+              className="w-full mt-3 py-2.5 bg-[#245A34] text-white text-[14px] font-bold rounded-full hover:bg-green-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Chia sẻ ngay
+              {sharePost.isPending ? "Sharing..." : "Repost"}
             </button>
+            {sharePost.isError ? (
+              <p role="alert" className="mt-2 text-sm font-bold text-red-600">
+                Share could not be posted. Please try again.
+              </p>
+            ) : null}
           </div>
 
-          {/* Divider */}
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-100" />
             </div>
             <div className="relative flex justify-center">
               <span className="bg-white px-3 text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                Hoặc chia sẻ qua
+                Or share via
               </span>
             </div>
           </div>
         </div>
 
-        {/* Quick Share Options */}
         <div className="px-6 pb-6 space-y-2">
-          {handleShareOptions.map((option) => (
+          {shareOptions.map((option) => (
             <button
               key={option.id}
+              type="button"
               onClick={option.action}
               className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-slate-50 transition-colors text-left"
             >
@@ -218,17 +206,17 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
           ))}
         </div>
 
-        {/* Link bar */}
         <div className="mx-6 mb-6 flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-2xl px-4 py-2.5">
           <Link2 className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={2} />
           <p className="text-[12px] text-slate-500 font-medium truncate flex-1">
             {shareLink}
           </p>
           <button
-            onClick={handleCopyLink}
+            type="button"
+            onClick={() => void handleCopyLink()}
             className="text-[12px] font-black text-[#245A34] hover:opacity-70 transition-opacity shrink-0"
           >
-            {linkCopied ? "Copied!" : "COPY"}
+            {linkCopied ? "Copied" : "Copy"}
           </button>
         </div>
       </div>

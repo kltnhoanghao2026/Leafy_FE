@@ -11,15 +11,12 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   const tabs = [
     { name: "Khu vực", path: ROUTES.DASHBOARD.ROOT },
-    { name: "Cảm biến", path: ROUTES.DASHBOARD.DEVICES },
-    { name: "Báo cáo", path: ROUTES.DASHBOARD.REPORTS },
+    { name: "Cảm biến", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING },
   ];
 
   const activeTabName = location.pathname.includes("/devices")
     ? "Cảm biến"
-    : location.pathname.includes("/reports")
-      ? "Báo cáo"
-      : "Khu vực";
+    : "Khu vực";
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
@@ -77,3 +74,4 @@ export function Header({ onMenuClick }: HeaderProps) {
     </header>
   );
 }
+

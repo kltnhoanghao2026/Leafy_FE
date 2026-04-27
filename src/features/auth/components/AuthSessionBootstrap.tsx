@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import axios from "axios";
-import { useMyProfile } from "../../settings/queries";
+import { useFilePreviewUrl, useMyProfile } from "../../settings/queries";
 import { useMyAccount } from "../../settings/queries/useMyAccount";
+import { isFileServiceReference } from "../../../lib/api/fileApi";
 import { useAuthStore } from "../../../store/authStore";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
@@ -54,6 +55,7 @@ export function AuthSessionBootstrap() {
   }, []);
 
   const { data: profile } = useMyProfile(!!accessToken && !isInitializing);
+  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
   const { data: account } = useMyAccount(!!accessToken && !isInitializing);
 
   useEffect(() => {
@@ -75,12 +77,20 @@ export function AuthSessionBootstrap() {
       return;
     }
 
+    const avatar =
+      avatarUrl ||
+      (profile.avatar && !isFileServiceReference(profile.avatar)
+        ? profile.avatar
+        : undefined) ||
+      profile.profilePicture ||
+      undefined;
+
     const nextUser = {
       id: profile.userId,
       name: profile.fullName,
       email: profile.email ?? undefined,
       phone: profile.phoneNumber ?? undefined,
-      avatar: profile.avatar ?? profile.profilePicture ?? undefined,
+      avatar,
     };
 
     const isSameUser =
@@ -93,7 +103,7 @@ export function AuthSessionBootstrap() {
     if (!isSameUser) {
       setUser(nextUser);
     }
-  }, [accessToken, profile, setUser, setAccountRole, user]);
+  }, [accessToken, avatarUrl, profile, setUser, setAccountRole, user]);
 
   useEffect(() => {
     console.log(
