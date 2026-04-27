@@ -26,10 +26,6 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
-    DISEASE_PREDICTION: "/dashboard/disease-prediction",
-    RAG_PANEL: "/dashboard/rag-panel",
-    RAG_TREATMENT_PLAN: (planId: string) =>
-      `/dashboard/rag-panel/treatment-plans/${planId}`,
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
     PENDING_REQUESTS: "/dashboard/pending-requests",
@@ -43,9 +39,11 @@ export const ROUTES = {
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
-    AI_ASSISTANT: "/dashboard/ai-assistant",
-    RAG_TREATMENT_PLANS: "/dashboard/ai-assistant/treatment-plans",
+    RAG_PANEL: "/dashboard/rag-panel",
+    RAG_TREATMENT_PLAN: (planId: string) =>
+      `/dashboard/rag-panel/treatment-plans/${planId}`,
     COMMUNITY: "/dashboard/community",
+    EXPERTS: "/dashboard/experts",
     CHAT: "/dashboard/chat",
     SETTINGS: "/dashboard/settings",
   },
@@ -291,7 +289,6 @@ export const API_ENDPOINTS = {
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
     TREATMENT_PLANS: "/rag/v1/treatment-plans/",
-    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
   },
 
   DISEASES: {

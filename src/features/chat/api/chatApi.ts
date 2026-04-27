@@ -203,11 +203,6 @@ export const chatApi = {
     );
   },
 
-  deleteConversation: async (conversationId: string): Promise<void> => {
-    await apiClient.delete(
-      `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}`
-    );
-  },
 
   pinConversation: async (conversationId: string): Promise<void> => {
     await apiClient.post(

@@ -2,9 +2,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   Search,
-  Bot,
   Activity,
-  ScanSearch,
   Bell,
   BellRing,
   Cpu,
@@ -18,6 +16,7 @@ import {
   Settings,
   LogOut,
   MessageSquare,
+  UserSquare,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
 import { useFilePreviewUrl } from "../features/settings/queries";
@@ -44,15 +43,25 @@ export function Sidebar() {
     profile?.profilePicture ||
     "https://i.pravatar.cc/150?img=11";
 
-  const baseNavItems = [
+  const coreNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Chẩn đoán hình ảnh", path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
-    { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
     { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, icon: Cpu },
+    { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
+  ];
+
+  const agricultureNavItems = [
+    { name: "Tổng quan", path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
+    { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    { name: "Kế hoạch", path: ROUTES.DASHBOARD.TREATMENT_PLANS, icon: ClipboardList },
+    { name: "Lịch chăm sóc", path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
+    { name: "Chẩn đoán", path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: Stethoscope },
+    { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
+  ];
+
+  const utilityNavItems = [
     { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: "Nhắn tin", path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
