@@ -6,33 +6,17 @@ import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "./features/auth/pages/VerifyEmailPage";
 import { DashboardLayout } from "./layouts/DashboardLayout";
-<<<<<<< HEAD
-=======
-import { AdminLayout } from "./layouts/AdminLayout";
-import { DashboardPage } from "./features/metrics-view/pages/DashboardPage";
-import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailMetricsPage";
-import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
-import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
-import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
-import { AlertsPage } from "./features/alerts/pages/AlertsPage";
-import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
-import { CommunityView } from "./features/community/pages/CommunityView";
-import { SettingsView } from "./features/settings/pages/SettingsView";
-import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
-import { UserManagementPage } from "./features/admin/users/UserManagementPage";
-import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
-import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
-import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
+import { AdminRoute } from "./components/AdminRoute";
+import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBootstrap";
+import { Toaster, toast } from "react-hot-toast";
+import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
+import { ROUTES } from "./lib/routes";
 import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
 import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
 import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
-import {
-  PlantDiseaseDBPage,
-  SpeciesPage,
-  PlantsPage,
-  PlantEventsPage,
-} from "./features/admin/plant-disease/PlantDiseaseDBPage";
-import { PlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
+import { PlantEventsPage, PlantsPage, SpeciesPage } from "./features/admin/plant-disease/PlantDiseaseDBPage";
 import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
 import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
 import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
@@ -41,14 +25,12 @@ import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
 import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
 import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
 import DataSyncPage from "./features/admin/sync/DataSyncPage";
->>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
-import { AdminRoute } from "./components/AdminRoute";
-import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBootstrap";
-import { Toaster, toast } from "react-hot-toast";
-import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
-import { ROUTES } from "./lib/routes";
+import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
+import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
+import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
+import { UserManagementPage } from "./features/admin/users/UserManagementPage";
+import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
+import { AdminLayout } from "./layouts/AdminLayout";
 
 const AgricultureOverviewPage = lazy(() =>
   import("./features/plant-management/pages/AgricultureOverviewPage"),

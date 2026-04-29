@@ -8,13 +8,7 @@ export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-<<<<<<< HEAD
     <div className="flex bg-[var(--app-bg)] min-h-screen font-sans transition-colors">
-      <AuthSessionBootstrap />
-
-=======
-    <div className="flex bg-[#F8FAF9] min-h-screen font-sans">
->>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
       {/* Sidebar - Desktop is handled by CSS, Mobile needs state */}
       <Sidebar />
 

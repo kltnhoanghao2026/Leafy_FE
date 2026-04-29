@@ -1,12 +1,8 @@
 import { useEffect } from "react";
-<<<<<<< HEAD
-import { useFilePreviewUrl, useMyProfile } from "../../settings/queries";
-import { isFileServiceReference } from "../../../lib/api/fileApi";
-=======
 import axios from "axios";
-import { useMyProfile } from "../../settings/queries";
+import { useFilePreviewUrl, useMyProfile } from "../../settings/queries";
 import { useMyAccount } from "../../settings/queries/useMyAccount";
->>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
+import { isFileServiceReference } from "../../../lib/api/fileApi";
 import { useAuthStore } from "../../../store/authStore";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
@@ -17,10 +13,6 @@ export function AuthSessionBootstrap() {
   const isInitializing = useAuthStore((state) => state.isInitializing);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-<<<<<<< HEAD
-  const { data: profile } = useMyProfile(!!accessToken);
-  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
-=======
   const setTokens = useAuthStore((state) => state.setTokens);
   const setAccountRole = useAuthStore((state) => state.setAccountRole);
   const setIsInitializing = useAuthStore((state) => state.setIsInitializing);
@@ -63,8 +55,8 @@ export function AuthSessionBootstrap() {
   }, []);
 
   const { data: profile } = useMyProfile(!!accessToken && !isInitializing);
+  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
   const { data: account } = useMyAccount(!!accessToken && !isInitializing);
->>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
 
   useEffect(() => {
     if (!accessToken) {
@@ -111,10 +103,7 @@ export function AuthSessionBootstrap() {
     if (!isSameUser) {
       setUser(nextUser);
     }
-<<<<<<< HEAD
-  }, [accessToken, avatarUrl, profile, setUser, user]);
-=======
-  }, [accessToken, profile, setUser, setAccountRole, user]);
+  }, [accessToken, avatarUrl, profile, setUser, setAccountRole, user]);
 
   useEffect(() => {
     console.log(
@@ -127,7 +116,6 @@ export function AuthSessionBootstrap() {
       setAccountRole(account.role);
     }
   }, [account, setAccountRole]);
->>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
 
   return null;
 }
