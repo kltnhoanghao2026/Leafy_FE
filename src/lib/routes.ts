@@ -67,6 +67,7 @@ export const ROUTES = {
     CERTIFICATES: "/admin/certificates",
     SEEDING: "/admin/seeding",
     SYNC: "/admin/sync",
+    IOT_DEMO_TOOLS: "/admin/iot-demo-tools",
   },
 } as const;
 

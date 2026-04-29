@@ -15,6 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
   [ROUTES.ADMIN.DISEASES]: "Bệnh & Điều trị",
   [ROUTES.ADMIN.PROFILES]: "Quản lý hồ sơ",
   [ROUTES.ADMIN.SEEDING]: "Khởi tạo dữ liệu",
+  [ROUTES.ADMIN.IOT_DEMO_TOOLS]: "Công cụ demo IoT",
 };
 
 function usePageTitle(): string {

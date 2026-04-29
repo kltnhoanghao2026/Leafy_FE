@@ -134,7 +134,6 @@ const bootstrapAuth = () => {
   useAuthStore.setState({
     user: { id: "user-1", name: "Tester" },
     accessToken: "token",
-    refreshToken: "refresh",
     isLoading: false,
     rememberMe: true,
   });

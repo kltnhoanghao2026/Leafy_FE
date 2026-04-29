@@ -17,6 +17,7 @@ import { ContentModerationPage } from "./features/admin/content-moderation/Conte
 import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
 import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
 import { PlantEventsPage, PlantsPage, SpeciesPage } from "./features/admin/plant-disease/PlantDiseaseDBPage";
+import { PlantDetailPage as AdminPlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
 import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
 import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
 import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
@@ -25,6 +26,8 @@ import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
 import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
 import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
 import DataSyncPage from "./features/admin/sync/DataSyncPage";
+import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
+import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
 import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
 import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
 import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
@@ -344,7 +347,7 @@ function App() {
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
-              <Route path="plants/:id" element={<PlantDetailPage />} />
+              <Route path="plants/:id" element={<AdminPlantDetailPage />} />
               <Route path="species" element={<SpeciesPage />} />
               <Route path="species/:id" element={<SpeciesDetailPage />} />
               <Route path="plant-events" element={<PlantEventsPage />} />
@@ -364,6 +367,12 @@ function App() {
               />
               <Route path="seeding" element={<DataSeedingPage />} />
               <Route path="sync" element={<DataSyncPage />} />
+              {isIotDemoToolsEnabled() && (
+                <Route
+                  path="iot-demo-tools"
+                  element={<IotDemoToolsPage />}
+                />
+              )}
             </Route>
           </Route>
 

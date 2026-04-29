@@ -83,7 +83,6 @@ describe("PushNotificationsBootstrap", () => {
         email: "farmer@example.com",
       },
       accessToken: "access-token",
-      refreshToken: "refresh-token",
       isLoading: false,
       rememberMe: false,
     });

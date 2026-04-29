@@ -191,8 +191,8 @@ describe("AlertsPage", () => {
     await screen.findByText("AIR_TEMP exceeded max threshold");
     await screen.findByRole("option", { name: "North Farm" });
     await userEvent.selectOptions(screen.getByLabelText("Farm plot"), farmPlot.id);
-    await userEvent.selectOptions(await screen.findByLabelText("Zone"), zone.id);
-    await userEvent.selectOptions(screen.getByLabelText("Device"), device.id);
+    await userEvent.selectOptions(await screen.findByLabelText("Zone"), zone.id ?? "");
+    await userEvent.selectOptions(screen.getByLabelText("Device"), device.id ?? "");
     await userEvent.selectOptions(screen.getByLabelText("Time range"), "24h");
 
     await waitFor(() => {
