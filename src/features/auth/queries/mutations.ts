@@ -6,7 +6,6 @@ import type {
   InitialRegisterRequest,
   VerifyOtpRequest,
   ResendOtpRequest,
-  RefreshTokenRequest,
   LogoutDeviceRequest,
 } from "../schema/requests";
 
@@ -38,7 +37,7 @@ export const useResendOtpMutation = () =>
 export const useRefreshAccessTokenMutation = () =>
   useMutation({
     mutationKey: authKeys.refreshAccessToken(),
-    mutationFn: (body: RefreshTokenRequest) => authApi.refreshAccessToken(body),
+    mutationFn: () => authApi.refreshAccessToken(),
   });
 
 export const useLogoutMutation = () =>

@@ -6,8 +6,46 @@ import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "./features/auth/pages/VerifyEmailPage";
 import { DashboardLayout } from "./layouts/DashboardLayout";
+<<<<<<< HEAD
+=======
+import { AdminLayout } from "./layouts/AdminLayout";
+import { DashboardPage } from "./features/metrics-view/pages/DashboardPage";
+import { ZoneDetailMetricsPage } from "./features/metrics-view/pages/ZoneDetailMetricsPage";
+import { DeviceManagementPage } from "./features/device-management/pages/DeviceManagementPage";
+import { DeviceDetailPage } from "./features/device-detail/pages/DeviceDetailPage";
+import { DeviceOnboardingPage } from "./features/device-onboarding/pages/DeviceOnboardingPage";
+import { AlertsPage } from "./features/alerts/pages/AlertsPage";
+import { AlertRulesPage } from "./features/alert-rules/pages/AlertRulesPage";
+import { CommunityView } from "./features/community/pages/CommunityView";
+import { SettingsView } from "./features/settings/pages/SettingsView";
+import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
+import { UserManagementPage } from "./features/admin/users/UserManagementPage";
+import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
+import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
+import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
+import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
+import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
+import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
+import {
+  PlantDiseaseDBPage,
+  SpeciesPage,
+  PlantsPage,
+  PlantEventsPage,
+} from "./features/admin/plant-disease/PlantDiseaseDBPage";
+import { PlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
+import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
+import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
+import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
+import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
+import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
+import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
+import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
+import DataSyncPage from "./features/admin/sync/DataSyncPage";
+>>>>>>> 2a564adc68ac47dd66695dca5f97c489ab0f0de2
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
+import { AdminRoute } from "./components/AdminRoute";
+import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBootstrap";
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
@@ -126,6 +164,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        {/* Runs before route guards: attempts silent refresh on page load */}
+        <AuthSessionBootstrap />
         <Routes>
           {/* Guest-only routes */}
           <Route element={<GuestOnlyRoute />}>
@@ -300,6 +340,48 @@ function App() {
                   </Suspense>
                 }
               />
+            </Route>
+          </Route>
+
+          {/* Admin routes */}
+          <Route element={<AdminRoute />}>
+            <Route path={ROUTES.ADMIN.ROOT} element={<AdminLayout />}>
+              <Route
+                index
+                element={<Navigate to={ROUTES.ADMIN.OVERVIEW} replace />}
+              />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="users" element={<UserManagementPage />} />
+              <Route path="farms" element={<FarmOverviewPage />} />
+              <Route path="farms/:plotId" element={<FarmPlotDetailPage />} />
+              <Route
+                path="farms/zones/:zoneId"
+                element={<FarmZoneDetailPage />}
+              />
+              <Route path="content" element={<ContentModerationPage />} />
+              <Route path="health" element={<SystemHealthPage />} />
+              <Route path="analytics" element={<AnalyticsDashboardPage />} />
+              <Route path="plants" element={<PlantsPage />} />
+              <Route path="plants/:id" element={<PlantDetailPage />} />
+              <Route path="species" element={<SpeciesPage />} />
+              <Route path="species/:id" element={<SpeciesDetailPage />} />
+              <Route path="plant-events" element={<PlantEventsPage />} />
+              <Route
+                path="plant-events/:id"
+                element={<PlantEventDetailPage />}
+              />
+              <Route path="diseases" element={<DiseasePage />} />
+              <Route path="profiles" element={<ProfileManagementPage />} />
+              <Route
+                path="profiles/:profileId"
+                element={<ProfileDetailPage />}
+              />
+              <Route
+                path="certificates"
+                element={<CertificateApprovalPage />}
+              />
+              <Route path="seeding" element={<DataSeedingPage />} />
+              <Route path="sync" element={<DataSyncPage />} />
             </Route>
           </Route>
 
