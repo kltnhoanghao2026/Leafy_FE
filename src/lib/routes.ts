@@ -187,6 +187,13 @@ export const API_ENDPOINTS = {
   PREFERENCES: {
     ME: "/preferences/me",
     APPEARANCE: "/preferences/appearance",
+    GENERAL: "/preferences/general",
+    SECURITY: "/preferences/security",
+    PRIVACY: "/preferences/privacy",
+    MESSAGE: "/preferences/message",
+    NOTIFICATION: "/preferences/notification",
+    SYNC: "/preferences/sync",
+    UTILITIES: "/preferences/utilities",
   },
 
   USERS: {

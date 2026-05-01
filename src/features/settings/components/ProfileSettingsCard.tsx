@@ -5,10 +5,12 @@ import { ROUTES } from "../../../lib/routes";
 import { useMyProfile, useFilePreviewUrl } from "../queries";
 import { isFileServiceReference } from "../../../lib/api/fileApi";
 import { ROLE_LABELS } from "../types";
+import { useTranslation } from "../../../i18n/useTranslation";
 
 const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=11";
 
 export function ProfileSettingsCard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { data: profile, isLoading } = useMyProfile();
   const { data: resolvedAvatarUrl } = useFilePreviewUrl(profile?.avatar);
@@ -42,7 +44,7 @@ export function ProfileSettingsCard() {
       className="bg-[var(--app-card)] rounded-[24px] p-5 shadow-sm border border-slate-100 hover:shadow-md hover:border-[#10B981]/20 transition-all duration-200 cursor-pointer group"
       onClick={handleClick}
       role="button"
-      aria-label="Xem trang hồ sơ của bạn"
+      aria-label={t("settings.profile.viewProfile")}
     >
       <div className="flex items-center gap-4">
         {/* Avatar */}
@@ -58,7 +60,7 @@ export function ProfileSettingsCard() {
         {/* Info */}
         <div className="flex-1 min-w-0">
           <p className="text-[15px] font-bold text-slate-800 truncate group-hover:text-[#245A34] transition-colors">
-            {profile?.fullName || "Chưa đặt tên"}
+            {profile?.fullName || t("settings.profile.unnamed")}
           </p>
           <p className="text-[13px] font-semibold text-slate-400 mt-0.5 truncate">
             {roleDisplay}{profile?.specialty ? ` · ${profile.specialty}` : ""}
@@ -76,7 +78,7 @@ export function ProfileSettingsCard() {
       </div>
 
       <p className="mt-3 text-[12px] font-semibold text-[#10B981] flex items-center gap-1 pl-[4.5rem]">
-        <User className="w-3 h-3" /> Xem trang hồ sơ của bạn
+        <User className="w-3 h-3" /> {t("settings.profile.viewProfile")}
       </p>
     </section>
   );

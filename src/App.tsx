@@ -14,6 +14,7 @@ import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBoot
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
+import { I18nProvider } from "./i18n";
 
 import { AdminOverviewPage } from "./features/admin/overview";
 import { UserManagementPage } from "./features/admin/users";
@@ -174,7 +175,8 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <I18nProvider>
+        <BrowserRouter>
         {/* Runs before route guards: attempts silent refresh on page load */}
         <AuthSessionBootstrap />
         <Routes>
@@ -458,7 +460,8 @@ function App() {
             },
           }}
         />
-      </BrowserRouter>
+        </BrowserRouter>
+      </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
