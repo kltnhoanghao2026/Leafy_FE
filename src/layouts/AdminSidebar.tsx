@@ -16,9 +16,11 @@ import {
   RefreshCw,
   CalendarDays,
   MapPinned,
+  RadioTower,
 } from "lucide-react";
 import { useState } from "react";
 import { ROUTES } from "../lib/routes";
+import { isIotDemoToolsEnabled } from "../features/admin/iot-demo/iotDemo.api";
 
 interface AdminSidebarProps {
   collapsed: boolean;
@@ -88,6 +90,15 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
           path: ROUTES.ADMIN.SEEDING,
           icon: Database,
         },
+        ...(isIotDemoToolsEnabled()
+          ? [
+              {
+                name: "IoT Demo Tools",
+                path: ROUTES.ADMIN.IOT_DEMO_TOOLS,
+                icon: RadioTower,
+              },
+            ]
+          : []),
         { name: "Đồng bộ dữ liệu", path: ROUTES.ADMIN.SYNC, icon: RefreshCw },
       ],
     },

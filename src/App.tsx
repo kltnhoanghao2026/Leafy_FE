@@ -13,6 +13,27 @@ import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBoot
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
+import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
+import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
+import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
+import { PlantEventsPage, PlantsPage, SpeciesPage } from "./features/admin/plant-disease/PlantDiseaseDBPage";
+import { PlantDetailPage as AdminPlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
+import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
+import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
+import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
+import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
+import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
+import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
+import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
+import DataSyncPage from "./features/admin/sync/DataSyncPage";
+import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
+import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
+import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
+import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
+import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
+import { UserManagementPage } from "./features/admin/users/UserManagementPage";
+import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
+import { AdminLayout } from "./layouts/AdminLayout";
 
 const AgricultureOverviewPage = lazy(() =>
   import("./features/plant-management/pages/AgricultureOverviewPage"),
@@ -326,7 +347,7 @@ function App() {
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
-              <Route path="plants/:id" element={<PlantDetailPage />} />
+              <Route path="plants/:id" element={<AdminPlantDetailPage />} />
               <Route path="species" element={<SpeciesPage />} />
               <Route path="species/:id" element={<SpeciesDetailPage />} />
               <Route path="plant-events" element={<PlantEventsPage />} />
@@ -346,6 +367,12 @@ function App() {
               />
               <Route path="seeding" element={<DataSeedingPage />} />
               <Route path="sync" element={<DataSyncPage />} />
+              {isIotDemoToolsEnabled() && (
+                <Route
+                  path="iot-demo-tools"
+                  element={<IotDemoToolsPage />}
+                />
+              )}
             </Route>
           </Route>
 

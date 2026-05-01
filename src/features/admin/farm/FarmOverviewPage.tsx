@@ -118,43 +118,6 @@ function useDebounce(value: string, delay = 300) {
   return debounced;
 }
 
-// ---- Pagination -----------------------------------------------------------
-
-function Pagination({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (p: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  return (
-    <div className="flex items-center justify-between px-1">
-      <button
-        onClick={() => onPageChange(Math.max(0, page - 1))}
-        disabled={page === 0}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-      >
-        <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
-        Trước
-      </button>
-      <span className="text-sm text-slate-500 font-medium">
-        Trang {page + 1} / {totalPages}
-      </span>
-      <button
-        onClick={() => onPageChange(Math.min(totalPages - 1, page + 1))}
-        disabled={page >= totalPages - 1}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
-      >
-        Sau
-        <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
-      </button>
-    </div>
-  );
-}
-
 // ---- Zone rows (lazy-loaded per plot) ------------------------------------
 
 function PlotZones({ plotId }: { plotId: string }) {

@@ -85,24 +85,6 @@ function SkeletonRow({ cols }: { cols: number }) {
   );
 }
 
-function EmptyState({ message = "Chưa có dữ liệu" }: { message?: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-      <Leaf className="w-10 h-10 mb-3 opacity-30" strokeWidth={1.5} />
-      <p className="text-sm font-medium">{message}</p>
-    </div>
-  );
-}
-
-function ErrorState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
-      <AlertCircle className="w-8 h-8" />
-      <p className="text-sm font-medium">Không thể tải dữ liệu</p>
-    </div>
-  );
-}
-
 interface FilterGroupProps<T extends string> {
   label: string;
   value: T;
@@ -874,13 +856,6 @@ function PlantsTab() {
 
 type EventTypeFilter = "all" | EventType;
 type PlannedFilter = "all" | "planned" | "immediate";
-
-const EVENT_FILTER_OPTIONS: { value: EventTypeFilter; label: string }[] = [
-  { value: "all", label: "Tất cả" },
-  ...(Object.entries(EVENT_TYPE_LABELS) as [EventType, string][]).map(
-    ([value, label]) => ({ value, label }),
-  ),
-];
 
 type EventCategory = "ROUTINE_CARE" | "HEALTH_MEDICAL" | "GROWTH_LIFECYCLE";
 

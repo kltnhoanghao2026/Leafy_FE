@@ -151,7 +151,7 @@ export function SpeciesDetailPage() {
         <InfoRow
           icon={<Wind className="w-3.5 h-3.5 text-slate-400" />}
           label="Môi trường lý tưởng"
-          value={species.idealEnv ?? "—"}
+          value={species.idealEnv ? JSON.stringify(species.idealEnv) : "—"}
         />
         <InfoRow
           icon={<Tag className="w-3.5 h-3.5 text-slate-400" />}

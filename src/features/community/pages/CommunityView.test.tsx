@@ -156,7 +156,6 @@ beforeEach(() => {
       avatar: "https://example.com/current-user.png",
     },
     accessToken: "access-token",
-    refreshToken: "refresh-token",
     isLoading: false,
     rememberMe: false,
   });

@@ -14,6 +14,7 @@ import {
   resolveFileType,
   formatDate,
 } from "./fileTypeHelpers";
+import type { KnownFileType } from "./fileTypeHelpers";
 import { DocumentViewerModal } from "./DocumentViewerModal";
 import { usePresignedUrl } from "./certificates.queries";
 import { Viewer, Worker, SpecialZoomLevel } from "@react-pdf-viewer/core";
@@ -184,96 +185,6 @@ export function CertificateItem({
 
       {showViewer && hasProof && (
         <DocumentViewerModal cert={cert} onClose={() => setShowViewer(false)} />
-      )}
-    </div>
-  );
-}
-
-/** Resolves the URL (presigned if fileId present, else fallback) then renders the preview. */
-function InlineProofPreview({
-  cert,
-  onExpand,
-}: {
-  cert: CertificateDto;
-  onExpand: () => void;
-}) {
-  const {
-    data: presignedUrl,
-    isLoading,
-    isError,
-  } = usePresignedUrl(cert.proofFileId);
-  const url = presignedUrl ?? cert.proofUrl;
-  const type = (cert.fileType as KnownFileType) ?? "OTHER";
-
-  if (isLoading) {
-    return (
-      <div className="mt-3 h-48 w-full rounded-xl border border-slate-200 bg-slate-100 animate-pulse" />
-    );
-  }
-
-  if ((isError || !url) && !cert.proofUrl) {
-    return (
-      <div className="mt-3 h-20 w-full rounded-xl border border-red-100 bg-red-50 flex items-center justify-center gap-2 text-xs text-red-500">
-        <AlertCircle className="w-4 h-4" strokeWidth={2} />
-        Không thể tải xem trước
-      </div>
-    );
-  }
-
-  const resolvedUrl = url!;
-
-  return (
-    <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50 group">
-      {/* expand button */}
-      <button
-        onClick={onExpand}
-        className="absolute top-2 right-2 z-10 p-1.5 rounded-lg bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/60"
-        title="Xem toàn màn hình"
-      >
-        <Maximize2 className="w-3.5 h-3.5" strokeWidth={2.5} />
-      </button>
-
-      {type === "IMAGE" && (
-        <img
-          src={resolvedUrl}
-          alt="Xem trước bằng chứng"
-          className="w-full max-h-56 object-contain bg-slate-100 cursor-zoom-in"
-          onClick={onExpand}
-        />
-      )}
-
-      {type === "PDF" && (
-        <div className="h-56 overflow-hidden cursor-pointer" onClick={onExpand}>
-          <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
-            <Viewer
-              fileUrl={resolvedUrl}
-              defaultScale={SpecialZoomLevel.PageWidth}
-            />
-          </Worker>
-        </div>
-      )}
-
-      {type === "DOCUMENT" && (
-        <div className="h-56 pointer-events-none">
-          <iframe
-            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resolvedUrl)}`}
-            title="Xem trước tài liệu"
-            className="w-full h-full border-0"
-          />
-          {/* overlay to intercept click and open modal */}
-          <button
-            className="absolute inset-0 w-full h-full cursor-pointer bg-transparent"
-            onClick={onExpand}
-            aria-label="Mở tài liệu"
-          />
-        </div>
-      )}
-
-      {type === "OTHER" && (
-        <div className="h-20 flex items-center justify-center gap-2 text-xs text-slate-400">
-          <FileTypeIcon fileType={cert.fileType} />
-          Không hỗ trợ xem trước loại tệp này
-        </div>
       )}
     </div>
   );

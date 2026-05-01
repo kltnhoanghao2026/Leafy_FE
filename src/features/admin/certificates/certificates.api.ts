@@ -1,6 +1,5 @@
 import type { ApiEnvelope } from "../../../shared/types/api";
 import type {
-  ApprovalRequestDto,
   ApprovalRequestResponse,
   UpdateApprovalStatusPayload,
 } from "../types";
