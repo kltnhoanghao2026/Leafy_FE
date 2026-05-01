@@ -159,9 +159,7 @@ export function ConversationList({ conversations, activeId, onSelect, onNewChat,
                       }`}
                     />
                     {conv.isGroup && <GroupIcon />}
-                    {!conv.isGroup && conv.status === 'ONLINE' && !isDisbanded && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
-                    )}
+
                     {conv.unreadCount > 0 && !isDisbanded && (
                       <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
                         {conv.unreadCount > 99 ? '99+' : conv.unreadCount}

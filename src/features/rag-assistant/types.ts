@@ -19,7 +19,7 @@ export interface RagSource {
   score?: number;
 }
 
-export interface RagTreatmentPlan {
+export interface RagPlan {
   id?: string;
   planId?: string;
   userId?: string;
@@ -52,9 +52,7 @@ export interface RagChatResult {
   documents?: RagSource[];
   sources?: RagSource[];
   web_search_results?: RagSource[];
-  treatment_plan?: RagTreatmentPlan | Record<string, unknown> | null;
-  treatmentPlan?: RagTreatmentPlan | Record<string, unknown> | null;
-  plan?: RagTreatmentPlan | Record<string, unknown> | null;
+  plan?: RagPlan | Record<string, unknown> | null;
   plant_id?: string | null;
   saved_plan_id?: string | null;
 }
@@ -70,7 +68,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
-  treatmentPlan?: RagTreatmentPlan | null;
+  plan?: RagPlan | null;
   sources?: RagSource[];
 }
 

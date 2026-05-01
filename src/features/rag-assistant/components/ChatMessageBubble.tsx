@@ -1,14 +1,14 @@
-import type { ChatMessage, RagTreatmentPlan } from "../types";
-import { TreatmentPlanPreviewCard } from "./TreatmentPlanPreviewCard";
+import { PlanPreviewCard } from './PlanPreviewCard';
+import type { ChatMessage, RagPlan } from "../types";
 
 interface ChatMessageBubbleProps {
   message: ChatMessage;
-  onCreateTreatmentPlan?: (plan: RagTreatmentPlan) => void;
+  onCreatePlan?: (plan: RagPlan) => void;
 }
 
 export function ChatMessageBubble({
   message,
-  onCreateTreatmentPlan,
+  onCreatePlan,
 }: ChatMessageBubbleProps) {
   const isUser = message.role === "user";
 
@@ -24,11 +24,11 @@ export function ChatMessageBubble({
         <p className="whitespace-pre-wrap text-sm font-semibold leading-6">
           {message.content}
         </p>
-        {message.treatmentPlan ? (
+        {message.plan ? (
           <div className="mt-4">
-            <TreatmentPlanPreviewCard
-              plan={message.treatmentPlan}
-              onCreateTreatmentPlan={onCreateTreatmentPlan}
+            <PlanPreviewCard
+              plan={message.plan}
+              onCreatePlan={onCreatePlan}
             />
           </div>
         ) : null}

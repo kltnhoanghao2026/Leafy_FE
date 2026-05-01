@@ -2,7 +2,6 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   Search,
-  Activity,
   Bell,
   BellRing,
   Cpu,
@@ -24,6 +23,7 @@ import { isFileServiceReference } from "../lib/api/fileApi";
 import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
+import { Avatar } from "../components/ui/Avatar";
 
 export function Sidebar() {
   const location = useLocation();
@@ -41,12 +41,11 @@ export function Sidebar() {
       ? profile.avatar
       : null) ||
     profile?.profilePicture ||
-    "https://i.pravatar.cc/150?img=11";
+    undefined;
 
   const coreNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
-    { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
+    { name: "Tìm kiếm", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
     { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
@@ -55,7 +54,7 @@ export function Sidebar() {
   const agricultureNavItems = [
     { name: "Tổng quan", path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
-    { name: "Kế hoạch", path: ROUTES.DASHBOARD.TREATMENT_PLANS, icon: ClipboardList },
+    { name: "Kế hoạch", path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
     { name: "Lịch chăm sóc", path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
     { name: "Chẩn đoán", path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: Stethoscope },
     { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
@@ -146,10 +145,11 @@ export function Sidebar() {
           to={ROUTES.DASHBOARD.SETTINGS}
           className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100"
         >
-          <img
+          <Avatar
             src={avatarSrc}
-            alt={displayName}
-            className="w-10 h-10 rounded-full border border-slate-200 shrink-0 object-cover"
+            name={displayName}
+            size="lg"
+            className="border border-slate-200"
           />
           <div className="ml-3 flex-1 min-w-0">
             <p className="text-xs font-bold text-gray-900 truncate">

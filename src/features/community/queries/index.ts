@@ -3,6 +3,7 @@ export {
   useCommunityComments,
   useCommunityFeed,
   useCommunityReplies,
+  usePostVoters,
 } from "./queries";
 export {
   useCreateCommunityComment,

@@ -83,12 +83,12 @@ export function NewDMModal({ isOpen, onClose, onStartChat }: NewDMModalProps) {
             <div className="space-y-1">
               {profilesRaw.map((profile: Profile) => (
                 <div
-                  key={profile.userId}
-                  onClick={() => { onStartChat(profile.userId); handleClose(); }}
+                  key={profile.id}
+                  onClick={() => { onStartChat(profile.id); handleClose(); }}
                   className="flex items-center p-3 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors group"
                 >
                   <img
-                    src={profile.avatar || `https://i.pravatar.cc/150?u=${profile.userId}`}
+                    src={profile.avatar || `https://i.pravatar.cc/150?u=${profile.id}`}
                     alt={profile.fullName}
                     className="w-12 h-12 rounded-full object-cover border border-gray-200 group-hover:border-green-300 transition-colors"
                   />

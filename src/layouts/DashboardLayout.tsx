@@ -8,7 +8,7 @@ export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex bg-[var(--app-bg)] min-h-screen font-sans transition-colors">
+    <div className="flex bg-[var(--app-bg)] h-screen font-sans transition-colors">
       {/* Sidebar - Desktop is handled by CSS, Mobile needs state */}
       <Sidebar />
 

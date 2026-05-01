@@ -69,7 +69,7 @@ export function NewChatModal({ isOpen, onClose, onStartChat, onGroupCreated }: N
   const createGroupMutation = useMutation({
     mutationFn: () =>
       chatApi.createGroup({
-        groupName: groupName.trim(),
+        name: groupName.trim(),
         memberIds: selectedMembers.map((m) => m.userId),
       }),
     onSuccess: (conv) => {

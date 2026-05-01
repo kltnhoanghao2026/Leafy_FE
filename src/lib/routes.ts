@@ -33,19 +33,21 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
-    TREATMENT_PLANS: "/dashboard/treatment-plans",
-    TREATMENT_PLAN_DETAIL: (planId: string) =>
-      `/dashboard/treatment-plans/${planId}`,
+    PLANS: "/dashboard/plans",
+    PLAN_DETAIL: (planId: string) =>
+      `/dashboard/plans/${planId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
     RAG_PANEL: "/dashboard/rag-panel",
-    RAG_TREATMENT_PLAN: (planId: string) =>
-      `/dashboard/rag-panel/treatment-plans/${planId}`,
+    RAG_PLAN: (planId: string) =>
+      `/dashboard/rag-panel/plans/${planId}`,
     COMMUNITY: "/dashboard/community",
     EXPERTS: "/dashboard/experts",
     CHAT: "/dashboard/chat",
     SETTINGS: "/dashboard/settings",
+    MY_PROFILE: "/dashboard/profile",
+    PROFILE_VIEW: (profileId: string) => `/dashboard/profile/${profileId}`,
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -172,6 +174,7 @@ export const API_ENDPOINTS = {
     DEACTIVATE: (profileId: string) => `/profiles/${profileId}/deactivate`,
     VERIFY: (profileId: string) => `/profiles/${profileId}/verify`,
     DELETE: (profileId: string) => `/profiles/${profileId}`,
+    PUBLIC: (profileId: string) => `/profiles/public/${profileId}`,
   },
 
   FILES: {
@@ -258,22 +261,23 @@ export const API_ENDPOINTS = {
     CALENDAR: "/plant-events/calendar",
   },
 
-  TREATMENT_PLANS: {
-    LIST: "/treatment-plans",
-    CREATE: "/treatment-plans",
-    ITEM: (planId: string) => `/treatment-plans/${planId}`,
-    UPDATE_STATUS: (planId: string) => `/treatment-plans/${planId}/status`,
-    MY: "/treatment-plans/me",
-    BY_PLANT: (plantId: string) => `/treatment-plans/plant/${plantId}`,
+  PLANS: {
+    LIST: "/plans",
+    CREATE: "/plans",
+    ITEM: (planId: string) => `/plans/${planId}`,
+    UPDATE_STATUS: (planId: string) => `/plans/${planId}/status`,
+    MY: "/plans/me",
+    BY_PLANT: (plantId: string) => `/plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
-      `/treatment-plans/farm-plot/${farmPlotId}`,
+      `/plans/farm-plot/${farmPlotId}`,
     BY_FARM_ZONE: (farmZoneId: string) =>
-      `/treatment-plans/farm-zone/${farmZoneId}`,
+      `/plans/farm-zone/${farmZoneId}`,
   },
 
   SEARCH: {
     POSTS: "/search/posts/search",
     PROFILES: "/search/profiles/search",
+    UNIFIED: "/search/search",
   },
 
   RAG: {
@@ -283,14 +287,14 @@ export const API_ENDPOINTS = {
     CONVERSATIONS: "/rag/v1/conversations",
     CONVERSATION: (conversationId: string) =>
       `/rag/v1/conversations/${conversationId}`,
-    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
+    PLAN: (planId: string) => `/rag/v1/plans/${planId}`,
     INGEST: "/rag/v1/ingest",
     PREVIEW: "/rag/v1/preview",
     DOCUMENTS: "/rag/v1/documents",
     DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
-    TREATMENT_PLANS: "/rag/v1/treatment-plans/",
+    PLANS: "/rag/v1/plans/",
   },
 
   DISEASES: {
@@ -356,7 +360,14 @@ export const API_ENDPOINTS = {
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>
       `/conversations/${conversationId}/messages`,
+    MEDIA: (conversationId: string) =>
+      `/conversations/${conversationId}/media`,
+    FILES: (conversationId: string) =>
+      `/conversations/${conversationId}/files`,
     SEND: (conversationId: string) => `/conversations/${conversationId}/messages`,
+    MESSAGE_EDIT: (messageId: string) => `/messages/${messageId}`,
+    MESSAGE_REVOKE: (messageId: string) => `/messages/${messageId}/revoke`,
+    MESSAGE_DELETE_ME: (messageId: string) => `/messages/${messageId}/me`,
   },
 
   ADMIN: {
@@ -379,6 +390,8 @@ export const API_ENDPOINTS = {
         `/search/failed-events/${id}/resolved`,
       FAILED_EVENTS_RETRY: (id: string) => `/search/failed-events/${id}/retry`,
       FAILED_EVENTS_RETRY_ALL: "/search/failed-events/retry/all",
+      // ChatUser sync — message-service /conversations/admin/sync-chat-users
+      CHAT_USERS_SYNC: "/conversations/admin/sync-chat-users",
     },
     SEED: {
       ACCOUNTS: "/admin/seed/accounts",
@@ -386,6 +399,7 @@ export const API_ENDPOINTS = {
       PLANTS: "/admin/seed/plants",
       SPECIES_PERENUAL: "/admin/seed/species/perenual",
       COMMUNITY: "/admin/seed/community",
+      COMMUNITY_PROFILES: "/admin/seed/profiles",
       CERTIFICATES: "/admin/seed/certificates",
       EXPERTS: "/admin/seed/experts",
     },

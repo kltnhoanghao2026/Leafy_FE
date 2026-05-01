@@ -38,7 +38,7 @@ export interface RagConversationMessage {
     documentsCount?: number;
     webResultsCount?: number;
     savedPlanId?: string;
-    treatmentPlan?: RagTreatmentPlan | null;
+    plan?: RagPlan | null;
   };
 }
 
@@ -69,7 +69,7 @@ export interface RagWebResult {
   [key: string]: unknown;
 }
 
-export interface RagTreatmentPlan {
+export interface RagPlan {
   [key: string]: unknown;
 }
 
@@ -77,7 +77,7 @@ export interface RagChatResponse {
   answer: string;
   threadId: string;
   documents: RagDocument[];
-  treatmentPlan?: RagTreatmentPlan | null;
+  plan?: RagPlan | null;
   plantId?: string;
   webSearchResults: RagWebResult[];
   savedPlanId?: string;

@@ -1,32 +1,34 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api/chatApi';
 import { ConversationList } from '../components/ConversationList';
 import { ChatArea } from '../components/ChatArea';
 import { NewDMModal } from '../components/NewDMModal';
 import { CreateGroupModal } from '../components/CreateGroupModal';
-import { GroupInfoPanel } from '../components/GroupInfoPanel';
+import { ConversationInfoPanel } from '../components/ConversationInfoPanel';
 import { useAuthStore } from '../../../store/authStore';
+import { useChatWebSocket } from '../hooks/useChatWebSocket';
 
 export function ChatPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDMModalOpen, setIsDMModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const { user } = useAuthStore();
-  const currentUserId = user?.id || '';
+  const currentUserId = user?.profileId || '';
   const queryClient = useQueryClient();
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => chatApi.getConversations(),
-    refetchInterval: 5000,
   });
+
+  useChatWebSocket(activeId);
 
   const activeConversation = conversations.find((c) => c.id === activeId) || null;
 
   const handleSelect = (id: string) => {
-    if (id !== activeId) setIsInfoOpen(false);
+    if (id !== activeId) setIsInfoOpen(true);
     setActiveId(id);
   };
 
@@ -34,7 +36,7 @@ export function ChatPage() {
     setIsDMModalOpen(false);
     try {
       const conv = await chatApi.getOrCreateConversation(partnerId);
-      setIsInfoOpen(false);
+      setIsInfoOpen(true);
       setActiveId(conv.id);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (error) {
@@ -44,12 +46,12 @@ export function ChatPage() {
 
   const handleGroupCreated = (conversationId: string) => {
     setIsGroupModalOpen(false);
-    setIsInfoOpen(false);
+    setIsInfoOpen(true);
     setActiveId(conversationId);
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const showInfoPanel = isInfoOpen && activeConversation?.isGroup;
+  const showInfoPanel = isInfoOpen;
 
   return (
     <>
@@ -72,7 +74,7 @@ export function ChatPage() {
           />
 
           {showInfoPanel && activeConversation && (
-            <GroupInfoPanel
+            <ConversationInfoPanel
               conversation={activeConversation}
               currentUserId={currentUserId}
               onClose={() => setIsInfoOpen(false)}
@@ -81,7 +83,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      {/* Modals — in root stacking context so z-50 covers the header */}
+      {/* Modals â€” in root stacking context so z-50 covers the header */}
       <NewDMModal
         isOpen={isDMModalOpen}
         onClose={() => setIsDMModalOpen(false)}

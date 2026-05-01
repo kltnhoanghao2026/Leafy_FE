@@ -56,7 +56,7 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
       return chatApi.createGroup({
         name: groupName.trim(),
         avatar: avatarUrl,
-        memberIds: selectedMembers.map((m) => m.userId),
+        memberIds: selectedMembers.map((m) => m.id),
       });
     },
     onSuccess: (conv) => {
@@ -68,13 +68,13 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
 
   const toggleMember = (member: Profile) => {
     setSelectedMembers((prev) =>
-      prev.some((m) => m.userId === member.userId)
-        ? prev.filter((m) => m.userId !== member.userId)
+      prev.some((m) => m.id === member.id)
+        ? prev.filter((m) => m.id !== member.id)
         : [...prev, member]
     );
   };
 
-  const isSelected = (userId: string) => selectedMembers.some((m) => m.userId === userId);
+  const isSelected = (profileId: string) => selectedMembers.some((m) => m.id === profileId);
 
   const handleClose = () => {
     setGroupName('');
@@ -158,8 +158,8 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
         {selectedMembers.length > 0 && (
           <div className="px-4 pt-3 pb-2 flex flex-wrap gap-2 border-b border-gray-100 shrink-0 max-h-24 overflow-y-auto custom-scrollbar">
             {selectedMembers.map((m) => (
-              <span key={m.userId} className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 text-xs font-semibold px-2.5 py-1 rounded-full">
-                <img src={m.avatar || `https://i.pravatar.cc/40?u=${m.userId}`} alt="" className="w-4 h-4 rounded-full" />
+              <span key={m.id} className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                <img src={m.avatar || `https://i.pravatar.cc/40?u=${m.id}`} alt="" className="w-4 h-4 rounded-full" />
                 {m.fullName}
                 <button onClick={() => toggleMember(m)} className="text-green-400 hover:text-red-500 transition-colors">✕</button>
               </span>
@@ -199,19 +199,19 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
             <div className="space-y-1">
               {searchResults.map((member) => (
                 <div
-                  key={member.userId}
+                  key={member.id}
                   onClick={() => toggleMember(member)}
                   className={`flex items-center p-3 rounded-xl transition-all cursor-pointer ${
-                    isSelected(member.userId) ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'
+                    isSelected(member.id) ? 'bg-green-50 ring-1 ring-green-200' : 'hover:bg-gray-50'
                   }`}
                 >
                   <div className="relative shrink-0">
                     <img
-                      src={member.avatar || `https://i.pravatar.cc/150?u=${member.userId}`}
+                      src={member.avatar || `https://i.pravatar.cc/150?u=${member.id}`}
                       alt={member.fullName}
                       className="w-10 h-10 rounded-full object-cover border border-gray-200"
                     />
-                    {isSelected(member.userId) && (
+                    {isSelected(member.id) && (
                       <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center border-2 border-white">
                         <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -224,9 +224,9 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
                     <p className="text-xs text-gray-400">{member.role}</p>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 transition-all shrink-0 flex items-center justify-center ${
-                    isSelected(member.userId) ? 'bg-green-600 border-green-600' : 'border-gray-300'
+                    isSelected(member.id) ? 'bg-green-600 border-green-600' : 'border-gray-300'
                   }`}>
-                    {isSelected(member.userId) && (
+                    {isSelected(member.id) && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>

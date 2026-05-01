@@ -37,7 +37,7 @@ import { DataSeedingPage } from "./features/admin/seeding";
 import { DataSyncPage } from "./features/admin/sync";
 
 const AgricultureOverviewPage = lazy(() =>
-  import("./features/plant-management/pages/AgricultureOverviewPage"),
+  import("./features/plant-management/overview/pages/AgricultureOverviewPage"),
 );
 const DashboardPage = lazy(() =>
   import("./features/metrics-view/pages/DashboardPage").then((module) => ({
@@ -75,28 +75,28 @@ const DiseaseDiagnosisPage = lazy(() =>
   })),
 );
 const PlantDetailPage = lazy(() =>
-  import("./features/plant-management/pages/PlantDetailPage").then((module) => ({
+  import("./features/plant-management/plant/pages/PlantDetailPage").then((module) => ({
     default: module.PlantDetailPage,
   })),
 );
 const PlantListPage = lazy(() =>
-  import("./features/plant-management/pages/PlantListPage").then((module) => ({
+  import("./features/plant-management/plant/pages/PlantListPage").then((module) => ({
     default: module.PlantListPage,
   })),
 );
 const PlantEventsCalendarPage = lazy(() =>
-  import("./features/plant-management/pages/PlantEventsCalendarPage").then((module) => ({
+  import("./features/plant-management/calendarview/pages/PlantEventsCalendarPage").then((module) => ({
     default: module.PlantEventsCalendarPage,
   })),
 );
-const TreatmentPlanDetailPage = lazy(() =>
-  import("./features/plant-management/pages/TreatmentPlanDetailPage").then((module) => ({
-    default: module.TreatmentPlanDetailPage,
+const PlanDetailPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanDetailPage").then((module) => ({
+    default: module.PlanDetailPage,
   })),
 );
-const TreatmentPlansPage = lazy(() =>
-  import("./features/plant-management/pages/TreatmentPlansPage").then((module) => ({
-    default: module.TreatmentPlansPage,
+const PlansPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlansPage").then((module) => ({
+    default: module.PlansPage,
   })),
 );
 const RagChatPage = lazy(() =>
@@ -104,9 +104,9 @@ const RagChatPage = lazy(() =>
     default: module.RagChatPage,
   })),
 );
-const RagTreatmentPlanDetailPage = lazy(() =>
-  import("./features/rag-chat/pages/RagTreatmentPlanDetailPage").then((module) => ({
-    default: module.RagTreatmentPlanDetailPage,
+const RagPlanDetailPage = lazy(() =>
+  import("./features/rag-chat/pages/RagPlanDetailPage").then((module) => ({
+    default: module.RagPlanDetailPage,
   })),
 );
 const AlertsPage = lazy(() =>
@@ -147,6 +147,16 @@ const ExpertsPage = lazy(() =>
 const PendingRequestsPage = lazy(() =>
   import("./features/profiles/pages/PendingRequestsPage").then((module) => ({
     default: module.PendingRequestsPage,
+  })),
+);
+const MyProfilePage = lazy(() =>
+  import("./features/profiles/pages/MyProfilePage").then((module) => ({
+    default: module.MyProfilePage,
+  })),
+);
+const UserProfilePage = lazy(() =>
+  import("./features/profiles/pages/UserProfilePage").then((module) => ({
+    default: module.UserProfilePage,
   })),
 );
 
@@ -262,18 +272,18 @@ function App() {
                 }
               />
               <Route
-                path="treatment-plans"
+                path="plans"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <TreatmentPlansPage />
+                    <PlansPage />
                   </Suspense>
                 }
               />
               <Route
-                path="treatment-plans/:planId"
+                path="plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <TreatmentPlanDetailPage />
+                    <PlanDetailPage />
                   </Suspense>
                 }
               />
@@ -310,10 +320,10 @@ function App() {
                 }
               />
               <Route
-                path="rag-panel/treatment-plans/:planId"
+                path="rag-panel/plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <RagTreatmentPlanDetailPage />
+                    <RagPlanDetailPage />
                   </Suspense>
                 }
               />
@@ -346,6 +356,22 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <PendingRequestsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <MyProfilePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile/:profileId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <UserProfilePage />
                   </Suspense>
                 }
               />

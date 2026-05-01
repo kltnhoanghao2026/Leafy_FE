@@ -1,1 +1,1 @@
-﻿export * from './CertificateApprovalPage';
+export * from './CertificateApprovalPage';

@@ -1,1 +1,1 @@
-﻿export * from './DataSeedingPage';
+export * from './DataSeedingPage';

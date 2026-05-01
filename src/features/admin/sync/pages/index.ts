@@ -1,1 +1,1 @@
-﻿export * from './DataSyncPage';
+export * from './DataSyncPage';

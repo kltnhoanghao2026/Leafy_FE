@@ -263,7 +263,10 @@ export function DataSeedingPage() {
   const seedSpeciesPerenual = useSeedSpeciesPerenual();
   const perenualResult = seedSpeciesPerenual.data?.data?.data;
 
-  // ── Community seeder
+  // ── Community seeder state
+  const [communityPostCount, setCommunityPostCount] = useState("");
+  const [communityCommentCount, setCommunityCommentCount] = useState("");
+  const [communityVoteCount, setCommunityVoteCount] = useState("");
   const seedCommunity = useSeedCommunity();
   const communityResult = seedCommunity.data?.data?.data;
 
@@ -534,7 +537,13 @@ export function DataSeedingPage() {
           destructive
           confirmMessage="Thao tác này sẽ XOÁ toàn bộ bài viết, bình luận và vote hiện tại, sau đó tạo lại từ đầu. Tiếp tục?"
           isPending={seedCommunity.isPending}
-          onRun={() => seedCommunity.mutate()}
+          onRun={() =>
+            seedCommunity.mutate({
+              postCount: toOptInt(communityPostCount),
+              commentCount: toOptInt(communityCommentCount),
+              voteCount: toOptInt(communityVoteCount),
+            })
+          }
           result={
             communityResult && (
               <ResultPanel title="Kết quả seeder cộng đồng" ok>
@@ -570,10 +579,29 @@ export function DataSeedingPage() {
             )
           }
         >
-          <p className="text-xs text-slate-400 italic">
-            Số lượng được cấu hình qua config server (100 bài / 400 bình luận /
-            700 vote).
-          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <NumInput
+              label="Số bài viết"
+              value={communityPostCount}
+              onChange={setCommunityPostCount}
+              min={1}
+              placeholder="Mặc định: 100"
+            />
+            <NumInput
+              label="Số bình luận"
+              value={communityCommentCount}
+              onChange={setCommunityCommentCount}
+              min={1}
+              placeholder="Mặc định: 400"
+            />
+            <NumInput
+              label="Số vote"
+              value={communityVoteCount}
+              onChange={setCommunityVoteCount}
+              min={1}
+              placeholder="Mặc định: 700"
+            />
+          </div>
         </SeederCard>
 
         {/* 5. Certificates */}

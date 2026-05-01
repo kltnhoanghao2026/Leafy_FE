@@ -1,7 +1,7 @@
 import apiClient from "../../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../../lib/routes";
 
-// ── Ingestion Task Types ────────────────────────────────────────────────────
+// â”€â”€ Ingestion Task Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface IngestionTaskInfo {
   original_filename?: string;
@@ -28,7 +28,7 @@ export interface IngestionResponse {
   file_id: string | null;
 }
 
-// ── Chunk Preview Types ─────────────────────────────────────────────────────
+// â”€â”€ Chunk Preview Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ChunkPreview {
   index: number;
@@ -44,7 +44,7 @@ export interface PreviewResponse {
   chunks: ChunkPreview[];
 }
 
-// ── Document Catalog Types ──────────────────────────────────────────────────
+// â”€â”€ Document Catalog Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface DocumentSummary {
   document_id: string;
@@ -66,10 +66,10 @@ export interface DocumentDetail extends DocumentSummary {
   chunks: ChunkPreview[];
 }
 
-// ── API Functions ───────────────────────────────────────────────────────────
+// â”€â”€ API Functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const knowledgeBaseApi = {
-  // ── Ingestion ─────────────────────────────────────────────────────────────
+  // â”€â”€ Ingestion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   ingestDocument: async (
     file: File,
@@ -89,7 +89,7 @@ export const knowledgeBaseApi = {
     return response.data.result || response.data.data;
   },
 
-  // ── Preview ───────────────────────────────────────────────────────────────
+  // â”€â”€ Preview â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   previewDocument: async (file: File): Promise<PreviewResponse> => {
     const formData = new FormData();
@@ -107,7 +107,7 @@ export const knowledgeBaseApi = {
     return response.data.result || response.data.data;
   },
 
-  // ── Tasks ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   getTasks: async (): Promise<IngestionTask[]> => {
     const response = await apiClient.get(API_ENDPOINTS.RAG.TASKS);
@@ -119,7 +119,7 @@ export const knowledgeBaseApi = {
     return response.data.result || response.data.data;
   },
 
-  // ── Document Catalog ──────────────────────────────────────────────────────
+  // â”€â”€ Document Catalog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   getDocuments: async (
     skip = 0,

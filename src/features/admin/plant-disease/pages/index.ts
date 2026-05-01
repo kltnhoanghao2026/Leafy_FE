@@ -1,4 +1,4 @@
-﻿export * from './DiseasePage';
+export * from './DiseasePage';
 export * from './PlantDetailPage';
 export * from './PlantDiseaseDBPage';
 export * from './PlantEventDetailPage';

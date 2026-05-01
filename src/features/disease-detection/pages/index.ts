@@ -1,1 +1,1 @@
-﻿export * from './DiseasePredictionPage';
+export * from './DiseasePredictionPage';

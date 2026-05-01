@@ -3,6 +3,9 @@ import { profilesApi } from '../api/profilesApi'
 import { ShieldCheck, UserPlus, MessageCircle, Search, Check } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
+import { Avatar } from '../../../components/ui/Avatar'
+import { ROUTES } from '../../../lib/routes'
 
 export function ExpertsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -135,20 +138,24 @@ export function ExpertsPage() {
               const isConsulted = localConsultState[expert.userId] ?? expert.hasPendingConsultRequest;
               return (
                 <div key={expert.id} className="group relative bg-[#F2FCF4] rounded-3xl p-6 hover:bg-[#E8F8EC] transition-colors border border-transparent hover:border-[#10B981]/20">
-                  <div className="flex gap-4">
-                    <div className="relative shrink-0">
-                      <img 
-                        src={expert.profilePicture || expert.avatar || "https://i.pravatar.cc/150"} 
-                        alt={expert.fullName} 
-                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm"
+                  <div className="flex gap-3">
+                    <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(expert.id)} className="relative shrink-0 block">
+                      <Avatar 
+                        src={expert.profilePicture || expert.avatar} 
+                        name={expert.fullName} 
+                        size="xl"
+                        className="border border-slate-200"
                       />
-                      <div className="absolute bottom-0 right-0 w-4 h-4 bg-[#10B981] border-2 border-white rounded-full"></div>
-                    </div>
+                      <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[#10B981] border-2 border-white rounded-full"></div>
+                    </Link>
                     
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[17px] font-bold text-gray-900 truncate group-hover:text-[#245A34] transition-colors">
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <Link
+                        to={ROUTES.DASHBOARD.PROFILE_VIEW(expert.id)}
+                        className="text-[17px] font-bold text-gray-900 truncate hover:text-[#10B981] hover:underline transition-colors"
+                      >
                         {expert.fullName}
-                      </h3>
+                      </Link>
                       <p className="text-[13px] font-bold text-[#10B981] mt-0.5 truncate">
                         {expert.specialty || "Chuyên gia nông nghiệp"}
                       </p>

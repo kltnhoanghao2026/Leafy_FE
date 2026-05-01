@@ -11,7 +11,7 @@ import { toast } from "react-hot-toast";
 import { ROUTES } from "../../../lib/routes";
 import { useCreateCommunityPost } from "../queries";
 import type { Post } from "../types";
-import { CommunityAvatar } from "./CommunityAvatar";
+import { Avatar } from '../../../components/ui/Avatar'
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface ShareModalProps {
@@ -117,8 +117,8 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
 
         <div className="px-6 pt-5 pb-2">
           <div className="flex items-start gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-200/80 mb-5">
-            <CommunityAvatar
-              source={post.author.avatar}
+            <Avatar
+              src={post.author.avatar}
               name={post.author.name}
               alt={post.author.name}
               className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
@@ -141,8 +141,8 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
               </p>
             </div>
             <div className="flex gap-3">
-              <CommunityAvatar
-                source={currentUser.avatar}
+              <Avatar
+                src={currentUser.avatar}
                 name={currentUser.name}
                 alt={currentUser.name}
                 className="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200"
@@ -223,3 +223,4 @@ export function ShareModal({ isOpen, onClose, post }: ShareModalProps) {
     </div>
   );
 }
+

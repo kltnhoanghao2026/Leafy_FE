@@ -7,6 +7,8 @@ import type {
   SearchProfileItem,
   SearchProfilesParams,
   SearchSpringPage,
+  UnifiedSearchParams,
+  UnifiedSearchResult,
 } from "../../features/search/types";
 
 const unwrapApiData = <T>(payload: T | ApiEnvelope<T>): T => {
@@ -44,6 +46,15 @@ export const searchApi = {
     const response = await apiClient.get<
       ApiEnvelope<SearchSpringPage<SearchProfileItem>> | SearchSpringPage<SearchProfileItem>
     >(API_ENDPOINTS.SEARCH.PROFILES, {
+      params: cleanParams(params),
+    });
+    return unwrapApiData(response.data);
+  },
+
+  unifiedSearch: async (params: UnifiedSearchParams) => {
+    const response = await apiClient.get<
+      ApiEnvelope<UnifiedSearchResult> | UnifiedSearchResult
+    >(API_ENDPOINTS.SEARCH.UNIFIED, {
       params: cleanParams(params),
     });
     return unwrapApiData(response.data);

@@ -8,6 +8,7 @@ import type { ConversationResponse, ConversationMember } from '../api/chatApi';
 import { Avatar } from '../../../components/ui/Avatar';
 
 interface Profile { id: string; userId: string; fullName: string; avatar: string; role: string; }
+type GroupSettings = Record<string, unknown>;
 interface GroupInfoPanelProps { conversation: ConversationResponse; currentUserId: string; onClose: () => void; }
 
 // ── Icons ─────────────────────────────────────────────────────────────────────

@@ -1,1 +1,1 @@
-﻿export * from './SystemHealthPage';
+export * from './SystemHealthPage';
