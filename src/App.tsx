@@ -166,6 +166,11 @@ const NotificationsPage = lazy(() =>
     default: module.NotificationsPage,
   }))
 );
+const GroupJoinPage = lazy(() =>
+  import('./features/chat/pages/GroupJoinPage').then((module) => ({
+    default: module.GroupJoinPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-sm font-bold text-slate-500">
@@ -409,6 +414,18 @@ function App() {
                 }
               />
             </Route>
+          </Route>
+
+          {/* Join link — protected but no layout wrapper */}
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="chat/join/:token"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <GroupJoinPage />
+                </Suspense>
+              }
+            />
           </Route>
 
           {/* Admin routes */}

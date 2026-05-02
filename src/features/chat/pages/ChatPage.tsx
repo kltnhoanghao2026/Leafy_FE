@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { chatApi } from '../api/chatApi';
 import { ConversationList } from '../components/ConversationList';
 import { ChatArea } from '../components/ChatArea';
@@ -27,6 +28,18 @@ export function ChatPage() {
   const { connected } = useChatWebSocket(activeId);
 
   const activeConversation = conversations.find((c) => c.id === activeId) || null;
+
+  const location = useLocation();
+
+  // Auto-open conversation when redirected from join link page
+  useEffect(() => {
+    const state = location.state as { openConversationId?: string } | null;
+    if (state?.openConversationId) {
+      setActiveId(state.openConversationId);
+      // Clear state so refreshing the page doesn't re-open it
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   const handleSelect = (id: string) => {
     setActiveId(id);
