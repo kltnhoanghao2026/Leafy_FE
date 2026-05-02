@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, FileText, Film, Music, Archive, File } from 'lucide-react';
 import type { AttachmentInfoResponse } from '../api/chatApi';
 
@@ -41,7 +42,7 @@ function ImageLightbox({ urls, names, initialIndex, onClose }: LightboxProps) {
     if (e.key === 'Escape') onClose();
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 bg-black/92 z-[200] flex items-center justify-center"
       onClick={onClose}
@@ -88,20 +89,19 @@ function ImageLightbox({ urls, names, initialIndex, onClose }: LightboxProps) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
-
 interface AttachmentPreviewProps {
   attachments: AttachmentInfoResponse[];
   type: string;
   isMe: boolean;
-  content?: string | null;
 }
 
-export function AttachmentPreview({ attachments, type, isMe, content }: AttachmentPreviewProps) {
+export function AttachmentPreview({ attachments, type, isMe }: AttachmentPreviewProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   if (!attachments || attachments.length === 0) return null;
@@ -170,7 +170,6 @@ export function AttachmentPreview({ attachments, type, isMe, content }: Attachme
           </div>
         )}
 
-        {content && <p className="text-[14px] leading-relaxed whitespace-pre-wrap mt-1.5">{content}</p>}
       </>
     );
   }
@@ -186,7 +185,6 @@ export function AttachmentPreview({ attachments, type, isMe, content }: Attachme
           className="rounded-xl max-w-xs bg-black"
           style={{ maxHeight: 220 }}
         />
-        {content && <p className="text-[14px] leading-relaxed whitespace-pre-wrap">{content}</p>}
       </div>
     );
   }
@@ -217,7 +215,6 @@ export function AttachmentPreview({ attachments, type, isMe, content }: Attachme
           <Download className="w-4 h-4 shrink-0 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
         </a>
       ))}
-      {content && <p className="text-[14px] leading-relaxed whitespace-pre-wrap text-gray-800 px-1">{content}</p>}
     </div>
   );
 }

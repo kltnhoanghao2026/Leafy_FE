@@ -13,7 +13,7 @@ export function ChatPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDMModalOpen, setIsDMModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(true);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
   const { user } = useAuthStore();
   const currentUserId = user?.profileId || '';
   const queryClient = useQueryClient();
@@ -23,21 +23,23 @@ export function ChatPage() {
     queryFn: () => chatApi.getConversations(),
   });
 
-  useChatWebSocket(activeId);
+  // WS hook — pass activeId to track which conversation the user is viewing
+  const { connected } = useChatWebSocket(activeId);
 
   const activeConversation = conversations.find((c) => c.id === activeId) || null;
 
   const handleSelect = (id: string) => {
-    if (id !== activeId) setIsInfoOpen(true);
     setActiveId(id);
+    // Open info panel only if switching to a new conversation
+    if (id !== activeId) setIsInfoOpen(false);
   };
 
   const handleStartChat = async (partnerId: string) => {
     setIsDMModalOpen(false);
     try {
       const conv = await chatApi.getOrCreateConversation(partnerId);
-      setIsInfoOpen(true);
       setActiveId(conv.id);
+      setIsInfoOpen(false);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     } catch (error) {
       console.error('Failed to start chat', error);
@@ -46,44 +48,46 @@ export function ChatPage() {
 
   const handleGroupCreated = (conversationId: string) => {
     setIsGroupModalOpen(false);
-    setIsInfoOpen(true);
+    setIsInfoOpen(false);
     setActiveId(conversationId);
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
 
-  const showInfoPanel = isInfoOpen;
-
   return (
     <>
+      {/* Full-viewport chat shell — sits below header (top-16) and beside sidebar (lg:left-64) */}
       <div className="fixed inset-0 top-16 lg:left-64 flex overflow-hidden bg-white z-10">
-        <div className="flex-1 flex h-full w-full min-w-0 relative">
 
-          <ConversationList
-            conversations={conversations}
-            activeId={activeId}
-            onSelect={handleSelect}
-            onNewChat={() => setIsDMModalOpen(true)}
-            onNewGroup={() => setIsGroupModalOpen(true)}
-          />
+        {/* Left: conversation list */}
+        <ConversationList
+          conversations={conversations}
+          activeId={activeId}
+          onSelect={handleSelect}
+          onNewChat={() => setIsDMModalOpen(true)}
+          onNewGroup={() => setIsGroupModalOpen(true)}
+        />
 
-          <ChatArea
+        {/* Center: chat area — takes all remaining horizontal space */}
+        <ChatArea
+          conversation={activeConversation}
+          currentUserId={currentUserId}
+          wsConnected={connected}
+          onToggleInfo={() => setIsInfoOpen((v) => !v)}
+          isInfoOpen={isInfoOpen}
+        />
+
+        {/* Right: info panel — sibling to ChatArea (NOT nested inside it) */}
+        {/* This prevents the panel from squishing the ChatArea's flex layout */}
+        {isInfoOpen && activeConversation && (
+          <ConversationInfoPanel
             conversation={activeConversation}
             currentUserId={currentUserId}
-            onToggleInfo={() => setIsInfoOpen((v) => !v)}
-            isInfoOpen={showInfoPanel}
+            onClose={() => setIsInfoOpen(false)}
           />
-
-          {showInfoPanel && activeConversation && (
-            <ConversationInfoPanel
-              conversation={activeConversation}
-              currentUserId={currentUserId}
-              onClose={() => setIsInfoOpen(false)}
-            />
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Modals â€” in root stacking context so z-50 covers the header */}
+      {/* Modals — in root stacking context so z-50 covers the header */}
       <NewDMModal
         isOpen={isDMModalOpen}
         onClose={() => setIsDMModalOpen(false)}

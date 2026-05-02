@@ -331,7 +331,7 @@ export function SharedMediaView({ conversationId, isFullScreen }: { conversation
               return (
                 <div
                   key={att.key ?? i}
-                  className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer group"
+                  className="aspect-square bg-gray-100 rounded-lg overflow-hidden relative cursor-pointer group border border-gray-200/60"
                   onClick={() => {
                     if (!isVideo && !isLastLimited) {
                       setLightboxUrls(allImageUrls);

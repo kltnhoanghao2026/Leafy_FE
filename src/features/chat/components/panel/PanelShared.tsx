@@ -112,7 +112,11 @@ export function SectionHeader({ label }: { label: string }) {
 }
 
 // ── NavRow ────────────────────────────────────────────────────────────────────
-export function NavRow({ icon, label, badge, onClick }: { icon: React.ReactNode; label: string; badge?: number; onClick: () => void }) {
+export function NavRow({
+  icon, label, badge, badgeType = 'notification', onClick
+}: {
+  icon: React.ReactNode; label: string; badge?: number; badgeType?: 'notification' | 'count'; onClick: () => void
+}) {
   return (
     <button
       onClick={onClick}
@@ -124,7 +128,11 @@ export function NavRow({ icon, label, badge, onClick }: { icon: React.ReactNode;
       </div>
       <div className="flex items-center gap-2">
         {badge != null && badge > 0 && (
-          <span className="min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{badge}</span>
+          <span className={`min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full flex items-center justify-center ${
+            badgeType === 'notification' ? 'bg-red-500 text-white shadow-sm' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {badge}
+          </span>
         )}
         <IconChevronRight />
       </div>

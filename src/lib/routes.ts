@@ -368,6 +368,8 @@ export const API_ENDPOINTS = {
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>
       `/conversations/${conversationId}/messages`,
+    MESSAGES_V2: (conversationId: string) =>
+      `/v2/conversations/${conversationId}/messages`,
     MEDIA: (conversationId: string) =>
       `/conversations/${conversationId}/media`,
     FILES: (conversationId: string) =>
