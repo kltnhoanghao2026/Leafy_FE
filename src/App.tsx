@@ -15,6 +15,7 @@ import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
 import { I18nProvider } from "./i18n";
+import { WebSocketProvider } from "./providers/WebSocketProvider";
 
 import { AdminOverviewPage } from "./features/admin/overview";
 import { UserManagementPage } from "./features/admin/users";
@@ -156,9 +157,14 @@ const MyProfilePage = lazy(() =>
   })),
 );
 const UserProfilePage = lazy(() =>
-  import("./features/profiles/pages/UserProfilePage").then((module) => ({
+  import('./features/profiles/pages/UserProfilePage').then((module) => ({
     default: module.UserProfilePage,
-  })),
+  }))
+);
+const NotificationsPage = lazy(() =>
+  import('./features/notifications/pages/NotificationsPage').then((module) => ({
+    default: module.NotificationsPage,
+  }))
 );
 
 const PageLoader = () => (
@@ -176,9 +182,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
-        <BrowserRouter>
-        {/* Runs before route guards: attempts silent refresh on page load */}
-        <AuthSessionBootstrap />
+        <WebSocketProvider>
+          <BrowserRouter>
+          {/* Runs before route guards: attempts silent refresh on page load */}
+          <AuthSessionBootstrap />
         <Routes>
           {/* Guest-only routes */}
           <Route element={<GuestOnlyRoute />}>
@@ -393,6 +400,14 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="notifications"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <NotificationsPage />
+                  </Suspense>
+                }
+              />
             </Route>
           </Route>
 
@@ -460,7 +475,8 @@ function App() {
             },
           }}
         />
-        </BrowserRouter>
+          </BrowserRouter>
+        </WebSocketProvider>
       </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

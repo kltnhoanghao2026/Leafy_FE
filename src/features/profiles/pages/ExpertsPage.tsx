@@ -134,8 +134,8 @@ export function ExpertsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {experts.map((expert) => {
-              const isFollowed = localFollowState[expert.userId] ?? expert.isFollowing;
-              const isConsulted = localConsultState[expert.userId] ?? expert.hasPendingConsultRequest;
+              const isFollowed = localFollowState[expert.id] ?? expert.isFollowing;
+              const isConsulted = localConsultState[expert.id] ?? expert.hasPendingConsultRequest;
               return (
                 <div key={expert.id} className="group relative bg-[#F2FCF4] rounded-3xl p-6 hover:bg-[#E8F8EC] transition-colors border border-transparent hover:border-[#10B981]/20">
                   <div className="flex gap-3">
@@ -167,7 +167,7 @@ export function ExpertsPage() {
                   
                   <div className="flex items-center gap-2 mt-6">
                     <button 
-                      onClick={() => isFollowed ? unfollowMutation.mutate(expert.userId) : followMutation.mutate(expert.userId)}
+                      onClick={() => isFollowed ? unfollowMutation.mutate(expert.id) : followMutation.mutate(expert.id)}
                       disabled={followMutation.isPending || unfollowMutation.isPending}
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-bold rounded-xl transition-colors shadow-sm ${
                         isFollowed 
@@ -179,7 +179,7 @@ export function ExpertsPage() {
                       {isFollowed ? 'Đang theo dõi' : 'Theo dõi'}
                     </button>
                     <button 
-                      onClick={() => isConsulted ? cancelConsultMutation.mutate(expert.userId) : consultMutation.mutate(expert.userId)}
+                      onClick={() => isConsulted ? cancelConsultMutation.mutate(expert.id) : consultMutation.mutate(expert.id)}
                       disabled={consultMutation.isPending || cancelConsultMutation.isPending}
                       className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-[13px] font-bold rounded-xl transition-colors shadow-sm ${
                         isConsulted

@@ -31,6 +31,7 @@ import {
   useRetryAllFailedEvents,
   useSyncCommunityProfiles,
   useSyncChatUsers,
+  useSyncNotificationUsers,
 } from "../";
 import type { SyncTaskStatus } from "../";
 
@@ -693,6 +694,72 @@ function ChatUserSyncCard() {
   );
 }
 
+// ── NotificationUser Sync Card ────────────────────────────────────────────────
+
+function NotificationUserSyncCard() {
+  const syncNotificationUsers = useSyncNotificationUsers();
+  const result = syncNotificationUsers.data?.data?.data;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-orange-50 shrink-0">
+          <UserCheck className="w-5 h-5 text-orange-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-slate-800">
+            Đồng bộ Hồ sơ Thông báo
+          </h3>
+          <p className="text-xs text-slate-500">
+            Đồng bộ thủ công thay đổi hồ sơ (profileId → accountId) vào dịch vụ thông báo
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
+        <button
+          onClick={() => syncNotificationUsers.mutate()}
+          disabled={syncNotificationUsers.isPending}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {syncNotificationUsers.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Đồng bộ ngay
+        </button>
+      </div>
+
+      {result && (
+        <div className={`rounded-lg border px-4 py-3 ${
+          result.success
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-red-200 bg-red-50"
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            {result.success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <XCircle className="w-4 h-4 text-red-600" />
+            )}
+            <span className="text-xs font-semibold text-slate-700">
+              {result.success ? "Sync thành công" : "Sync thất bại"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <StatRow label="Profiles đã lấy" value={(result.profilesFetched ?? 0).toLocaleString()} />
+            <StatRow label="NotificationUser đã upsert" value={(result.notificationUsersUpserted ?? 0).toLocaleString()} />
+            {result.errorMessage && (
+              <p className="text-xs text-red-700 mt-1 font-mono break-all">{result.errorMessage}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Community Profile Sync Card ────────────────────────────────────────────────
 
 function CommunityProfileSyncCard() {
@@ -788,6 +855,7 @@ export function DataSyncPage() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 animate-in fade-in duration-300 slide-in-from-bottom-2">
             <CommunityProfileSyncCard />
             <ChatUserSyncCard />
+            <NotificationUserSyncCard />
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { MapPin, Menu, Search, Sun, X } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'
+import { NotificationPopover } from '../features/notifications/components/NotificationPopover'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -99,34 +100,39 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </form>
 
-        {/* Right: Tab nav + weather (desktop only) */}
-        <div className="hidden lg:flex items-center gap-6 shrink-0">
-          {/* Tab Navigation */}
-          <nav className="flex space-x-6" aria-label="Page tabs">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.name}
-                to={tab.path}
-                className={`py-5 text-[14px] font-bold border-b-[3px] transition-colors whitespace-nowrap ${
-                  activeTabName === tab.name
-                    ? 'border-[#245A34] text-[#245A34]'
-                    : 'border-transparent text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                {tab.name}
-              </Link>
-            ))}
-          </nav>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-4 shrink-0">
+          {/* Tab nav + weather (desktop only) */}
+          <div className="hidden lg:flex items-center gap-6">
+            {/* Tab Navigation */}
+            <nav className="flex space-x-6" aria-label="Page tabs">
+              {tabs.map((tab) => (
+                <Link
+                  key={tab.name}
+                  to={tab.path}
+                  className={`py-5 text-[14px] font-bold border-b-[3px] transition-colors whitespace-nowrap ${
+                    activeTabName === tab.name
+                      ? 'border-[#245A34] text-[#245A34]'
+                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {tab.name}
+                </Link>
+              ))}
+            </nav>
 
-          <div className="w-px h-6 bg-slate-200" />
+            <div className="w-px h-6 bg-slate-200" />
 
-          {/* Weather Widget */}
-          <div className="flex items-center px-4 py-2 bg-[#F1F9F3] rounded-full">
-            <Sun className="w-4 h-4 text-[#245A34] mr-2" strokeWidth={3} />
-            <span className="text-[13px] font-bold text-[#245A34]">
-              28°C | Nắng nhẹ
-            </span>
+            {/* Weather Widget */}
+            <div className="flex items-center px-4 py-2 bg-[#F1F9F3] rounded-full">
+              <Sun className="w-4 h-4 text-[#245A34] mr-2" strokeWidth={3} />
+              <span className="text-[13px] font-bold text-[#245A34]">
+                28°C | Nắng nhẹ
+              </span>
+            </div>
           </div>
+
+          <NotificationPopover />
         </div>
       </div>
     </header>

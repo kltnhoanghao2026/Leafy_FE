@@ -24,12 +24,19 @@ import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
 import { Avatar } from "../components/ui/Avatar";
+import { useNotificationState } from "../features/notifications/queries/queries";
+import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 
 export function Sidebar() {
   const location = useLocation();
   const { data: profile } = useMyProfile();
   const logout = useLogout();
   const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
+
+  // Live unread count — WebSocket keeps this fresh
+  useNotificationWebSocket();
+  const { data: stateData } = useNotificationState();
+  const unreadCount = stateData?.data?.unreadCount ?? 0;
 
   const displayName = profile?.fullName || "Đang tải...";
   const displayRole = profile?.role
@@ -64,38 +71,52 @@ export function Sidebar() {
     { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: "Nhắn tin", path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
+    { name: "Thông báo", path: ROUTES.DASHBOARD.NOTIFICATIONS, icon: Bell },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
 
   const renderNavItem = (
     item: (typeof coreNavItems | typeof agricultureNavItems | typeof utilityNavItems)[number],
-  ) => (
-    <NavLink
-      key={item.name}
-      to={item.path}
-      className={() => {
-        const isHome = item.path === ROUTES.DASHBOARD.ROOT;
-        const activePath =
-          "activePath" in item && item.activePath ? item.activePath : item.path;
-        const isCurrentlyActive = isHome
-          ? location.pathname === ROUTES.DASHBOARD.ROOT ||
-            location.pathname.startsWith("/dashboard/metrics")
-          : location.pathname.startsWith(activePath);
+    badge?: number,
+  ) => {
+    const isHome = item.path === ROUTES.DASHBOARD.ROOT;
+    const activePath =
+      'activePath' in item && item.activePath ? item.activePath : item.path;
+    const isCurrentlyActive = isHome
+      ? location.pathname === ROUTES.DASHBOARD.ROOT ||
+        location.pathname.startsWith('/dashboard/metrics')
+      : location.pathname.startsWith(activePath);
 
-        return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
+    return (
+      <NavLink
+        key={item.name}
+        to={item.path}
+        className={`flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
           isCurrentlyActive
-            ? "bg-[#245A34] text-white"
-            : "text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]"
-        }`;
-      }}
-    >
-      <item.icon
-        className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
-        strokeWidth={2.5}
-      />
-      {item.name}
-    </NavLink>
-  );
+            ? 'bg-[#245A34] text-white'
+            : 'text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]'
+        }`}
+      >
+        <item.icon
+          className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
+          strokeWidth={2.5}
+        />
+        <span className="flex-1">{item.name}</span>
+        {badge != null && badge > 0 && (
+          <span
+            className={`ml-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full leading-none ${
+              isCurrentlyActive
+                ? 'bg-white/30 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </NavLink>
+    );
+  };
+
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10">
@@ -128,15 +149,20 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 py-6 overflow-y-auto space-y-2 px-3">
-        {coreNavItems.map(renderNavItem)}
+        {coreNavItems.map((item) => renderNavItem(item))}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
           Nông nghiệp thông minh
         </div>
-        {agricultureNavItems.map(renderNavItem)}
+        {agricultureNavItems.map((item) => renderNavItem(item))}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
           Khác
         </div>
-        {utilityNavItems.map(renderNavItem)}
+        {utilityNavItems.map((item) =>
+          renderNavItem(
+            item,
+            item.path === ROUTES.DASHBOARD.NOTIFICATIONS ? unreadCount : undefined,
+          )
+        )}
       </nav>
 
       {/* User Profile & Logout */}
