@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { RefreshCw } from "lucide-react";
 import { useSpecies } from '../..';
+import { Select } from '../../../../components/ui/Select';
 
 interface SpeciesSelectProps {
   value: string;
@@ -16,30 +17,24 @@ export function SpeciesSelect({
   const speciesQuery = useSpecies();
   const species = useMemo(() => speciesQuery.data ?? [], [speciesQuery.data]);
 
+  const placeholder = speciesQuery.isLoading ? "Đang tải giống cây..." : "Chọn giống/loài cây";
+
   return (
     <div>
-      <label
-        htmlFor="plant-species"
-        className="text-xs font-black uppercase tracking-wide text-slate-500"
-      >
+      <span className="text-xs font-black uppercase tracking-wide text-slate-500">
         Giống/Loài cây
-      </label>
-      <select
-        id="plant-species"
-        required={required}
+      </span>
+      <Select
+        className="mt-2"
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
-      >
-        <option value="">
-          {speciesQuery.isLoading ? "Đang tải giống cây..." : "Chọn giống/loài cây"}
-        </option>
-        {species.map((item) => (
-          <option key={item.id} value={item.id}>
-            {[item.commonName, item.cultivarName].filter(Boolean).join(" - ")}
-          </option>
-        ))}
-      </select>
+        onChange={(v) => onChange(String(v))}
+        options={species.map((item) => ({
+          value: item.id,
+          label: [item.commonName, item.cultivarName].filter(Boolean).join(" - "),
+        }))}
+        placeholder={placeholder}
+        disabled={speciesQuery.isLoading}
+      />
 
       {speciesQuery.isError ? (
         <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">

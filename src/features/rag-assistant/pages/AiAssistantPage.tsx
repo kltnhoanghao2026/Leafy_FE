@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FileText, Sparkles } from "lucide-react";
+import { FileText, Leaf, Sparkles } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { ChatInput } from "../components/ChatInput";
 import { ChatPanel } from "../components/ChatPanel";
@@ -191,6 +191,20 @@ export function AiAssistantPage() {
           onClose={() => setPlanForCreate(null)}
         />
       ) : null}
+
+      <section className="rounded-4xl border border-amber-100 bg-amber-50 p-5">
+        <div className="flex gap-3">
+          <Leaf className="mt-1 h-5 w-5 text-amber-700" />
+          <div>
+            <h3 className="text-base font-black text-amber-950">
+              Lưu ý an toàn khi dùng AI
+            </h3>
+            <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
+              Kết quả chẩn đoán và kế hoạch AI chỉ mang tính hỗ trợ. Cần kiểm tra thực tế tại vườn trước khi áp dụng thuốc hoặc can thiệp.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -3,7 +3,6 @@ import {
   Home,
   Search,
   Bot,
-  Activity,
   ScanSearch,
   Bell,
   BellRing,
@@ -12,7 +11,6 @@ import {
   ClipboardList,
   LayoutDashboard,
   Sprout,
-  Stethoscope,
   Users,
   Settings,
   LogOut,
@@ -26,14 +24,16 @@ import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
 import { Avatar } from "../components/ui/Avatar";
+import { useTranslation } from "../i18n";
 
 export function Sidebar() {
   const location = useLocation();
+  const { t } = useTranslation();
   const { data: profile } = useMyProfile();
   const logout = useLogout();
   const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
 
-  const displayName = profile?.fullName || "Đang tải...";
+  const displayName = profile?.fullName || t('nav.loadingUser');
   const displayRole = profile?.role
     ? ROLE_LABELS[profile.role] || profile.role
     : "";
@@ -46,29 +46,27 @@ export function Sidebar() {
     undefined;
 
   const coreNavItems = [
-    { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
-    { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Chẩn đoán hình ảnh", path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
-    { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
-    { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
-    { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
+    { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
+    { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
+    { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
+    { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
+    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
   ];
 
   const agricultureNavItems = [
-    { name: "Tổng quan", path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
-    { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
-    { name: "Kế hoạch", path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
-    { name: "Lịch chăm sóc", path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
-    { name: "Chẩn đoán", path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: Stethoscope },
-    { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
+    { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
+    { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
+    { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
+    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
+    { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
   ];
 
   const utilityNavItems = [
-    { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
-    { name: "Nhắn tin", path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
-    { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
-    { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
+    { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
+    { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
+    { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
+    { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
 
   const renderNavItem = (
@@ -125,7 +123,7 @@ export function Sidebar() {
             Coffee Monitor
           </span>
           <span className="text-xs font-semibold text-slate-400">
-            Hệ thống giám sát
+            {t('nav.systemMonitor')}
           </span>
         </div>
       </div>
@@ -134,11 +132,11 @@ export function Sidebar() {
       <nav className="flex-1 py-6 overflow-y-auto space-y-2 px-3">
         {coreNavItems.map(renderNavItem)}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Nông nghiệp thông minh
+          {t('nav.sectionAgriculture')}
         </div>
         {agricultureNavItems.map(renderNavItem)}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Khác
+          {t('nav.sectionOther')}
         </div>
         {utilityNavItems.map(renderNavItem)}
       </nav>
@@ -177,7 +175,7 @@ export function Sidebar() {
             className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
             strokeWidth={2.5}
           />
-          Đăng xuất
+          {t('auth.logout')}
         </button>
       </div>
     </aside>

@@ -16,6 +16,8 @@ import {
   toDateTimeInputValue,
 } from '../../shared/components/displayUtils';
 import { SpeciesSelect } from '../../species/components/SpeciesSelect';
+import { Select } from '../../../../components/ui/Select';
+import { DatePicker } from '../../../../components/ui/DatePicker';
 
 interface PlantFormDialogProps {
   mode: "create" | "edit";
@@ -180,24 +182,18 @@ export function PlantFormDialog({
                 />
               </Field>
 
-              <Field label="Vườn" htmlFor="plant-farm-plot">
-                <select
-                  id="plant-farm-plot"
-                  required
+              <div>
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                  Vườn
+                </span>
+                <Select
+                  className="mt-2"
                   value={form.farmPlotId}
-                  onChange={(event) =>
-                    updateForm({ farmPlotId: event.target.value })
-                  }
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
-                >
-                  <option value="">Chọn vườn</option>
-                  {farmPlots.map((plot) => (
-                    <option key={plot.id} value={plot.id}>
-                      {plot.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                  onChange={(v) => updateForm({ farmPlotId: String(v) })}
+                  options={farmPlots.map((plot) => ({ value: plot.id, label: plot.name }))}
+                  placeholder="Chọn vườn"
+                />
+              </div>
             </div>
 
             <SpeciesSelect
@@ -207,37 +203,34 @@ export function PlantFormDialog({
             />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <Field label="Ngày trồng" htmlFor="planting-date">
-                <input
-                  id="planting-date"
+              <div>
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                  Ngày trồng
+                </span>
+                <DatePicker
+                  className="mt-2"
                   type="datetime-local"
                   value={form.plantingDate}
-                  onChange={(event) =>
-                    updateForm({ plantingDate: event.target.value })
-                  }
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
+                  onChange={(v) => updateForm({ plantingDate: v })}
+                  placeholder="Chọn ngày trồng..."
                 />
-              </Field>
+              </div>
 
               {mode === "edit" ? (
-                <Field label="Trạng thái" htmlFor="plant-status">
-                  <select
-                    id="plant-status"
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                    Trạng thái
+                  </span>
+                  <Select
+                    className="mt-2"
                     value={form.plantStatus}
-                    onChange={(event) =>
-                      updateForm({
-                        plantStatus: event.target.value as PlantStatus,
-                      })
-                    }
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
-                  >
-                    {Object.entries(PLANT_STATUS_LABELS).map(([status, label]) => (
-                      <option key={status} value={status}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                    onChange={(v) => updateForm({ plantStatus: v as PlantStatus })}
+                    options={Object.entries(PLANT_STATUS_LABELS).map(([status, label]) => ({
+                      value: status,
+                      label,
+                    }))}
+                  />
+                </div>
               ) : null}
             </div>
 
@@ -287,28 +280,30 @@ export function PlantFormDialog({
                     className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
                   />
                 </Field>
-                <Field label="Ngày nảy mầm" htmlFor="germination-date">
-                  <input
-                    id="germination-date"
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                    Ngày nảy mầm
+                  </span>
+                  <DatePicker
+                    className="mt-2"
                     type="datetime-local"
                     value={form.germinationDate}
-                    onChange={(event) =>
-                      updateForm({ germinationDate: event.target.value })
-                    }
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
+                    onChange={(v) => updateForm({ germinationDate: v })}
+                    placeholder="Chọn ngày nảy mầm..."
                   />
-                </Field>
-                <Field label="Ngày thu hoạch" htmlFor="actual-harvest-date">
-                  <input
-                    id="actual-harvest-date"
+                </div>
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                    Ngày thu hoạch
+                  </span>
+                  <DatePicker
+                    className="mt-2"
                     type="datetime-local"
                     value={form.actualHarvestDate}
-                    onChange={(event) =>
-                      updateForm({ actualHarvestDate: event.target.value })
-                    }
-                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
+                    onChange={(v) => updateForm({ actualHarvestDate: v })}
+                    placeholder="Chọn ngày thu hoạch..."
                   />
-                </Field>
+                </div>
               </div>
             </details>
           </div>

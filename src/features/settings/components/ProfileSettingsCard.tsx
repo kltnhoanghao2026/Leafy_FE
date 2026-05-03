@@ -7,8 +7,6 @@ import { isFileServiceReference } from "../../../lib/api/fileApi";
 import { ROLE_LABELS } from "../types";
 import { useTranslation } from "../../../i18n/useTranslation";
 
-const FALLBACK_AVATAR = "https://i.pravatar.cc/150?img=11";
-
 export function ProfileSettingsCard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -19,7 +17,7 @@ export function ProfileSettingsCard() {
     resolvedAvatarUrl ||
     (profile?.avatar && !isFileServiceReference(profile.avatar) ? profile.avatar : null) ||
     profile?.profilePicture ||
-    FALLBACK_AVATAR;
+    undefined;
 
   const roleDisplay = profile?.role ? ROLE_LABELS[profile.role] ?? profile.role : "";
 

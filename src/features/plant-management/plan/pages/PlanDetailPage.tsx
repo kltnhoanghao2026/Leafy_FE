@@ -21,6 +21,7 @@ import {
   formatDate,
   TREATMENT_STATUS_LABELS,
 } from "../../shared/components/displayUtils";
+import { Select } from "../../../../components/ui/Select";
 
 const STATUS_OPTIONS: TreatmentStatus[] = [
   "PENDING",
@@ -127,23 +128,19 @@ export function PlanDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <select
-            aria-label="Đổi trạng thái kế hoạch"
+          <Select
             value={plan.status}
-            onChange={(event) =>
+            onChange={(v) =>
               void updateStatus.mutateAsync({
                 planId: plan.id,
-                status: event.target.value as TreatmentStatus,
+                status: v as TreatmentStatus,
               })
             }
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700"
-          >
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>
-                {(TREATMENT_STATUS_LABELS as any)[status]}
-              </option>
-            ))}
-          </select>
+            options={STATUS_OPTIONS.map((s) => ({
+              value: s,
+              label: (TREATMENT_STATUS_LABELS as Record<string, string>)[s] ?? s,
+            }))}
+          />
           <button
             type="button"
             onClick={() => setDeletePlanOpen(true)}

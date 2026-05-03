@@ -32,12 +32,21 @@ const EVENT_TYPES: PlantEventType[] = [
   "HARVEST",
 ];
 
+function parseOptionalNumber(value: string, label: string) {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${label} phải là số không âm.`);
+  }
+  return parsed;
+}
+
 export function PlantEventEditDialog({
   event,
   isSubmitting = false,
   onClose,
   onSubmit,
-}: PlantEventEditDialogProps) {
+}: PlantEventEditDialogProps): React.ReactElement {
   const [form, setForm] = useState({
     eventType: event.eventType,
     note: event.note ?? "",
@@ -50,18 +59,9 @@ export function PlantEventEditDialog({
     mrlNote: event.mrlNote ?? "",
     estimatedCost: event.estimatedCost ?? "",
     planned: event.planned,
-    showAdvanced: false,
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-
-  const parseOptionalNumber = (value: string, label: string) => {
-    if (!value.trim()) return undefined;
-    const parsed = Number(value);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      throw new Error(`${label} phải là số không âm.`);
-    }
-    return parsed;
-  };
 
   const submit = () => {
     setValidationError(null);
@@ -237,18 +237,13 @@ export function PlantEventEditDialog({
 
         <button
           type="button"
-          onClick={() =>
-            setForm((current) => ({
-              ...current,
-              showAdvanced: !current.showAdvanced,
-            }))
-          }
+          onClick={() => setShowAdvanced(v => !v)}
           className="mt-5 text-sm font-black text-[#245A34]"
         >
-          {form.showAdvanced ? "Ẩn thông tin an toàn/nâng cao" : "Thông tin an toàn/nâng cao"}
+          {showAdvanced ? "Ẩn thông tin an toàn/nâng cao" : "Thông tin an toàn/nâng cao"}
         </button>
 
-        {form.showAdvanced ? (
+        {showAdvanced ? (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">

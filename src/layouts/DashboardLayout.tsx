@@ -33,7 +33,7 @@ export function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
+        <main className="flex-1 min-h-0 overflow-y-auto flex flex-col p-4 lg:p-8 gap-6">
           <PushNotificationsBootstrap />
           <Outlet />
         </main>
