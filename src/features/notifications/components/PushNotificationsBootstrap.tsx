@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import toast from "react-hot-toast";
+import { useLocation } from "react-router-dom";
 import { buildWebDeviceIdentifier } from "../../../lib/clientDevice";
 import { useAuthStore } from "../../../store/authStore";
 import { useMyProfile } from "../../settings/queries";
@@ -30,6 +31,7 @@ function getPushErrorMessage(error: unknown) {
 }
 
 export function PushNotificationsBootstrap() {
+  const location = useLocation();
   const accessToken = useAuthStore((state) => state.accessToken);
   const currentUser = useAuthStore((state) => state.user);
   const { data: profile } = useMyProfile(!!accessToken);
@@ -259,6 +261,14 @@ export function PushNotificationsBootstrap() {
   }
 
   if (supportState === "unsupported") {
+    return null;
+  }
+
+  const isAlertTab =
+    location.pathname.includes("/alerts") ||
+    location.pathname.includes("/alert-rules");
+
+  if (!isAlertTab) {
     return null;
   }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Image as ImageIcon, MapPin } from 'lucide-react'
 import { CreatePostModal } from './CreatePostModal'
-import { CommunityAvatar } from './CommunityAvatar'
+import { Avatar } from '../../../components/ui/Avatar'
 import { useCommunityCurrentUser } from '../hooks/useCommunityCurrentUser'
 
 export function CreatePostArea() {
@@ -16,11 +16,11 @@ export function CreatePostArea() {
       >
         {/* Input Row */}
         <div className="flex gap-4 mb-6">
-          <CommunityAvatar
-            source={currentUser.avatar}
+          <Avatar
+            src={currentUser.avatar}
             name={currentUser.name}
-            alt={currentUser.name}
-            className="w-12 h-12 rounded-full object-cover shrink-0 border border-slate-200"
+            size="xl"
+            className="border border-slate-200"
           />
           <div className="flex-1 bg-slate-50 border border-slate-200/50 rounded-3xl px-5 py-3 hover:bg-slate-100/50 transition-colors">
             <span className="text-[15px] text-slate-400 select-none">
@@ -70,3 +70,4 @@ export function CreatePostArea() {
     </>
   )
 }
+

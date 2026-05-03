@@ -15,6 +15,7 @@ import {
 import { AdminDetailButton } from "../../../../components/admin/AdminDetailButton";
 import { AdminTable } from "../../../../components/admin/AdminTable";
 import { AdminPagination } from "../../../../components/admin/AdminPagination";
+import { AdminTabs } from "../../../../components/admin/AdminTabs";
 import {
   useAdminFarmPlots,
   useAdminFarmZones,
@@ -711,22 +712,11 @@ export function FarmOverviewPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-slate-200">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors rounded-t-lg border-b-2 -mb-px ${
-              activeTab === tab.id
-                ? "border-emerald-600 text-emerald-700 bg-emerald-50/60"
-                : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            {tab.icon}
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <AdminTabs
+        tabs={TABS}
+        activeTab={activeTab}
+        onChange={(tabId) => setActiveTab(tabId as Tab)}
+      />
 
       {/* Tab content */}
       {activeTab === "plots" ? <PlotsTab /> : <ZonesTab />}

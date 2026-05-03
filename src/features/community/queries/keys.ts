@@ -12,4 +12,7 @@ export const communityKeys = {
   repliesRoot: () => [...communityKeys.all(), "replies"] as const,
   replies: (commentId: string, params: CommunityPageParams) =>
     [...communityKeys.repliesRoot(), commentId, params] as const,
+  votesRoot: () => [...communityKeys.all(), "votes"] as const,
+  voters: (postId: string, type: "UPVOTE" | "DOWNVOTE", params: CommunityPageParams) =>
+    [...communityKeys.votesRoot(), postId, type, params] as const,
 };

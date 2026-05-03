@@ -16,26 +16,26 @@ export const useSendRagChatMutation = () => {
   return useMutation({
     mutationFn: (payload: RagChatRequest) => ragApi.sendRagChat(payload),
     onSuccess: async (result) => {
-      if (result.treatmentPlan || result.treatment_plan || result.plan) {
+      if (result.plan || result.plan || result.plan) {
         await queryClient.invalidateQueries({
-          queryKey: [...ragAssistantKeys.all, "treatment-plans"],
+          queryKey: [...ragAssistantKeys.all, "plans"],
         });
       }
     },
   });
 };
 
-export const useRagTreatmentPlans = (
+export const useRagPlans = (
   params: { page?: number; size?: number } = {},
 ) =>
   useQuery({
-    queryKey: ragAssistantKeys.treatmentPlans(params),
-    queryFn: () => ragApi.getRagTreatmentPlans(params),
+    queryKey: ragAssistantKeys.plans(params),
+    queryFn: () => ragApi.getRagPlans(params),
   });
 
-export const useRagTreatmentPlan = (planId: string | null) =>
+export const useRagPlan = (planId: string | null) =>
   useQuery({
-    queryKey: ragAssistantKeys.treatmentPlan(planId ?? ""),
-    queryFn: () => ragApi.getRagTreatmentPlanById(planId ?? ""),
+    queryKey: ragAssistantKeys.plan(planId ?? ""),
+    queryFn: () => ragApi.getRagPlanById(planId ?? ""),
     enabled: Boolean(planId),
   });

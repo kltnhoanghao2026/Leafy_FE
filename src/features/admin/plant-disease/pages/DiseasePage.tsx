@@ -4,11 +4,11 @@ import { AdminTable } from "../../../../components/admin/AdminTable";
 import { AdminPagination } from "../../../../components/admin/AdminPagination";
 import toast from "react-hot-toast";
 import {
-  useAdminTreatmentPlans,
-  useUpdateTreatmentPlanStatus,
-  useDeleteTreatmentPlan,
+  useAdminPlans,
+  useUpdatePlanStatus,
+  useDeletePlan,
 } from "../api/";
-import type { TreatmentStatus, TreatmentPlanListParams } from "../types";
+import type { TreatmentStatus, PlanListParams } from "../types";
 
 // ============================================================================
 // Constants
@@ -118,17 +118,17 @@ function TreatmentPlansPanel() {
   const [statusFilter, setStatusFilter] =
     useState<TreatmentStatusFilter>("all");
 
-  const updateStatusMutation = useUpdateTreatmentPlanStatus();
-  const deleteMutation = useDeleteTreatmentPlan();
+  const updateStatusMutation = useUpdatePlanStatus();
+  const deleteMutation = useDeletePlan();
 
-  const params: TreatmentPlanListParams = {
+  const params: PlanListParams = {
     page,
     size: pageSize,
     ...(statusFilter !== "all"
       ? { status: statusFilter as TreatmentStatus }
       : {}),
   };
-  const { data: pageData, isLoading, isError } = useAdminTreatmentPlans(params);
+  const { data: pageData, isLoading, isError } = useAdminPlans(params);
 
   const plans = pageData?.content ?? [];
   const totalPages = pageData?.totalPages ?? 0;
@@ -211,7 +211,7 @@ function TreatmentPlansPanel() {
         renderSkeleton={() => <SkeletonRow cols={7} />}
         skeletonCount={8}
       >
-        {plans.map((plan) => (
+        {plans.map((plan: any) => (
           <div
             key={plan.id}
             className="grid grid-cols-[1.5fr_80px_100px_1fr_140px_110px_120px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors"

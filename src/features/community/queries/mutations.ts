@@ -14,9 +14,10 @@ export const useCreateCommunityPost = () => {
     mutationFn: (payload: CreateCommunityPostRequest) =>
       communityApi.createPost(payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: communityKeys.feedRoot(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: communityKeys.feedRoot() }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+      ]);
     },
     meta: {
       successMessage: "Post created.",
@@ -33,6 +34,7 @@ export const useCreateCommunityComment = () => {
     onSuccess: async (_response, payload) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: communityKeys.feedRoot() }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
         queryClient.invalidateQueries({
           queryKey: communityKeys.commentsRoot(),
         }),
@@ -60,9 +62,10 @@ export const useVotePost = () => {
         type: payload.type,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: communityKeys.feedRoot(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: communityKeys.feedRoot() }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+      ]);
     },
     meta: {
       successMessage: "Post vote updated.",

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { CreatePostArea } from '../components/CreatePostArea'
-import { HotTopicsWidget } from '../components/HotTopicsWidget'
-import { OnlineExpertsWidget } from '../components/OnlineExpertsWidget'
+import { SuggestedExpertsWidget } from '../../profiles/components/SuggestedExpertsWidget'
 import { PostCard } from '../components/PostCard'
 import { useCommunityFeed } from '../queries'
 import type { CommunityPageParams } from '../../../lib/api/communityApi'
@@ -118,9 +117,8 @@ export function CommunityView() {
         </div>
 
         {/* Right Sidebar Widgets */}
-        <div className="flex flex-col gap-6 xl:col-span-4">
-          <HotTopicsWidget />
-          <OnlineExpertsWidget />
+        <div className="flex flex-col gap-6 xl:col-span-4 sticky top-6 self-start">
+          <SuggestedExpertsWidget />
         </div>
         
       </div>

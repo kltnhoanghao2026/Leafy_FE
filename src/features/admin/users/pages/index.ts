@@ -1,1 +1,1 @@
-﻿export * from './UserManagementPage';
+export * from './UserManagementPage';

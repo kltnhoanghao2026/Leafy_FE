@@ -40,4 +40,55 @@ export const fileApi = {
 
     return response.data.data;
   },
+  async uploadFileDirectToS3(file: File): Promise<FileResponse> {
+    // 1. Get presigned URL
+    const presignedResponse = await apiClient.get<
+      ApiEnvelope<{ s3Key: string; presignedUrl: string }>
+    >(API_ENDPOINTS.FILES.PRESIGNED_UPLOAD_URL, {
+      params: {
+        filename: file.name,
+        contentType: file.type || "application/octet-stream",
+      },
+    });
+
+    if (!presignedResponse.data.data) {
+      throw new Error(
+        presignedResponse.data.message || "Failed to get presigned upload URL",
+      );
+    }
+
+    const { s3Key, presignedUrl } = presignedResponse.data.data;
+
+    // 2. Upload file directly to S3
+    const uploadResult = await fetch(presignedUrl, {
+      method: "PUT",
+      body: file,
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+      },
+    });
+
+    if (!uploadResult.ok) {
+      throw new Error(`Failed to upload file to S3: ${uploadResult.statusText}`);
+    }
+
+    // 3. Create file metadata in our backend
+    const createResponse = await apiClient.post<ApiEnvelope<FileResponse>>(
+      API_ENDPOINTS.FILES.CREATE,
+      {
+        s3Key,
+        originalFileName: file.name,
+        contentType: file.type || "application/octet-stream",
+        fileSize: file.size,
+      },
+    );
+
+    if (!createResponse.data.data) {
+      throw new Error(
+        createResponse.data.message || "Failed to create file metadata",
+      );
+    }
+
+    return createResponse.data.data;
+  },
 };

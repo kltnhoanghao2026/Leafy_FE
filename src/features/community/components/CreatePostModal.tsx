@@ -3,7 +3,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { AlertCircle, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
 import { useCreateCommunityPost } from "../queries";
 import { useUploadFileMutation } from "../../settings/queries";
-import { CommunityAvatar } from "./CommunityAvatar";
+import { Avatar } from '../../../components/ui/Avatar'
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CreatePostModalProps {
@@ -139,12 +139,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5">
             <div className="flex items-center gap-3 mb-4">
-              <CommunityAvatar
-                source={currentUser.avatar}
-                name={currentUser.name}
-                alt={currentUser.name}
-                className="w-11 h-11 rounded-full object-cover border border-slate-200"
-              />
+              <Avatar src={currentUser.avatar} name={currentUser.name} size="xl" className="border border-slate-200" />
               <div>
                 <p className="text-[15px] font-bold text-gray-900">
                   {currentUser.name}
@@ -303,3 +298,5 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
     </div>
   );
 }
+
+

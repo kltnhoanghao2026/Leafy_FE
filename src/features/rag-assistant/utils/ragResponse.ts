@@ -2,7 +2,7 @@ import type {
   RagApiResponse,
   RagChatResult,
   RagSource,
-  RagTreatmentPlan,
+  RagPlan,
 } from "../types";
 
 export const unwrapRagResult = <T>(payload: T | RagApiResponse<T>): T => {
@@ -40,7 +40,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 export const normalizeTreatmentPlan = (
   value: unknown,
-): RagTreatmentPlan | null => {
+): RagPlan | null => {
   if (!isRecord(value)) return null;
 
   const nestedPlan = isRecord(value.plan) ? value.plan : {};
@@ -59,7 +59,7 @@ export const normalizeTreatmentPlan = (
     null;
 
   return {
-    ...(value as RagTreatmentPlan),
+    ...(value as RagPlan),
     id: typeof planId === "string" ? planId : undefined,
     planId: typeof planId === "string" ? planId : undefined,
     title: typeof title === "string" ? title : "Kế hoạch điều trị AI",
@@ -82,15 +82,15 @@ export const normalizeTreatmentPlan = (
 
 export const getTreatmentPlanFromChat = (
   result: RagChatResult | null | undefined,
-): RagTreatmentPlan | null =>
+): RagPlan | null =>
   normalizeTreatmentPlan(
-    result?.treatmentPlan ?? result?.treatment_plan ?? result?.plan,
+    result?.plan,
   );
 
-export const getPlanTitle = (plan: RagTreatmentPlan) =>
+export const getPlanTitle = (plan: RagPlan) =>
   plan.title || plan.name || plan.planId || plan.id || "Kế hoạch điều trị AI";
 
-export const getPlanStepCount = (plan: RagTreatmentPlan) => {
+export const getPlanStepCount = (plan: RagPlan) => {
   if (Array.isArray(plan.steps)) return plan.steps.length;
   if (Array.isArray(plan.schedule)) return plan.schedule.length;
   if (

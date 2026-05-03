@@ -80,7 +80,7 @@ export interface PlantEventDto {
   active: boolean;
 }
 
-export interface TreatmentPlanDto {
+export interface PlanDto {
   id: string;
   userId: string;
   ragPlanId: string | null;
@@ -137,7 +137,7 @@ export interface PlantEventListParams {
   farmZoneId?: string;
 }
 
-export interface TreatmentPlanListParams {
+export interface PlanListParams {
   page?: number;
   size?: number;
   sortBy?: string;

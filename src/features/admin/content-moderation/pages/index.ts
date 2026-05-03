@@ -1,1 +1,1 @@
-﻿export * from './ContentModerationPage';
+export * from './ContentModerationPage';

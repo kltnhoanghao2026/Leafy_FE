@@ -5,7 +5,7 @@ import type {
   RagChatRequest,
   RagChatResult,
   RagHealthResponse,
-  RagTreatmentPlan,
+  RagPlan,
 } from "../types";
 import { normalizeTreatmentPlan, unwrapRagResult } from "../utils/ragResponse";
 
@@ -24,12 +24,12 @@ export const ragApi = {
     return unwrapRagResult(response.data);
   },
 
-  getRagTreatmentPlans: async (
+  getRagPlans: async (
     params: { page?: number; size?: number } = {},
   ) => {
     const response = await apiClient.get<
-      RagApiResponse<RagTreatmentPlan[]> | RagTreatmentPlan[]
-    >(API_ENDPOINTS.RAG.TREATMENT_PLANS, {
+      RagApiResponse<RagPlan[]> | RagPlan[]
+    >(API_ENDPOINTS.RAG.PLANS, {
       params: { page: params.page ?? 0, size: params.size ?? 20 },
     });
     return unwrapRagResult(response.data).map(
@@ -37,10 +37,10 @@ export const ragApi = {
     );
   },
 
-  getRagTreatmentPlanById: async (planId: string) => {
+  getRagPlanById: async (planId: string) => {
     const response = await apiClient.get<
-      RagApiResponse<RagTreatmentPlan> | RagTreatmentPlan
-    >(API_ENDPOINTS.RAG.TREATMENT_PLAN(planId));
+      RagApiResponse<RagPlan> | RagPlan
+    >(API_ENDPOINTS.RAG.PLAN(planId));
     const plan = unwrapRagResult(response.data);
     return normalizeTreatmentPlan(plan) ?? plan;
   },

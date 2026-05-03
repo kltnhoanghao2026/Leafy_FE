@@ -31,7 +31,8 @@ export interface RegisterFormInputs {
 
 // --- User ---
 export interface User {
-  id: string;
+  id: string;       // auth account UUID
+  profileId: string; // profile-service profileId
   name: string;
   email?: string;
   phone?: string;

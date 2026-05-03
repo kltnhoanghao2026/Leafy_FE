@@ -74,7 +74,15 @@ export const useSeedSpeciesPerenual = () =>
 
 export const useSeedCommunity = () =>
   useMutation({
-    mutationFn: () => seedingApi.seedCommunity(),
+    mutationFn: ({
+      postCount,
+      commentCount,
+      voteCount,
+    }: {
+      postCount?: number;
+      commentCount?: number;
+      voteCount?: number;
+    } = {}) => seedingApi.seedCommunity(postCount, commentCount, voteCount),
     onSuccess: (res) => {
       const d = res.data.data;
       toast.success(
@@ -82,6 +90,18 @@ export const useSeedCommunity = () =>
       );
     },
     onError: () => toast.error("Seeder cộng đồng thất bại"),
+  });
+
+export const useSyncCommunityProfiles = () =>
+  useMutation({
+    mutationFn: () => seedingApi.syncCommunityProfiles(),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      toast.success(
+        `Đã đồng bộ ${d?.seededProfileCount ?? 0} hồ sơ từ profile-service`,
+      );
+    },
+    onError: () => toast.error("Đồng bộ hồ sơ thất bại"),
   });
 
 export const useSeedCertificates = () =>
@@ -100,4 +120,14 @@ export const useSeedCertificates = () =>
       );
     },
     onError: () => toast.error("Seeder chứng chỉ thất bại"),
+  });
+
+export const useSeedExperts = () =>
+  useMutation({
+    mutationFn: (count: number) => seedingApi.seedExperts(count),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      toast.success(`Chuyên gia: Đã tạo ${d ?? 0} hồ sơ`);
+    },
+    onError: () => toast.error("Seeder chuyên gia thất bại"),
   });

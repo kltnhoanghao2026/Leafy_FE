@@ -46,7 +46,7 @@ export function AuthSessionBootstrap() {
         }
       })
       .catch(() => {
-        // No valid session – user must log in
+        // No valid session â€“ user must log in
       })
       .finally(() => {
         setIsInitializing(false);
@@ -61,7 +61,7 @@ export function AuthSessionBootstrap() {
   useEffect(() => {
     if (!accessToken) {
       console.log(
-        "[AuthSessionBootstrap] no accessToken → clearing user & accountRole",
+        "[AuthSessionBootstrap] no accessToken â†’ clearing user & accountRole",
       );
       if (user !== null) {
         setUser(null);
@@ -87,6 +87,7 @@ export function AuthSessionBootstrap() {
 
     const nextUser = {
       id: profile.userId,
+      profileId: profile.id,
       name: profile.fullName,
       email: profile.email ?? undefined,
       phone: profile.phoneNumber ?? undefined,
@@ -107,11 +108,11 @@ export function AuthSessionBootstrap() {
 
   useEffect(() => {
     console.log(
-      `[AuthSessionBootstrap] account effect — role=${account?.role ?? "(no account yet)"}`,
+      `[AuthSessionBootstrap] account effect â€” role=${account?.role ?? "(no account yet)"}`,
     );
     if (account?.role) {
       console.log(
-        `[AuthSessionBootstrap] setting accountRole → ${account.role}`,
+        `[AuthSessionBootstrap] setting accountRole â†’ ${account.role}`,
       );
       setAccountRole(account.role);
     }

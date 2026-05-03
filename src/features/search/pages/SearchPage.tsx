@@ -1,370 +1,522 @@
-import { useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
+  ArrowBigUp,
+  BadgeCheck,
   ChevronLeft,
   ChevronRight,
-  MessageSquare,
+  Clock,
+  Layers,
+  Loader2,
+  MapPin,
+  MessageCircle,
   RefreshCw,
   Search,
-  ThumbsUp,
-  UserRound,
-} from "lucide-react";
-import { Link } from "react-router-dom";
-import { ROUTES } from "../../../lib/routes";
-import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
+  User,
+  Users,
+  X,
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ROUTES } from '../../../lib/routes'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
+import { formatDateTime } from '../../metrics-view/utils/format'
+import { Avatar } from '../../../components/ui/Avatar'
+import { useUnifiedSearch, useSearchPosts, useSearchProfiles } from '../queries'
 import type {
   SearchMode,
   SearchPostItem,
-  SearchPostsParams,
   SearchProfileItem,
+  SearchPostsParams,
   SearchProfilesParams,
-} from "../types";
-import { useSearchPosts, useSearchProfiles } from "../queries";
+  UnifiedSearchParams,
+} from '../types'
 
-const MIN_SEARCH_LENGTH = 2;
-const PAGE_SIZE = 10;
-const DEFAULT_AVATAR = "https://i.pravatar.cc/150?img=11";
+// ── constants ─────────────────────────────────────────────────────────────────
+const MIN_LENGTH   = 2
+const PAGE_SIZE    = 10
+const UNIFIED_SIZE = 5   // items per section in "All" view
 
-const modeLabels: Record<SearchMode, string> = {
-  posts: "Posts",
-  profiles: "Profiles",
-};
+type TabMode = 'all' | SearchMode
 
-const getPostText = (post: SearchPostItem): string =>
-  post.caption || post.title || "Untitled post";
+function fmtStat(n: number | null | undefined) {
+  if (!n) return '0'
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+}
 
-const getAuthorName = (post: SearchPostItem): string =>
-  post.authorInfo?.fullName || "Unknown author";
-
-const getProfileAvatar = (profile: SearchProfileItem): string =>
-  profile.avatar || profile.profilePicture || DEFAULT_AVATAR;
-
+// ── page ──────────────────────────────────────────────────────────────────────
 export function SearchPage() {
-  const [keyword, setKeyword] = useState("");
-  const [submittedKeyword, setSubmittedKeyword] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [mode, setMode] = useState<SearchMode>("posts");
-  const [page, setPage] = useState(0);
-  const debouncedKeyword = useDebouncedValue(keyword, 400);
-  const searchTerm = (isSubmitted ? submittedKeyword : debouncedKeyword).trim();
-  const canSearch = searchTerm.length >= MIN_SEARCH_LENGTH;
+  const [searchParams, setSearchParams] = useSearchParams()
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const postParams = useMemo<SearchPostsParams>(
-    () => ({
-      searchTerm,
-      page,
-      size: PAGE_SIZE,
-    }),
-    [page, searchTerm],
-  );
+  const urlQ    = searchParams.get('q') ?? ''
+  const urlTab  = (searchParams.get('tab') as TabMode) ?? 'all'
+  const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
 
-  const profileParams = useMemo<SearchProfilesParams>(
-    () => ({
-      searchTerm,
-      page,
-      size: PAGE_SIZE,
-    }),
-    [page, searchTerm],
-  );
+  const [inputValue, setInputValue] = useState(urlQ)
+  const debouncedInput = useDebouncedValue(inputValue, 350)
 
-  const postsQuery = useSearchPosts(postParams, mode === "posts" && canSearch);
-  const profilesQuery = useSearchProfiles(
-    profileParams,
-    mode === "profiles" && canSearch,
-  );
-  const activeQuery = mode === "posts" ? postsQuery : profilesQuery;
-  const activePage = mode === "posts" ? postsQuery.data : profilesQuery.data;
+  // Sync input when navigating from Header
+  useEffect(() => { setInputValue(urlQ) }, [urlQ])
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(0);
-    setSubmittedKeyword(keyword.trim());
-    setIsSubmitted(true);
-  };
+  // Push debounced term to URL
+  useEffect(() => {
+    const term = debouncedInput.trim()
+    if (term === urlQ || term.length < MIN_LENGTH) return
+    setSearchParams(p => {
+      const n = new URLSearchParams(p)
+      n.set('q', term); n.set('page', '0')
+      return n
+    }, { replace: true })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedInput])
+
+  const setTab = useCallback((tab: TabMode) => {
+    setSearchParams(p => {
+      const n = new URLSearchParams(p)
+      n.set('tab', tab); n.set('page', '0')
+      return n
+    })
+  }, [setSearchParams])
+
+  const setPage = useCallback((page: number) => {
+    setSearchParams(p => {
+      const n = new URLSearchParams(p)
+      n.set('page', String(page))
+      return n
+    })
+  }, [setSearchParams])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const term = inputValue.trim()
+    if (term.length < MIN_LENGTH) return
+    setSearchParams({ q: term, tab: urlTab, page: '0' })
+  }
+
+  const canSearch = urlQ.trim().length >= MIN_LENGTH
+
+  // ── data queries ─────────────────────────────────────────────────────────
+  const unifiedParams = useMemo<UnifiedSearchParams>(() => ({
+    searchTerm: urlQ,
+    postSize: UNIFIED_SIZE,
+    profileSize: UNIFIED_SIZE,
+  }), [urlQ])
+
+  const postParams = useMemo<SearchPostsParams>(() => ({
+    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE,
+  }), [urlQ, urlPage])
+
+  const profileParams = useMemo<SearchProfilesParams>(() => ({
+    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE,
+  }), [urlQ, urlPage])
+
+  const unifiedQuery  = useUnifiedSearch(unifiedParams,  canSearch && urlTab === 'all')
+  const postsQuery    = useSearchPosts(postParams,        canSearch && urlTab === 'posts')
+  const profilesQuery = useSearchProfiles(profileParams,  canSearch && urlTab === 'profiles')
+
+  const activeQuery = urlTab === 'all' ? unifiedQuery : urlTab === 'posts' ? postsQuery : profilesQuery
+  const isLoading   = activeQuery.isLoading
+  const isError     = activeQuery.isError
+
+  // ── tabs config ───────────────────────────────────────────────────────────
+  const tabs = [
+    { key: 'all'      as TabMode, label: 'Tất cả',      icon: Layers },
+    { key: 'posts'    as TabMode, label: 'Bài viết',    icon: MessageCircle },
+    { key: 'profiles' as TabMode, label: 'Chuyên gia',  icon: Users },
+  ]
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-          Search
-        </h2>
-        <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-          Search backend-indexed community posts and user profiles.
-        </p>
-      </div>
+    <div className="flex-1 w-full max-w-3xl mx-auto space-y-5 pb-12 animate-in fade-in duration-300">
 
-      <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col lg:flex-row lg:items-center gap-3"
-        >
-          <label className="sr-only" htmlFor="searchKeyword">
-            Search keyword
-          </label>
-          <div className="flex-1 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 focus-within:border-[#245A34] focus-within:ring-2 focus-within:ring-[#245A34]/15">
-            <Search className="mr-3 h-5 w-5 text-slate-400" strokeWidth={2.5} />
+      {/* ── Hero search bar ────────────────────────────────────────────── */}
+      <div className="rounded-[2rem] bg-gradient-to-br from-[#1a4228] to-[#2d7248] p-6 shadow-lg">
+        <h1 className="text-[21px] font-black text-white mb-1 tracking-tight">Tìm kiếm</h1>
+        <p className="text-[13px] text-green-200/70 mb-5">
+          Tìm bài viết và chuyên gia từ một từ khoá duy nhất
+        </p>
+
+        <form onSubmit={handleSubmit} role="search">
+          <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 border transition-all bg-white/10 backdrop-blur-sm ${
+            inputValue ? 'border-white/40' : 'border-white/20'
+          }`}>
+            <Search className="w-4 h-4 text-white/60 shrink-0" strokeWidth={2.5} />
             <input
-              id="searchKeyword"
-              value={keyword}
-              onChange={(event) => {
-                setKeyword(event.target.value);
-                setIsSubmitted(false);
-                setSubmittedKeyword("");
-                setPage(0);
-              }}
-              placeholder="Enter at least 2 characters to search posts or profiles"
-              className="w-full bg-transparent text-sm font-bold text-slate-800 outline-none placeholder:text-slate-400"
+              ref={inputRef}
+              type="search"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              placeholder="Nhập ít nhất 2 ký tự..."
+              aria-label="Từ khoá tìm kiếm"
+              className="flex-1 bg-transparent text-[15px] font-semibold text-white placeholder:text-white/40 outline-none"
+              autoFocus
             />
+            {inputValue && (
+              <button type="button" onClick={() => { setInputValue(''); inputRef.current?.focus() }}
+                className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 shrink-0 transition-colors"
+                aria-label="Xoá">
+                <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+              </button>
+            )}
+            <button type="submit"
+              disabled={inputValue.trim().length < MIN_LENGTH}
+              className="shrink-0 px-5 py-2 bg-white text-[#245A34] text-[13px] font-black rounded-xl hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              Tìm
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={keyword.trim().length < MIN_SEARCH_LENGTH}
-            className="rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Search
-          </button>
         </form>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {(["posts", "profiles"] as SearchMode[]).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => {
-                setMode(option);
-                setPage(0);
-                setIsSubmitted(false);
-                setSubmittedKeyword("");
-              }}
-              className={`rounded-full px-4 py-2 text-sm font-black transition-colors ${
-                mode === option
-                  ? "bg-[#245A34] text-white"
-                  : "bg-slate-50 text-slate-500 hover:bg-green-50 hover:text-[#245A34]"
-              }`}
-            >
-              {modeLabels[option]}
+        {/* Tab switcher */}
+        <div className="flex gap-2 mt-4 flex-wrap">
+          {tabs.map(({ key, label, icon: Icon }) => (
+            <button key={key} type="button" onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                urlTab === key
+                  ? 'bg-white text-[#245A34] shadow-sm'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
+              }`}>
+              <Icon className="w-3.5 h-3.5" strokeWidth={2.5} />
+              {label}
             </button>
           ))}
         </div>
+      </div>
 
-        <p className="mt-4 text-xs font-semibold text-slate-500">
-          Press Enter to search immediately. Results update after a short
-          debounce while typing.
-        </p>
-      </section>
-
-      {!canSearch ? (
-        <div className="rounded-[2rem] bg-white border border-slate-100 p-10 text-center shadow-sm">
-          <Search className="mx-auto h-8 w-8 text-slate-400" />
-          <h3 className="mt-4 text-lg font-black text-slate-800">
-            Enter a search keyword
-          </h3>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
-            Use at least 2 characters to search backend posts or profiles.
-          </p>
+      {/* ── Empty prompt ──────────────────────────────────────────────── */}
+      {!canSearch && (
+        <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm p-14 flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center">
+            <Search className="w-7 h-7 text-slate-300" strokeWidth={1.5} />
+          </div>
+          <p className="text-[15px] font-bold text-slate-600">Nhập từ khoá để tìm kiếm</p>
+          <p className="text-[13px] text-slate-400 -mt-2">Cần ít nhất 2 ký tự</p>
         </div>
-      ) : null}
+      )}
 
-      {canSearch && activeQuery.isLoading ? (
-        <div
-          aria-label="Loading search results"
-          className="rounded-[2rem] bg-white border border-slate-100 p-5 shadow-sm"
+      {/* ── Loading ───────────────────────────────────────────────────── */}
+      {canSearch && isLoading && (
+        <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm p-12 flex flex-col items-center gap-3 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin" strokeWidth={2} />
+          <p className="text-[14px] font-semibold">Đang tìm kiếm...</p>
+        </div>
+      )}
+
+      {/* ── Error ─────────────────────────────────────────────────────── */}
+      {canSearch && isError && !isLoading && (
+        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 shadow-sm flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[14px] font-bold text-red-700">Không thể tải kết quả</p>
+            <p className="text-[12px] text-red-500 mt-0.5">Dịch vụ tìm kiếm trả về lỗi. Vui lòng thử lại.</p>
+          </div>
+          <button onClick={() => void activeQuery.refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white text-[13px] font-bold hover:bg-red-700 shrink-0">
+            <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.5} /> Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* ── ALL tab ───────────────────────────────────────────────────── */}
+      {canSearch && urlTab === 'all' && unifiedQuery.data && !isError && !isLoading && (
+        <AllResults
+          data={unifiedQuery.data}
+          keyword={urlQ}
+          onSeeAllPosts={() => setTab('posts')}
+          onSeeAllProfiles={() => setTab('profiles')}
+        />
+      )}
+
+      {/* ── POSTS tab ─────────────────────────────────────────────────── */}
+      {canSearch && urlTab === 'posts' && postsQuery.data && !isError && !isLoading && (
+        <PaginatedSection
+          title="Bài viết"
+          icon={<MessageCircle className="w-4 h-4" strokeWidth={2.5} />}
+          totalItems={postsQuery.data.totalItems}
+          page={urlPage}
+          totalPages={postsQuery.data.totalPages}
+          hasPrev={postsQuery.data.hasPrevious}
+          hasNext={postsQuery.data.hasNext}
+          onPrev={() => setPage(Math.max(urlPage - 1, 0))}
+          onNext={() => setPage(urlPage + 1)}
+          keyword={urlQ}
         >
-          {[0, 1, 2].map((item) => (
-            <div
-              key={item}
-              className="h-20 rounded-2xl bg-slate-100 animate-pulse mb-3 last:mb-0"
-            />
-          ))}
-        </div>
-      ) : null}
+          {postsQuery.data.items.length === 0
+            ? <EmptyState message="Không tìm thấy bài viết nào" />
+            : <PostList posts={postsQuery.data.items} keyword={urlQ} />
+          }
+        </PaginatedSection>
+      )}
 
-      {canSearch && activeQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                Search results could not be loaded
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                The search service returned an error for the current query.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void activeQuery.refetch()}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {canSearch && activePage && !activeQuery.isError ? (
-        <section className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
-            <div>
-              <p className="text-sm font-black text-slate-800">
-                {formatNumber(activePage.totalItems)} {modeLabels[mode].toLowerCase()} found
-              </p>
-              <p className="text-xs font-semibold text-slate-500">
-                Page {formatNumber(activePage.page + 1)} of{" "}
-                {formatNumber(Math.max(activePage.totalPages, 1))}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((current) => Math.max(current - 1, 0))}
-                disabled={!activePage.hasPrevious}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous search page"
-              >
-                <ChevronLeft className="h-4 w-4" strokeWidth={3} />
-              </button>
-              <button
-                type="button"
-                onClick={() => setPage((current) => current + 1)}
-                disabled={!activePage.hasNext}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next search page"
-              >
-                <ChevronRight className="h-4 w-4" strokeWidth={3} />
-              </button>
-            </div>
-          </div>
-
-          {activePage.items.length === 0 ? (
-            <div className="p-10 text-center">
-              <h3 className="text-lg font-black text-slate-800">
-                No {modeLabels[mode].toLowerCase()} found
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                Try a different keyword or switch search mode.
-              </p>
-            </div>
-          ) : mode === "posts" ? (
-            <PostResults posts={postsQuery.data?.items ?? []} />
-          ) : (
-            <ProfileResults profiles={profilesQuery.data?.items ?? []} />
-          )}
-        </section>
-      ) : null}
+      {/* ── PROFILES tab ──────────────────────────────────────────────── */}
+      {canSearch && urlTab === 'profiles' && profilesQuery.data && !isError && !isLoading && (
+        <PaginatedSection
+          title="Chuyên gia"
+          icon={<Users className="w-4 h-4" strokeWidth={2.5} />}
+          totalItems={profilesQuery.data.totalItems}
+          page={urlPage}
+          totalPages={profilesQuery.data.totalPages}
+          hasPrev={profilesQuery.data.hasPrevious}
+          hasNext={profilesQuery.data.hasNext}
+          onPrev={() => setPage(Math.max(urlPage - 1, 0))}
+          onNext={() => setPage(urlPage + 1)}
+          keyword={urlQ}
+        >
+          {profilesQuery.data.items.length === 0
+            ? <EmptyState message="Không tìm thấy chuyên gia nào" />
+            : <ProfileList profiles={profilesQuery.data.items} />
+          }
+        </PaginatedSection>
+      )}
     </div>
-  );
+  )
 }
 
-function PostResults({ posts }: { posts: SearchPostItem[] }) {
+// ── All results view ──────────────────────────────────────────────────────────
+function AllResults({
+  data, keyword, onSeeAllPosts, onSeeAllProfiles,
+}: {
+  data: { posts: SearchPostItem[]; profiles: SearchProfileItem[]; totalPosts: number; totalProfiles: number }
+  keyword: string
+  onSeeAllPosts: () => void
+  onSeeAllProfiles: () => void
+}) {
+  const noPosts    = data.posts.length === 0
+  const noProfiles = data.profiles.length === 0
+
+  if (noPosts && noProfiles) {
+    return (
+      <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm p-14 flex flex-col items-center gap-3">
+        <Search className="w-10 h-10 text-slate-200" strokeWidth={1.5} />
+        <p className="text-[15px] font-bold text-slate-600">Không tìm thấy kết quả</p>
+        <p className="text-[13px] text-slate-400">Thử từ khoá khác</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="divide-y divide-slate-100">
-      {posts.map((post) => (
-        <Link
-          key={post.id}
-          to={`${ROUTES.DASHBOARD.COMMUNITY}?post=${encodeURIComponent(post.id)}`}
-          className="block p-5 transition-colors hover:bg-slate-50"
-        >
-          <div className="flex items-start gap-4">
-            <img
-              src={post.authorInfo?.avatar || DEFAULT_AVATAR}
-              alt={getAuthorName(post)}
-              className="h-11 w-11 shrink-0 rounded-full border border-slate-200 object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-black text-slate-900">
-                  {getAuthorName(post)}
-                </p>
-                {post.postType ? (
-                  <span className="rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-[#245A34]">
-                    {post.postType}
+    <div className="space-y-4">
+      {/* Posts section */}
+      {!noPosts && (
+        <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
+          <SectionHeader
+            icon={<MessageCircle className="w-4 h-4" strokeWidth={2.5} />}
+            title="Bài viết"
+            total={data.totalPosts}
+            onSeeAll={onSeeAllPosts}
+          />
+          <PostList posts={data.posts} keyword={keyword} />
+        </div>
+      )}
+
+      {/* Profiles section */}
+      {!noProfiles && (
+        <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
+          <SectionHeader
+            icon={<Users className="w-4 h-4" strokeWidth={2.5} />}
+            title="Chuyên gia"
+            total={data.totalProfiles}
+            onSeeAll={onSeeAllProfiles}
+          />
+          <ProfileList profiles={data.profiles} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Section header (All view) ─────────────────────────────────────────────────
+function SectionHeader({ icon, title, total, onSeeAll }: {
+  icon: React.ReactNode; title: string; total: number; onSeeAll: () => void
+}) {
+  return (
+    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="flex items-center gap-2 text-[14px] font-bold text-gray-800">
+        <span className="text-[#245A34]">{icon}</span>
+        {title}
+        <span className="ml-1 px-2 py-0.5 rounded-full bg-slate-100 text-[12px] font-bold text-slate-500">
+          {fmtStat(total)}
+        </span>
+      </div>
+      {total > UNIFIED_SIZE && (
+        <button onClick={onSeeAll}
+          className="text-[13px] font-bold text-[#245A34] hover:underline">
+          Xem tất cả →
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ── Paginated section wrapper (Posts/Profiles tabs) ────────────────────────────
+function PaginatedSection({ title, icon, totalItems, page, totalPages, hasPrev, hasNext, onPrev, onNext, keyword, children }: {
+  title: string; icon: React.ReactNode; totalItems: number
+  page: number; totalPages: number; hasPrev: boolean; hasNext: boolean
+  onPrev: () => void; onNext: () => void; keyword: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+        <div className="flex items-center gap-2 text-[14px] font-bold text-gray-800">
+          <span className="text-[#245A34]">{icon}</span>
+          {title}
+          <span className="ml-1 px-2 py-0.5 rounded-full bg-slate-100 text-[12px] font-bold text-slate-500">
+            {fmtStat(totalItems)}
+          </span>
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1.5">
+            <button onClick={onPrev} disabled={!hasPrev} aria-label="Trang trước"
+              className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors">
+              <ChevronLeft className="w-3.5 h-3.5" strokeWidth={2.5} />
+            </button>
+            <span className="text-[12px] font-semibold text-slate-400 min-w-[50px] text-center">
+              {page + 1}/{totalPages}
+            </span>
+            <button onClick={onNext} disabled={!hasNext} aria-label="Trang sau"
+              className="w-8 h-8 rounded-full border border-slate-200 flex items-center justify-center text-slate-500 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 transition-colors">
+              <ChevronRight className="w-3.5 h-3.5" strokeWidth={2.5} />
+            </button>
+          </div>
+        )}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+// ── Post list ─────────────────────────────────────────────────────────────────
+function PostList({ posts, keyword }: { posts: SearchPostItem[]; keyword: string }) {
+  return (
+    <ul className="divide-y divide-slate-100">
+      {posts.map(post => {
+        const name   = post.authorInfo?.fullName ?? 'Người dùng'
+        const avatar = post.authorInfo?.avatar ?? null
+        const body   = post.caption ?? post.title ?? ''
+        return (
+          <li key={post.id}>
+            <Link to={`${ROUTES.DASHBOARD.COMMUNITY}?post=${encodeURIComponent(post.id)}`}
+              className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50/70 transition-colors group">
+              <Avatar src={avatar} name={name} alt={name} size="lg"
+                className="shrink-0 mt-0.5 border border-slate-200" />
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                  <span className="text-[13px] font-bold text-gray-900">{name}</span>
+                  {post.authorInfo?.isVerified && (
+                    <BadgeCheck className="w-3.5 h-3.5 text-[#245A34]" strokeWidth={2.5} />
+                  )}
+                  {post.postType && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      post.postType === 'URGENT' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-[#245A34]'
+                    }`}>{post.postType}</span>
+                  )}
+                </div>
+                {body && (
+                  <p className="text-[13px] text-slate-600 line-clamp-2 leading-relaxed">
+                    <Highlighted text={body} keyword={keyword} />
+                  </p>
+                )}
+                {post.hashtags && post.hashtags.length > 0 && (
+                  <p className="mt-1 text-[11px] text-[#245A34] font-medium">{post.hashtags.join(' ')}</p>
+                )}
+                <div className="flex flex-wrap gap-3 mt-2 text-[11px] text-slate-400 font-medium">
+                  {post.uploadedAt && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" strokeWidth={2} />
+                      {formatDateTime(post.uploadedAt)}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1">
+                    <ArrowBigUp className="w-3 h-3" strokeWidth={2} />
+                    {fmtStat(post.upvoteCount)}
                   </span>
-                ) : null}
+                  <span className="flex items-center gap-1">
+                    <MessageCircle className="w-3 h-3" strokeWidth={2} />
+                    {fmtStat(post.commentCount)}
+                  </span>
+                </div>
               </div>
-              <p className="mt-1 line-clamp-2 text-sm font-semibold leading-relaxed text-slate-700">
-                {getPostText(post)}
-              </p>
-              {post.hashtags?.length ? (
-                <p className="mt-2 text-xs font-bold text-[#245A34]">
-                  {post.hashtags.join(" ")}
-                </p>
-              ) : null}
-              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-bold text-slate-500">
-                <span>{formatDateTime(post.uploadedAt)}</span>
-                <span className="inline-flex items-center gap-1">
-                  <ThumbsUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  {formatNumber(post.upvoteCount ?? 0)}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  {formatNumber(post.commentCount ?? 0)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
-function ProfileResults({ profiles }: { profiles: SearchProfileItem[] }) {
+// ── Profile list ──────────────────────────────────────────────────────────────
+function ProfileList({ profiles }: { profiles: SearchProfileItem[] }) {
   return (
-    <div className="divide-y divide-slate-100">
-      {profiles.map((profile) => (
-        <article key={profile.id} className="p-5">
-          <div className="flex items-start gap-4">
-            <img
-              src={getProfileAvatar(profile)}
-              alt={profile.fullName || "Profile"}
-              className="h-12 w-12 shrink-0 rounded-full border border-slate-200 object-cover"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-black text-slate-900">
-                  {profile.fullName || "Unnamed profile"}
-                </h3>
-                {profile.role ? (
-                  <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">
+    <ul className="divide-y divide-slate-100">
+      {profiles.map(profile => {
+        const avatar = profile.avatar ?? profile.profilePicture ?? null
+        const name   = profile.fullName ?? 'Người dùng'
+        return (
+          <li key={profile.id} className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50/70 transition-colors group">
+            <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.userId!)} className="block shrink-0">
+              <Avatar src={avatar} name={name} alt={name} size="xl"
+                className="border border-slate-200" />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.userId!)} className="text-[14px] font-bold text-gray-900 hover:text-[#10B981] hover:underline transition-colors">
+                  {name}
+                </Link>
+                {profile.isVerified && (
+                  <BadgeCheck className="w-3.5 h-3.5 text-[#245A34]" strokeWidth={2.5} />
+                )}
+                {profile.role && (
+                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-black uppercase text-slate-500">
                     {profile.role}
                   </span>
-                ) : null}
-                {profile.isVerified ? (
-                  <span className="rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-[#245A34]">
-                    Verified
-                  </span>
-                ) : null}
+                )}
               </div>
-              {profile.specialty ? (
-                <p className="mt-1 text-sm font-bold text-[#245A34]">
-                  {profile.specialty}
-                </p>
-              ) : null}
-              {profile.bio ? (
-                <p className="mt-2 line-clamp-2 text-sm font-semibold leading-relaxed text-slate-600">
-                  {profile.bio}
-                </p>
-              ) : null}
-              {profile.addressLine ? (
-                <p className="mt-2 text-xs font-bold text-slate-500">
+              {profile.specialty && (
+                <p className="text-[12px] font-semibold text-[#245A34] mb-1">{profile.specialty}</p>
+              )}
+              {profile.bio && (
+                <p className="text-[13px] text-slate-600 line-clamp-2 leading-relaxed">{profile.bio}</p>
+              )}
+              {profile.addressLine && (
+                <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                  <MapPin className="w-3 h-3" strokeWidth={2} />
                   {profile.addressLine}
                 </p>
-              ) : null}
+              )}
             </div>
-            <div className="hidden sm:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-slate-400">
-              <UserRound className="h-5 w-5" strokeWidth={2.5} />
+            <div className="hidden sm:flex w-8 h-8 rounded-full bg-slate-50 items-center justify-center shrink-0 text-slate-300">
+              <User className="w-4 h-4" strokeWidth={2} />
             </div>
-          </div>
-          <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-2 text-xs font-bold text-amber-700">
-            Profile detail navigation is not available yet; this result is
-            display-only.
-          </p>
-        </article>
-      ))}
-    </div>
-  );
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
-export default SearchPage;
+// ── Empty state ───────────────────────────────────────────────────────────────
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="py-14 flex flex-col items-center gap-3">
+      <Search className="w-10 h-10 text-slate-200" strokeWidth={1.5} />
+      <p className="text-[14px] font-bold text-slate-500">{message}</p>
+    </div>
+  )
+}
+
+// ── Keyword highlighter ───────────────────────────────────────────────────────
+function Highlighted({ text, keyword }: { text: string; keyword: string }) {
+  if (!keyword.trim()) return <>{text}</>
+  const regex = new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+  const parts = text.split(regex)
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part)
+          ? <mark key={i} className="bg-yellow-100 text-yellow-900 rounded px-0.5 not-italic">{part}</mark>
+          : part
+      )}
+    </>
+  )
+}
+
+export default SearchPage

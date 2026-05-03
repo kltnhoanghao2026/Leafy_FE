@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import { AdminTabs } from "../../../../components/admin/AdminTabs";
 import {
   RefreshCw,
   UserCheck,
@@ -19,6 +20,8 @@ import {
   useStartProfileSync,
   useResumeProfileSync,
   useProfileSyncStatus,
+  useReindexProfiles,
+  useResetProfileIndex,
   useReindexPosts,
   useResetPostIndex,
   useFailedEvents,
@@ -26,10 +29,12 @@ import {
   useResolveFailedEvent,
   useRetryFailedEvent,
   useRetryAllFailedEvents,
+  useSyncCommunityProfiles,
+  useSyncChatUsers,
 } from "../";
 import type { SyncTaskStatus } from "../";
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: SyncTaskStatus }) {
   const map: Record<
@@ -115,20 +120,28 @@ function ConfirmBanner({
           onClick={onConfirm}
           className="px-3 py-1 text-xs rounded-md bg-amber-600 text-white hover:bg-amber-700 font-medium"
         >
-          Xác nhận xoá & khởi tạo lại
+          Xác nhận xoá &amp; khởi tạo lại
         </button>
       </div>
     </div>
   );
 }
 
-// ── Profile Sync Card ────────────────────────────────────────────────────────
+// ── Profile Sync Card ─────────────────────────────────────────────────────────
 
 function ProfileSyncCard() {
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [reindexSize, setReindexSize] = useState(500);
+
   const { data: syncStatus, isFetching } = useProfileSyncStatus(taskId);
   const startSync = useStartProfileSync();
   const resumeSync = useResumeProfileSync();
+  const reindexProfiles = useReindexProfiles();
+  const resetProfileIndex = useResetProfileIndex();
+
+  const syncCommunityProfiles = useSyncCommunityProfiles();
+  const syncCommunityResult = syncCommunityProfiles.data?.data?.data;
 
   const isActive =
     syncStatus?.status === "STARTING" || syncStatus?.status === "RUNNING";
@@ -152,15 +165,21 @@ function ProfileSyncCard() {
     });
   };
 
+  const handleReset = () => {
+    resetProfileIndex.mutate(undefined, {
+      onSuccess: () => setShowResetConfirm(false),
+    });
+  };
+
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-50 shrink-0">
           <UserCheck className="w-5 h-5 text-emerald-600" />
         </div>
         <div>
           <h3 className="font-semibold text-slate-800">
-            Đồng bộ hồ sơ người dùng
+            Đồng bộ Hồ sơ Người dùng
           </h3>
           <p className="text-xs text-slate-500">
             Tái lập chỉ mục hồ sơ từ profile-service vào Elasticsearch
@@ -182,7 +201,7 @@ function ProfileSyncCard() {
           {syncStatus.status === "COMPLETED" && <ProgressBar value={100} />}
           <div className="flex flex-col gap-0.5">
             <StatRow
-              label="Đã xử lý"
+              label="Đã xử lý (qua Kafka)"
               value={`${syncStatus.processedCount.toLocaleString()} / ${syncStatus.totalCount.toLocaleString()}`}
             />
             <StatRow
@@ -201,7 +220,31 @@ function ProfileSyncCard() {
         </div>
       )}
 
-      <div className="flex gap-2 flex-wrap">
+      {showResetConfirm && (
+        <ConfirmBanner
+          message="Thao tác này sẽ xoá toàn bộ chỉ mục hồ sơ hiện tại và bắt đầu lại từ đầu. Không thể hoàn tác."
+          onConfirm={handleReset}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
+
+      {/* Batch size control for direct reindex */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-500 shrink-0">Kích thước batch:</label>
+        <input
+          id="profile-reindex-size"
+          type="number"
+          min={50}
+          max={2000}
+          step={50}
+          value={reindexSize}
+          onChange={(e) => setReindexSize(Math.max(50, Number(e.target.value)))}
+          disabled={reindexProfiles.isPending || resetProfileIndex.isPending || isActive}
+          className="w-24 px-2 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-50"
+        />
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
         <button
           onClick={handleStart}
           disabled={startSync.isPending || isActive}
@@ -212,7 +255,38 @@ function ProfileSyncCard() {
           ) : (
             <Play className="w-4 h-4" />
           )}
-          Bắt đầu đồng bộ
+          Đồng bộ ngầm (Kafka)
+        </button>
+
+        <button
+          onClick={() => reindexProfiles.mutate(reindexSize)}
+          disabled={reindexProfiles.isPending || resetProfileIndex.isPending || isActive}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-emerald-300 bg-white text-emerald-600 text-sm font-medium hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {reindexProfiles.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Tái lập chỉ mục
+        </button>
+
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          disabled={
+            reindexProfiles.isPending ||
+            resetProfileIndex.isPending ||
+            showResetConfirm ||
+            isActive
+          }
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resetProfileIndex.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <TriangleAlert className="w-4 h-4" />
+          )}
+          Xoá &amp; khởi tạo lại
         </button>
 
         {taskId && syncStatus?.status === "FAILED" && (
@@ -241,10 +315,11 @@ function ProfileSyncCard() {
   );
 }
 
-// ── Post Sync Card ───────────────────────────────────────────────────────────
+// ── Post Sync Card ────────────────────────────────────────────────────────────
 
 function PostSyncCard() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [reindexSize, setReindexSize] = useState(200);
   const reindexPosts = useReindexPosts();
   const resetPostIndex = useResetPostIndex();
 
@@ -255,14 +330,14 @@ function PostSyncCard() {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4">
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
       <div className="flex items-center gap-3">
         <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-50 shrink-0">
           <FileText className="w-5 h-5 text-indigo-600" />
         </div>
         <div>
           <h3 className="font-semibold text-slate-800">
-            Đồng bộ bài viết cộng đồng
+            Đồng bộ Bài viết Cộng đồng
           </h3>
           <p className="text-xs text-slate-500">
             Tái lập hoặc xoá và khởi tạo lại chỉ mục bài viết trong
@@ -279,9 +354,25 @@ function PostSyncCard() {
         />
       )}
 
-      <div className="flex gap-2 flex-wrap">
+      {/* Batch size control */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-500 shrink-0">Kích thước batch:</label>
+        <input
+          id="post-reindex-size"
+          type="number"
+          min={50}
+          max={2000}
+          step={50}
+          value={reindexSize}
+          onChange={(e) => setReindexSize(Math.max(50, Number(e.target.value)))}
+          disabled={reindexPosts.isPending || resetPostIndex.isPending}
+          className="w-24 px-2 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 disabled:opacity-50"
+        />
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
         <button
-          onClick={() => reindexPosts.mutate(undefined)}
+          onClick={() => reindexPosts.mutate(reindexSize)}
           disabled={reindexPosts.isPending || resetPostIndex.isPending}
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -307,14 +398,14 @@ function PostSyncCard() {
           ) : (
             <TriangleAlert className="w-4 h-4" />
           )}
-          Xoá & khởi tạo lại
+          Xoá &amp; khởi tạo lại
         </button>
       </div>
     </div>
   );
 }
 
-// ── Failed Events Card ───────────────────────────────────────────────────────
+// ── Failed Events Card ────────────────────────────────────────────────────────
 
 function FailedEventsCard() {
   const [page, setPage] = useState(0);
@@ -407,9 +498,8 @@ function FailedEventsCard() {
             </thead>
             <tbody>
               {events.map((event) => (
-                <>
+                <React.Fragment key={event.id}>
                   <tr
-                    key={event.id}
                     className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
                     onClick={() =>
                       setExpandedId(expandedId === event.id ? null : event.id)
@@ -473,7 +563,7 @@ function FailedEventsCard() {
                     </td>
                   </tr>
                   {expandedId === event.id && (
-                    <tr key={`${event.id}-expanded`} className="bg-slate-50">
+                    <tr className="bg-slate-50">
                       <td colSpan={5} className="px-4 pb-3 pt-1">
                         <div className="flex flex-col gap-2">
                           {event.errorMessage && (
@@ -504,7 +594,7 @@ function FailedEventsCard() {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -537,25 +627,177 @@ function FailedEventsCard() {
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── ChatUser Sync Card ────────────────────────────────────────────────────────
+
+function ChatUserSyncCard() {
+  const syncChatUsers = useSyncChatUsers();
+  const result = syncChatUsers.data?.data?.data;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-violet-50 shrink-0">
+          <UserCheck className="w-5 h-5 text-violet-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-slate-800">
+            Đồng bộ Hồ sơ Nhắn tin
+          </h3>
+          <p className="text-xs text-slate-500">
+            Đồng bộ thủ công thay đổi hồ sơ (tên, avatar) vào dịch vụ nhắn tin
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
+        <button
+          onClick={() => syncChatUsers.mutate()}
+          disabled={syncChatUsers.isPending}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {syncChatUsers.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Đồng bộ ngay
+        </button>
+      </div>
+
+      {result && (
+        <div className={`rounded-lg border px-4 py-3 ${
+          result.success
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-red-200 bg-red-50"
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            {result.success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <XCircle className="w-4 h-4 text-red-600" />
+            )}
+            <span className="text-xs font-semibold text-slate-700">
+              {result.success ? "Sync thành công" : "Sync thất bại"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <StatRow label="Profiles đã lấy" value={(result.profilesFetched ?? 0).toLocaleString()} />
+            <StatRow label="ChatUser đã upsert" value={(result.chatUsersUpserted ?? 0).toLocaleString()} />
+            {result.errorMessage && (
+              <p className="text-xs text-red-700 mt-1 font-mono break-all">{result.errorMessage}</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Community Profile Sync Card ────────────────────────────────────────────────
+
+function CommunityProfileSyncCard() {
+  const syncCommunityProfiles = useSyncCommunityProfiles();
+  const result = syncCommunityProfiles.data?.data?.data;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-teal-50 shrink-0">
+          <UserCheck className="w-5 h-5 text-teal-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-slate-800">
+            Đồng bộ Hồ sơ Cộng đồng
+          </h3>
+          <p className="text-xs text-slate-500">
+            Đồng bộ thủ công thay đổi hồ sơ (tên, avatar) vào dịch vụ cộng đồng
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
+        <button
+          onClick={() => syncCommunityProfiles.mutate()}
+          disabled={syncCommunityProfiles.isPending}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {syncCommunityProfiles.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Đồng bộ ngay
+        </button>
+      </div>
+
+      {result && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-semibold text-slate-700">Kết quả đồng bộ</span>
+          </div>
+          <div className="flex items-center justify-between py-0.5 text-sm">
+            <span className="text-slate-500">Hồ sơ đã cập nhật</span>
+            <span className="font-semibold text-slate-800 tabular-nums">
+              {result.seededProfileCount?.toLocaleString() ?? 0}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+const SYNC_TABS = [
+  { id: "search", label: "Dữ liệu Tìm kiếm (ES)" },
+  { id: "cache", label: "Bộ đệm Dịch vụ (Cache)" },
+  { id: "failed", label: "Sự kiện lỗi (Kafka)" },
+];
 
 export function DataSyncPage() {
+  const [activeTab, setActiveTab] = useState<"search" | "cache" | "failed">("search");
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Đồng bộ dữ liệu</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Quản lý quá trình đồng bộ hồ sơ người dùng và bài viết cộng đồng vào
-          chỉ mục tìm kiếm Elasticsearch.
+          Quản lý quá trình đồng bộ dữ liệu giữa các dịch vụ và Elasticsearch.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <ProfileSyncCard />
-        <PostSyncCard />
-      </div>
+      {/* Tabs */}
+      <AdminTabs
+        tabs={SYNC_TABS}
+        activeTab={activeTab}
+        onChange={(tabId) => setActiveTab(tabId as "search" | "cache" | "failed")}
+      />
 
-      <FailedEventsCard />
+      {/* Tab Content */}
+      <div className="min-h-[400px]">
+        {activeTab === "search" && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 animate-in fade-in duration-300 slide-in-from-bottom-2">
+            <ProfileSyncCard />
+            <PostSyncCard />
+          </div>
+        )}
+
+        {activeTab === "cache" && (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 animate-in fade-in duration-300 slide-in-from-bottom-2">
+            <CommunityProfileSyncCard />
+            <ChatUserSyncCard />
+          </div>
+        )}
+
+        {activeTab === "failed" && (
+          <div className="animate-in fade-in duration-300 slide-in-from-bottom-2">
+            <FailedEventsCard />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

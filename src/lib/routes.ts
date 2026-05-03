@@ -32,20 +32,26 @@ export const ROUTES = {
       `/dashboard/rag-panel/treatment-plans/${planId}`,
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
+    PENDING_REQUESTS: "/dashboard/pending-requests",
     DEVICES: "/dashboard/devices",
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
-    TREATMENT_PLANS: "/dashboard/treatment-plans",
-    TREATMENT_PLAN_DETAIL: (planId: string) =>
-      `/dashboard/treatment-plans/${planId}`,
+    PLANS: "/dashboard/plans",
+    PLAN_DETAIL: (planId: string) =>
+      `/dashboard/plans/${planId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
-    AI_ASSISTANT: "/dashboard/ai-assistant",
-    RAG_TREATMENT_PLANS: "/dashboard/ai-assistant/treatment-plans",
+    RAG_PANEL: "/dashboard/rag-panel",
+    RAG_PLAN: (planId: string) =>
+      `/dashboard/rag-panel/plans/${planId}`,
     COMMUNITY: "/dashboard/community",
+    EXPERTS: "/dashboard/experts",
+    CHAT: "/dashboard/chat",
     SETTINGS: "/dashboard/settings",
+    MY_PROFILE: "/dashboard/profile",
+    PROFILE_VIEW: (profileId: string) => `/dashboard/profile/${profileId}`,
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -155,6 +161,7 @@ export const API_ENDPOINTS = {
     ME: "/profiles/me",
     GET: (profileId: string) => `/profiles/${profileId}`,
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
+    PUBLIC_EXPERTS: "/profiles/experts",
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
     PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
@@ -165,17 +172,21 @@ export const API_ENDPOINTS = {
       `/profiles/${profileId}/approval-requests/${requestId}/revoke`,
     // Admin-only endpoints
     LIST: "/profiles",
+    SEARCH_EXPERTS: "/profiles/search/experts",
     SEARCH: "/profiles/search",
     DETAILS: (profileId: string) => `/profiles/${profileId}/details`,
     ACTIVATE: (profileId: string) => `/profiles/${profileId}/activate`,
     DEACTIVATE: (profileId: string) => `/profiles/${profileId}/deactivate`,
     VERIFY: (profileId: string) => `/profiles/${profileId}/verify`,
     DELETE: (profileId: string) => `/profiles/${profileId}`,
+    PUBLIC: (profileId: string) => `/profiles/public/${profileId}`,
   },
 
   FILES: {
     UPLOAD: "/files/upload",
     PRESIGNED_URL: (fileId: string) => `/files/presigned-url/${fileId}`,
+    PRESIGNED_UPLOAD_URL: "/files/presigned-upload-url",
+    CREATE: "/files",
   },
 
   PREFERENCES: {
@@ -255,22 +266,23 @@ export const API_ENDPOINTS = {
     CALENDAR: "/plant-events/calendar",
   },
 
-  TREATMENT_PLANS: {
-    LIST: "/treatment-plans",
-    CREATE: "/treatment-plans",
-    ITEM: (planId: string) => `/treatment-plans/${planId}`,
-    UPDATE_STATUS: (planId: string) => `/treatment-plans/${planId}/status`,
-    MY: "/treatment-plans/me",
-    BY_PLANT: (plantId: string) => `/treatment-plans/plant/${plantId}`,
+  PLANS: {
+    LIST: "/plans",
+    CREATE: "/plans",
+    ITEM: (planId: string) => `/plans/${planId}`,
+    UPDATE_STATUS: (planId: string) => `/plans/${planId}/status`,
+    MY: "/plans/me",
+    BY_PLANT: (plantId: string) => `/plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
-      `/treatment-plans/farm-plot/${farmPlotId}`,
+      `/plans/farm-plot/${farmPlotId}`,
     BY_FARM_ZONE: (farmZoneId: string) =>
-      `/treatment-plans/farm-zone/${farmZoneId}`,
+      `/plans/farm-zone/${farmZoneId}`,
   },
 
   SEARCH: {
     POSTS: "/search/posts/search",
     PROFILES: "/search/profiles/search",
+    UNIFIED: "/search/search",
   },
 
   RAG: {
@@ -280,7 +292,7 @@ export const API_ENDPOINTS = {
     CONVERSATIONS: "/rag/v1/conversations",
     CONVERSATION: (conversationId: string) =>
       `/rag/v1/conversations/${conversationId}`,
-    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
+    PLAN: (planId: string) => `/rag/v1/plans/${planId}`,
     INGEST: "/rag/v1/ingest",
     PREVIEW: "/rag/v1/preview",
     DOCUMENTS: "/rag/v1/documents",
@@ -349,11 +361,19 @@ export const API_ENDPOINTS = {
   },
 
   MESSAGES: {
+    ROOT: "/conversations",
     CONVERSATIONS: "/conversations",
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>
-      `/messages/conversation/${conversationId}`,
-    SEND: "/messages",
+      `/conversations/${conversationId}/messages`,
+    MEDIA: (conversationId: string) =>
+      `/conversations/${conversationId}/media`,
+    FILES: (conversationId: string) =>
+      `/conversations/${conversationId}/files`,
+    SEND: (conversationId: string) => `/conversations/${conversationId}/messages`,
+    MESSAGE_EDIT: (messageId: string) => `/messages/${messageId}`,
+    MESSAGE_REVOKE: (messageId: string) => `/messages/${messageId}/revoke`,
+    MESSAGE_DELETE_ME: (messageId: string) => `/messages/${messageId}/me`,
   },
 
   ADMIN: {
@@ -363,6 +383,9 @@ export const API_ENDPOINTS = {
       PROFILES_START: "/profiles/sync/start",
       PROFILES_RESUME: (taskId: string) => `/profiles/sync/resume/${taskId}`,
       PROFILES_STATUS: (taskId: string) => `/profiles/sync/status/${taskId}`,
+      // Profile sync - search-service direct ES sync
+      PROFILES_REINDEX: "/search/profiles/reindex-all",
+      PROFILES_RESET: "/search/profiles/reset",
       // Post sync — search-service /sync/posts/* (via /api/search/sync/**)
       POSTS_REINDEX: "/search/sync/posts",
       POSTS_RESET: "/search/sync/posts/reset",
@@ -373,6 +396,8 @@ export const API_ENDPOINTS = {
         `/search/failed-events/${id}/resolved`,
       FAILED_EVENTS_RETRY: (id: string) => `/search/failed-events/${id}/retry`,
       FAILED_EVENTS_RETRY_ALL: "/search/failed-events/retry/all",
+      // ChatUser sync — message-service /conversations/admin/sync-chat-users
+      CHAT_USERS_SYNC: "/conversations/admin/sync-chat-users",
     },
     SEED: {
       ACCOUNTS: "/admin/seed/accounts",
@@ -380,7 +405,9 @@ export const API_ENDPOINTS = {
       PLANTS: "/admin/seed/plants",
       SPECIES_PERENUAL: "/admin/seed/species/perenual",
       COMMUNITY: "/admin/seed/community",
+      COMMUNITY_PROFILES: "/admin/seed/profiles",
       CERTIFICATES: "/admin/seed/certificates",
+      EXPERTS: "/admin/seed/experts",
     },
   },
 } as const;

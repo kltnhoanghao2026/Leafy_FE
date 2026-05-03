@@ -27,7 +27,14 @@ export interface Post {
   author: AuthorSummary;
   timestamp: string;
   location?: string;
+  /** Flat combined text (caption || description || title) — for backward compat */
   content: string;
+  /** Original title from post content */
+  title?: string | null;
+  /** Hashtag list from post content */
+  hashtags?: string[] | null;
+  /** Post type — FEED or SHARE */
+  postType: CommunityPostType;
   images?: string[];
   isUrgent?: boolean;
   likes: number;
@@ -47,6 +54,8 @@ export interface SharedPostSnapshot {
   timestamp: string;
   location?: string;
   content: string;
+  title?: string | null;
+  hashtags?: string[] | null;
   images?: string[];
   isUrgent?: boolean;
   likes: number;
@@ -179,6 +188,27 @@ export interface VoteCommunityRequest {
   targetType: CommunityVoteTargetType;
   targetId: string;
   type: CommunityVoteType;
+}
+
+export interface CommunityVoteAuthorInfo {
+  id: string
+  fullName: string | null
+  avatar: string | null
+  role: string | null
+  isVerified: boolean | null
+}
+
+export interface CommunityVoteResponse {
+  id: string
+  voteId?: string         // alias kept for backward compat with APP shape
+  type: CommunityVoteType
+  authorId: string
+  authorInfo: CommunityVoteAuthorInfo | null
+  targetId: string
+  targetType: string
+  active: boolean
+  createdAt: string | null
+  lastModifiedAt: string | null
 }
 
 export interface HotTopic {

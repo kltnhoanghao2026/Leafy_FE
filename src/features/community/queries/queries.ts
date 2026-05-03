@@ -6,6 +6,7 @@ import {
   normalizeCommunityPage,
 } from "../mappers";
 import { communityKeys } from "./keys";
+import type { CommunityVoteType } from "../types";
 
 export const useCommunityFeed = (
   params: CommunityPageParams,
@@ -40,4 +41,16 @@ export const useCommunityReplies = (
     queryFn: () => communityApi.getRepliesByComment(commentId, params),
     select: (page) => normalizeCommunityPage(page, mapCommentResponseToComment),
     enabled: enabled && !!commentId,
+  });
+
+export const usePostVoters = (
+  postId: string,
+  type: CommunityVoteType,
+  params: CommunityPageParams,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: communityKeys.voters(postId, type, params),
+    queryFn: () => communityApi.getVotesByPost(postId, type, params),
+    enabled: enabled && !!postId,
   });

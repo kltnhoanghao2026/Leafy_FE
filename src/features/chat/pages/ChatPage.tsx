@@ -1,0 +1,99 @@
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { chatApi } from '../api/chatApi';
+import { ConversationList } from '../components/ConversationList';
+import { ChatArea } from '../components/ChatArea';
+import { NewDMModal } from '../components/NewDMModal';
+import { CreateGroupModal } from '../components/CreateGroupModal';
+import { ConversationInfoPanel } from '../components/ConversationInfoPanel';
+import { useAuthStore } from '../../../store/authStore';
+import { useChatWebSocket } from '../hooks/useChatWebSocket';
+
+export function ChatPage() {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [isDMModalOpen, setIsDMModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(true);
+  const { user } = useAuthStore();
+  const currentUserId = user?.profileId || '';
+  const queryClient = useQueryClient();
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => chatApi.getConversations(),
+  });
+
+  useChatWebSocket(activeId);
+
+  const activeConversation = conversations.find((c) => c.id === activeId) || null;
+
+  const handleSelect = (id: string) => {
+    if (id !== activeId) setIsInfoOpen(true);
+    setActiveId(id);
+  };
+
+  const handleStartChat = async (partnerId: string) => {
+    setIsDMModalOpen(false);
+    try {
+      const conv = await chatApi.getOrCreateConversation(partnerId);
+      setIsInfoOpen(true);
+      setActiveId(conv.id);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    } catch (error) {
+      console.error('Failed to start chat', error);
+    }
+  };
+
+  const handleGroupCreated = (conversationId: string) => {
+    setIsGroupModalOpen(false);
+    setIsInfoOpen(true);
+    setActiveId(conversationId);
+    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+  };
+
+  const showInfoPanel = isInfoOpen;
+
+  return (
+    <>
+      <div className="fixed inset-0 top-16 lg:left-64 flex overflow-hidden bg-white z-10">
+        <div className="flex-1 flex h-full w-full min-w-0 relative">
+
+          <ConversationList
+            conversations={conversations}
+            activeId={activeId}
+            onSelect={handleSelect}
+            onNewChat={() => setIsDMModalOpen(true)}
+            onNewGroup={() => setIsGroupModalOpen(true)}
+          />
+
+          <ChatArea
+            conversation={activeConversation}
+            currentUserId={currentUserId}
+            onToggleInfo={() => setIsInfoOpen((v) => !v)}
+            isInfoOpen={showInfoPanel}
+          />
+
+          {showInfoPanel && activeConversation && (
+            <ConversationInfoPanel
+              conversation={activeConversation}
+              currentUserId={currentUserId}
+              onClose={() => setIsInfoOpen(false)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Modals â€” in root stacking context so z-50 covers the header */}
+      <NewDMModal
+        isOpen={isDMModalOpen}
+        onClose={() => setIsDMModalOpen(false)}
+        onStartChat={handleStartChat}
+      />
+      <CreateGroupModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        onGroupCreated={handleGroupCreated}
+      />
+    </>
+  );
+}

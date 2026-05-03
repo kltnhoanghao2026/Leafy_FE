@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import {
-  AlertTriangle,
   ArrowRight,
   Bot,
   BookOpenText,
-  CalendarCheck2,
-  ChevronDown,
-  ChevronUp,
   Clock3,
   FlaskConical,
   Globe,
@@ -16,7 +12,6 @@ import {
   MessageCircle,
   RefreshCcw,
   SendHorizontal,
-  ShieldAlert,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -169,7 +164,7 @@ const mapConversationMessageToChatMessage = (
           threadId: "",
           documents: [],
           webSearchResults: [],
-          treatmentPlan: message.responseMeta?.treatmentPlan ?? null,
+          plan: message.responseMeta?.plan ?? null,
           savedPlanId: message.responseMeta?.savedPlanId,
         }
       : undefined,
@@ -220,8 +215,6 @@ const asPlanRecord = (v: unknown): JsonRecord =>
 const asPlanString = (v: unknown): string =>
   typeof v === "string" ? v.trim() : "";
 
-const asPlanArray = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-
 const asPlanNumber = (v: unknown): number | undefined =>
   typeof v === "number" && Number.isFinite(v) ? v : undefined;
 
@@ -237,23 +230,7 @@ const URGENCY_STYLES: Record<string, string> = {
   NORMAL: "bg-slate-200 text-slate-700",
 };
 
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  IRRIGATION: "bg-blue-100 text-blue-700",
-  NUTRITION: "bg-lime-100 text-lime-700",
-  WEED_CONTROL: "bg-yellow-100 text-yellow-700",
-  PRUNING: "bg-orange-100 text-orange-700",
-  SCOUTING: "bg-teal-100 text-teal-700",
-  DISEASE_DETECTED: "bg-red-100 text-red-700",
-  TREATMENT_APPLICATION: "bg-purple-100 text-purple-700",
-  QUARANTINE: "bg-rose-100 text-rose-700",
-  HEALTH_RECOVERY: "bg-emerald-100 text-emerald-700",
-  PHENOLOGY: "bg-indigo-100 text-indigo-700",
-  REPOT: "bg-cyan-100 text-cyan-700",
-  HARVEST: "bg-amber-100 text-amber-700",
-};
 
-const getEventColor = (type: string): string =>
-  EVENT_TYPE_COLORS[type] ?? "bg-slate-100 text-slate-600";
 
 export function RagChatPage() {
   const navigate = useNavigate();
@@ -294,7 +271,7 @@ export function RagChatPage() {
 
   const latestDocuments = lastAssistantResponse?.documents ?? [];
   const latestWebResults = lastAssistantResponse?.webSearchResults ?? [];
-  const latestTreatmentPlan = lastAssistantResponse?.treatmentPlan ?? null;
+  const latestTreatmentPlan = lastAssistantResponse?.plan ?? null;
   const latestSavedPlanId = lastAssistantResponse?.savedPlanId;
 
   const streamingAssistantMessage = useMemo(() => {
@@ -955,22 +932,12 @@ export function RagChatPage() {
             const severity = asPlanString(plan.severityLevel).toUpperCase();
             const urgency = asPlanString(plan.urgency).toUpperCase();
             const confidence = asPlanNumber(plan.confidenceScore);
-            const schedule = asPlanArray(plan.schedule).map(asPlanRecord);
-            const requiredInputs = asPlanArray(plan.requiredInputs).filter(
-              (s): s is string => typeof s === "string" && s.length > 0,
-            );
-            const safetyWarnings = asPlanArray(plan.safetyWarnings).filter(
-              (s): s is string => typeof s === "string" && s.length > 0,
-            );
-            const successIndicators = asPlanString(plan.successIndicators);
-            const planCost = asPlanString(plan.estimatedCost);
-            const source = asPlanString(plan.source);
 
             return (
               <div
                 onClick={() => {
                   if (latestSavedPlanId) {
-                    navigate(ROUTES.DASHBOARD.RAG_TREATMENT_PLAN(latestSavedPlanId));
+                    navigate(ROUTES.DASHBOARD.RAG_PLAN(latestSavedPlanId));
                   }
                 }}
                 className={`rounded-3xl border border-violet-200 bg-violet-50 p-4 lg:p-5 shadow-sm transition-all ${

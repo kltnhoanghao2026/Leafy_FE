@@ -2,7 +2,7 @@ import type { ApiEnvelope } from "../../../shared/types/api";
 import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 
-// ── Response types ──────────────────────────────────────────────────────────
+// â”€â”€ Response types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface AccountSeedResult {
   created: number;
@@ -32,6 +32,8 @@ export interface PlantSeedResult {
   seededPlantCount: number;
   deletedEventCount: number;
   seededEventCount: number;
+  deletedPlanCount: number;
+  seededPlanCount: number;
   sourceFarmPlotCount: number;
   sourceFarmZoneCount: number;
 }
@@ -55,6 +57,7 @@ export interface CommunitySeedResult {
   seededCommentCount: number;
   seededVoteCount: number;
   sourceProfileCount: number;
+  seededProfileCount: number;
 }
 
 export interface CertificateSeedResult {
@@ -64,7 +67,7 @@ export interface CertificateSeedResult {
   sourceProfileCount: number;
 }
 
-// ── API calls ───────────────────────────────────────────────────────────────
+// â”€â”€ API calls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const seedingApi = {
   seedAccounts: (count: number) =>
@@ -110,9 +113,23 @@ export const seedingApi = {
       { params: { startPage, pages, perPage } },
     ),
 
-  seedCommunity: () =>
+  seedCommunity: (postCount?: number, commentCount?: number, voteCount?: number) =>
     apiClient.post<ApiEnvelope<CommunitySeedResult>>(
       API_ENDPOINTS.ADMIN.SEED.COMMUNITY,
+      null,
+      {
+        params: {
+          ...(postCount != null && { postCount }),
+          ...(commentCount != null && { commentCount }),
+          ...(voteCount != null && { voteCount }),
+        },
+      },
+    ),
+
+  syncCommunityProfiles: () =>
+    apiClient.post<ApiEnvelope<CommunitySeedResult>>(
+      API_ENDPOINTS.ADMIN.SEED.COMMUNITY_PROFILES,
+      null,
     ),
 
   seedCertificates: (requestCount?: number, certsPerRequest?: number) =>
@@ -125,5 +142,12 @@ export const seedingApi = {
           ...(certsPerRequest != null && { certsPerRequest }),
         },
       },
+    ),
+
+  seedExperts: (count: number) =>
+    apiClient.post<ApiEnvelope<number>>(
+      API_ENDPOINTS.ADMIN.SEED.EXPERTS,
+      null,
+      { params: { count } },
     ),
 };

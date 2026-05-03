@@ -1,2 +1,2 @@
-﻿export * from './ProfileDetailPage';
+export * from './ProfileDetailPage';
 export * from './ProfileManagementPage';

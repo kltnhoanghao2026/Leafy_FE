@@ -114,7 +114,7 @@ export function DiseaseDiagnosisPage() {
     prediction: DiseasePrediction,
     predictions: DiseasePrediction[],
   ) => {
-    navigate(ROUTES.DASHBOARD.AI_ASSISTANT, {
+    navigate(ROUTES.DASHBOARD.RAG_PANEL, {
       state: {
         diseaseContext: {
           diseaseClassName: prediction.className,

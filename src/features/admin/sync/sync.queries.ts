@@ -25,7 +25,6 @@ export const useProfileSyncStatus = (taskId: string | null) =>
     select: (res) => res.data.data,
     enabled: taskId != null,
     refetchInterval: (query) => {
-      // query.state.data is the raw AxiosResponse (before select); navigate to status safely
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const status: unknown = (query.state.data as any)?.data?.data?.status;
       return typeof status === "string" &&
@@ -52,7 +51,24 @@ export const useResetPostIndex = () =>
     onError: () => toast.error("Xoá chỉ mục bài viết thất bại"),
   });
 
-// ── Failed Events ────────────────────────────────────────────────────────────
+export const useReindexProfiles = () =>
+  useMutation({
+    mutationFn: (size?: number) => syncApi.reindexProfiles(size),
+    onSuccess: (res) => {
+      const count = res.data.data?.indexedCount ?? 0;
+      toast.success(`Tái lập chỉ mục hồ sơ: ${count.toLocaleString()} hồ sơ`);
+    },
+    onError: () => toast.error("Tái lập chỉ mục hồ sơ thất bại"),
+  });
+
+export const useResetProfileIndex = () =>
+  useMutation({
+    mutationFn: () => syncApi.resetProfileIndex(),
+    onSuccess: () => toast.success("Đã xoá và khởi tạo lại chỉ mục hồ sơ"),
+    onError: () => toast.error("Xoá chỉ mục hồ sơ thất bại"),
+  });
+
+// ── Failed Events ─────────────────────────────────────────────────────────────
 
 export const useFailedEvents = (params: FailedEventsListParams = {}) =>
   useQuery({
@@ -105,3 +121,31 @@ export const useRetryAllFailedEvents = () => {
     onError: () => toast.error("Gửi lại tất cả sự kiện thất bại"),
   });
 };
+
+export const useSyncCommunityProfiles = () =>
+  useMutation({
+    mutationFn: () => syncApi.syncCommunityProfiles(),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      toast.success(
+        `Đã đồng bộ ${d?.seededProfileCount ?? 0} hồ sơ từ profile-service`,
+      );
+    },
+    onError: () => toast.error("Đồng bộ hồ sơ thất bại"),
+  });
+
+export const useSyncChatUsers = () =>
+  useMutation({
+    mutationFn: () => syncApi.syncChatUsers(),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      if (d?.success) {
+        toast.success(
+          `ChatUser sync hoàn thành: ${d.chatUsersUpserted?.toLocaleString() ?? 0} bản ghi`,
+        );
+      } else {
+        toast.error(`Sync thất bại: ${d?.errorMessage ?? "Lỗi không xác định"}`);
+      }
+    },
+    onError: () => toast.error("Không thể đồng bộ ChatUser"),
+  });

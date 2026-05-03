@@ -15,6 +15,7 @@ interface RagChatResultRaw {
   thread_id?: string;
   threadId?: string;
   documents?: unknown[];
+  plan?: unknown;
   treatment_plan?: unknown;
   treatmentPlan?: unknown;
   plant_id?: string;
@@ -80,9 +81,10 @@ const mapChatResult = (raw: RagChatResultRaw): RagChatResponse => {
     answer: raw.answer ?? "",
     threadId: raw.thread_id ?? raw.threadId ?? "",
     documents: (raw.documents ?? []) as RagChatResponse["documents"],
-    treatmentPlan: (raw.treatment_plan ??
+    plan: (raw.plan ??
+      raw.treatment_plan ??
       raw.treatmentPlan ??
-      null) as RagChatResponse["treatmentPlan"],
+      null) as RagChatResponse["plan"],
     plantId: raw.plant_id ?? raw.plantId,
     webSearchResults: (raw.web_search_results ??
       raw.webSearchResults ??
@@ -372,10 +374,15 @@ export async function deleteRagConversation(
 
 export async function getRagTreatmentPlan(planId: string) {
   const response = await apiClient.get(
-    API_ENDPOINTS.RAG.TREATMENT_PLAN(planId),
+    API_ENDPOINTS.RAG.PLAN(planId),
   );
   if (!response.data || !response.data.result) {
     throw new Error("Invalid response format");
   }
+  return response.data.result;
+}
+
+export async function getRagPlan(planId: string) {
+  const response = await apiClient.get(API_ENDPOINTS.RAG.PLAN(planId));
   return response.data.result;
 }

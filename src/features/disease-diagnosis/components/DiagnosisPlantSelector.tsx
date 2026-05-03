@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from "react";
 import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
-import { usePlants } from "../../plant-management/queries";
+import { usePlants } from '../../plant-management';
 import { useMyProfile } from "../../settings/queries";
 import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
-import type { PlantResponse } from "../../plant-management/types";
+import type { PlantResponse } from '../../plant-management/shared/types';
 
 export interface DiagnosisPlantContext {
   plantId?: string;

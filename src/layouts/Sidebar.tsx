@@ -16,6 +16,8 @@ import {
   Users,
   Settings,
   LogOut,
+  MessageSquare,
+  UserSquare,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
 import { useFilePreviewUrl } from "../features/settings/queries";
@@ -23,6 +25,7 @@ import { isFileServiceReference } from "../lib/api/fileApi";
 import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
+import { Avatar } from "../components/ui/Avatar";
 
 export function Sidebar() {
   const location = useLocation();
@@ -40,54 +43,32 @@ export function Sidebar() {
       ? profile.avatar
       : null) ||
     profile?.profilePicture ||
-    "https://i.pravatar.cc/150?img=11";
+    undefined;
 
   const coreNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
+    { name: "Tìm kiếm", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: "Chẩn đoán hình ảnh", path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
     { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
     { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    {
-      name: "Thiết bị",
-      path: ROUTES.DASHBOARD.DEVICE_ONBOARDING,
-      activePath: ROUTES.DASHBOARD.DEVICES,
-      icon: Cpu,
-    },
+    { name: "Thiết bị", path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
   ];
 
   const agricultureNavItems = [
-    {
-      name: "Tổng quan",
-      path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW,
-      icon: LayoutDashboard,
-    },
+    { name: "Tổng quan", path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
-    {
-      name: "Kế hoạch",
-      path: ROUTES.DASHBOARD.TREATMENT_PLANS,
-      icon: ClipboardList,
-    },
-    {
-      name: "Lịch chăm sóc",
-      path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
-      icon: CalendarDays,
-    },
-    {
-      name: "Chẩn đoán",
-      path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS,
-      icon: Stethoscope,
-    },
-    {
-      name: "Trợ lý AI",
-      path: ROUTES.DASHBOARD.AI_ASSISTANT,
-      icon: Bot,
-    },
+    { name: "Kế hoạch", path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
+    { name: "Lịch chăm sóc", path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
+    { name: "Chẩn đoán", path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: Stethoscope },
+    { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
   ];
 
   const utilityNavItems = [
+    { name: "Chuyên gia", path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
+    { name: "Nhắn tin", path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
@@ -170,10 +151,11 @@ export function Sidebar() {
           to={ROUTES.DASHBOARD.SETTINGS}
           className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100"
         >
-          <img
+          <Avatar
             src={avatarSrc}
-            alt={displayName}
-            className="w-10 h-10 rounded-full border border-slate-200 shrink-0 object-cover"
+            name={displayName}
+            size="lg"
+            className="border border-slate-200"
           />
           <div className="ml-3 flex-1 min-w-0">
             <p className="text-xs font-bold text-gray-900 truncate">

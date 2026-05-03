@@ -82,3 +82,19 @@ export interface SearchProfilesParams {
   sortBy?: string;
   sortDir?: SearchSortDirection;
 }
+
+export interface UnifiedSearchParams {
+  searchTerm: string;
+  postSize?: number;
+  profileSize?: number;
+}
+
+export interface UnifiedSearchResult {
+  searchTerm: string;
+  posts: SearchPostItem[];
+  profiles: SearchProfileItem[];
+  totalPosts: number;
+  totalProfiles: number;
+  postSize: number;
+  profileSize: number;
+}
