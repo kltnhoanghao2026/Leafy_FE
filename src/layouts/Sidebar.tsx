@@ -48,9 +48,7 @@ export function Sidebar() {
   const coreNavItems = [
     { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Tìm kiếm", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: "Chẩn đoán hình ảnh", path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
-    { name: "Trợ lý ảo AI", path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
     { name: "Theo dõi", path: ROUTES.DASHBOARD.MONITOR, icon: Activity },
     { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
