@@ -1,17 +1,13 @@
 import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import {
-  Bot,
   CalendarDays,
   ClipboardList,
-  Leaf,
-  RefreshCw,
   Sprout,
   Stethoscope,
 } from "lucide-react";
 import { ROUTES } from '../../../../lib/routes';
 import { useDiagnoseRequests } from '../../../disease-diagnosis/queries';
-import { useRagHealth } from '../../../rag-assistant/queries';
 import {
   useMyPlants,
   useMyPlans,
@@ -40,49 +36,46 @@ export function AgricultureOverviewPage() {
     endDate: nextWeekString,
   });
   const diagnosisQuery = useDiagnoseRequests({ page: 0, size: 5 });
-  const ragHealthQuery = useRagHealth();
 
   const plants = plantsQuery.data ?? [];
   const plans = plansQuery.data ?? [];
   const events = eventsQuery.data ?? [];
   const diagnosis = diagnosisQuery.data?.content ?? [];
   const activePlans = plans.filter((plan: PlanResponse) => activeStatuses.has(plan.status));
-  const aiReady = !ragHealthQuery.isError && Boolean(ragHealthQuery.data);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
-      <header className="overflow-hidden rounded-[2rem] bg-[#173F2A] p-7 text-white shadow-sm">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-100">
-          Agriculture command center
-        </p>
-        <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-[34px] font-black tracking-tight">
-              Tổng quan nông nghiệp thông minh
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-emerald-50">
-              Theo dõi cây trồng, chẩn đoán bệnh, kế hoạch điều trị và lịch chăm sóc trong một màn hình.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {[
+    <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden">
+      {/* Compact header */}
+      <header className="shrink-0 flex flex-col gap-3 rounded-2xl bg-[#173F2A] px-6 py-4 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-100">
+            Agriculture command center
+          </p>
+          <h2 className="mt-0.5 text-xl font-black tracking-tight">
+            Tổng quan nông nghiệp thông minh
+          </h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
               ["Chẩn đoán bệnh", ROUTES.DASHBOARD.DISEASE_DIAGNOSIS],
               ["Hỏi AI", ROUTES.DASHBOARD.RAG_PANEL],
               ["Xem lịch", ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR],
-            ].map(([label, path]) => (
-              <Link
-                key={path}
-                to={path}
-                className="rounded-2xl bg-white/12 px-4 py-2.5 text-sm font-black text-white ring-1 ring-white/20 hover:bg-white/20"
-              >
-                {label}
-              </Link>
-            ))}
-          </div>
+            ] as [string, string][]
+          ).map(([label, path]) => (
+            <Link
+              key={path}
+              to={path}
+              className="rounded-xl bg-white/12 px-3 py-2 text-xs font-black text-white ring-1 ring-white/20 hover:bg-white/20"
+            >
+              {label}
+            </Link>
+          ))}
         </div>
       </header>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      {/* Compact stats row */}
+      <div className="shrink-0 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard
           icon={Sprout}
           label="Cây trồng"
@@ -93,7 +86,7 @@ export function AgricultureOverviewPage() {
         />
         <SummaryCard
           icon={ClipboardList}
-          label="Plan chờ/đang làm"
+          label="Plan đang xử lý"
           value={activePlans.length}
           loading={plansQuery.isLoading}
           error={plansQuery.isError}
@@ -115,48 +108,20 @@ export function AgricultureOverviewPage() {
           error={diagnosisQuery.isError}
           retry={() => void diagnosisQuery.refetch()}
         />
-        <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-50 p-3 text-[#245A34]">
-              <Bot className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                Trợ lý AI
-              </p>
-              <p className="mt-1 text-lg font-black text-slate-900">
-                {ragHealthQuery.isLoading
-                  ? "Đang kiểm tra"
-                  : aiReady
-                    ? "AI sẵn sàng"
-                    : "AI chưa sẵn sàng"}
-              </p>
-            </div>
-          </div>
-          {ragHealthQuery.isError ? (
-            <button
-              type="button"
-              onClick={() => void ragHealthQuery.refetch()}
-              className="mt-4 inline-flex items-center text-sm font-black text-red-600"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Thử lại
-            </button>
-          ) : null}
-        </div>
-      </section>
+      </div>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      {/* Panels — fill remaining height, each scrollable internally */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Panel title="Lịch chăm sóc sắp tới" link={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}>
           <UpcomingEventsList
-            events={events.slice(0, 5)}
+            events={events.slice(0, 8)}
             loading={eventsQuery.isLoading}
             error={eventsQuery.isError}
           />
         </Panel>
         <Panel title="Kế hoạch đang xử lý" link={ROUTES.DASHBOARD.PLANS}>
           <ActivePlanList
-            plans={activePlans.slice(0, 5)}
+            plans={activePlans.slice(0, 8)}
             loading={plansQuery.isLoading}
             error={plansQuery.isError}
           />
@@ -168,21 +133,7 @@ export function AgricultureOverviewPage() {
             error={diagnosisQuery.isError}
           />
         </Panel>
-      </section>
-
-      <section className="rounded-[2rem] border border-amber-100 bg-amber-50 p-5">
-        <div className="flex gap-3">
-          <Leaf className="mt-1 h-5 w-5 text-amber-700" />
-          <div>
-            <h3 className="text-base font-black text-amber-950">
-              Lưu ý an toàn khi dùng AI
-            </h3>
-            <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
-              Kết quả chẩn đoán và kế hoạch AI chỉ mang tính hỗ trợ. Cần kiểm tra thực tế tại vườn trước khi áp dụng thuốc hoặc can thiệp.
-            </p>
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
@@ -203,27 +154,27 @@ function SummaryCard({
   retry: () => void;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div className="rounded-2xl bg-emerald-50 p-3 text-[#245A34]">
-          <Icon className="h-5 w-5" />
-        </div>
-        {error ? (
-          <button
-            type="button"
-            onClick={retry}
-            className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600"
-          >
-            Retry
-          </button>
-        ) : null}
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="shrink-0 rounded-xl bg-emerald-50 p-2.5 text-[#245A34]">
+        <Icon className="h-4 w-4" />
       </div>
-      <p className="mt-4 text-xs font-black uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 text-3xl font-black text-slate-900">
-        {loading ? "..." : error ? "!" : value}
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-black uppercase tracking-wide text-slate-400">
+          {label}
+        </p>
+        <p className="text-2xl font-black text-slate-900">
+          {loading ? "..." : error ? "!" : value}
+        </p>
+      </div>
+      {error ? (
+        <button
+          type="button"
+          onClick={retry}
+          className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-600"
+        >
+          Retry
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -238,15 +189,15 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="text-lg font-black text-slate-900">{title}</h3>
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+        <h3 className="text-base font-black text-slate-900">{title}</h3>
         <Link to={link} className="text-sm font-black text-[#245A34]">
           Xem tất cả
         </Link>
       </div>
-      {children}
-    </section>
+      <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
+    </div>
   );
 }
 

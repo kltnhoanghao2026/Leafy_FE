@@ -1,5 +1,4 @@
 import { Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { GroupedEventList } from './GroupedEventList';
 import type { PlantEventResponse } from '../../shared/types';
 
 interface TimelineViewProps {
@@ -8,7 +7,8 @@ interface TimelineViewProps {
   month: Date; // current month being shown
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  onEdit: (e: PlantEventResponse) => void;
+  selectedDate: string | null;
+  onSelectDate: (d: string | null) => void;
 }
 
 export function TimelineView({
@@ -16,7 +16,8 @@ export function TimelineView({
   month,
   onPrevMonth,
   onNextMonth,
-  onEdit,
+  selectedDate,
+  onSelectDate,
 }: TimelineViewProps) {
   // Group events by calculatedStartDate
   const grouped: Record<string, PlantEventResponse[]> = {};
@@ -58,47 +59,37 @@ export function TimelineView({
           <p className="text-sm font-medium text-slate-500">Không có sự kiện trong tháng này</p>
         </div>
       ) : (
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-3 top-2 bottom-6 w-0.5 bg-slate-200" />
-
+        <div className="flex flex-col gap-1.5">
           {dates.map(dateStr => {
+            const isSelected = selectedDate === dateStr;
             const dateObj = new Date(dateStr + 'T00:00:00');
             const label = dateObj.toLocaleDateString('vi-VN', {
               weekday: 'long', day: 'numeric', month: 'short',
             });
             return (
-              <div key={dateStr} className="mb-8">
-                {/* Date header with timeline dot */}
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100">
-                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  </div>
-                  <span className="text-sm font-bold capitalize text-slate-700">{label}</span>
+              <button key={dateStr} type="button"
+                onClick={() => onSelectDate(isSelected ? null : dateStr)}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                  isSelected
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-slate-100 bg-white hover:bg-slate-50'
+                }`}>
+                <div className="flex items-center gap-2.5">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${
+                    isSelected ? 'bg-emerald-500' : 'bg-slate-300'
+                  }`} />
+                  <span className={`text-sm font-semibold capitalize ${
+                    isSelected ? 'text-emerald-700' : 'text-slate-700'
+                  }`}>{label}</span>
                 </div>
-                {/* Events */}
-                <div className="pl-9">
-                  <GroupedEventList events={grouped[dateStr]} onEdit={onEdit} />
-                </div>
-              </div>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                  isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {grouped[dateStr].length}
+                </span>
+              </button>
             );
           })}
-        </div>
-      )}
-
-      {/* Legend */}
-      {dates.length > 0 && (
-        <div className="flex items-center justify-center gap-5 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-sm">
-          {([
-            ['#3B82F6', 'Chăm sóc'],
-            ['#F97316', 'Sức khỏe'],
-            ['#10B981', 'Sinh trưởng'],
-          ] as const).map(([color, label]) => (
-            <span key={label} className="flex items-center gap-1.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-              <span className="text-[10px] font-medium text-slate-500">{label}</span>
-            </span>
-          ))}
         </div>
       )}
     </div>

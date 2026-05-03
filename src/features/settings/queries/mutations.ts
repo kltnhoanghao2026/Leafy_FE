@@ -4,6 +4,13 @@ import { profileApi } from "../api/profile.api";
 import { preferenceKeys, profileKeys } from "./keys";
 import type {
   AppearanceSettingsUpdateRequest,
+  GeneralSettingsUpdateRequest,
+  SecuritySettingsUpdateRequest,
+  PrivacySettingsUpdateRequest,
+  MessageSettingsUpdateRequest,
+  NotificationSettingsUpdateRequest,
+  SyncSettingsUpdateRequest,
+  UtilitiesSettingsUpdateRequest,
   ProfileUpdateRequest,
 } from "../types";
 
@@ -38,6 +45,90 @@ export const useUpdateAppearancePreferencesMutation = () => {
     },
     meta: {
       successMessage: "Display preferences saved.",
+    },
+  });
+};
+
+export const useUpdateGeneralPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: GeneralSettingsUpdateRequest) =>
+      profileApi.updateGeneralPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdateSecurityPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: SecuritySettingsUpdateRequest) =>
+      profileApi.updateSecurityPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdatePrivacyPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: PrivacySettingsUpdateRequest) =>
+      profileApi.updatePrivacyPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdateMessagePreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: MessageSettingsUpdateRequest) =>
+      profileApi.updateMessagePreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdateNotificationPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: NotificationSettingsUpdateRequest) =>
+      profileApi.updateNotificationPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdateSyncPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: SyncSettingsUpdateRequest) =>
+      profileApi.updateSyncPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
+    },
+  });
+};
+
+export const useUpdateUtilitiesPreferencesMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: UtilitiesSettingsUpdateRequest) =>
+      profileApi.updateUtilitiesPreferences(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
     },
   });
 };
