@@ -248,7 +248,10 @@ export function PlantEventDetailPage() {
             label="Chi phí ước tính"
             value={
               event.estimatedCost != null
-                ? event.estimatedCost
+                ? Number(event.estimatedCost).toLocaleString("vi-VN", {
+                    style: "currency",
+                    currency: "VND",
+                  })
                 : "—"
             }
           />

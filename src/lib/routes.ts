@@ -26,6 +26,10 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
+    DISEASE_PREDICTION: "/dashboard/disease-prediction",
+    RAG_PANEL: "/dashboard/rag-panel",
+    RAG_TREATMENT_PLAN: (planId: string) =>
+      `/dashboard/rag-panel/treatment-plans/${planId}`,
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
     PENDING_REQUESTS: "/dashboard/pending-requests",
@@ -74,6 +78,7 @@ export const ROUTES = {
     KNOWLEDGE_BASE: "/admin/knowledge-base",
     SEEDING: "/admin/seeding",
     SYNC: "/admin/sync",
+    IOT_DEMO_TOOLS: "/admin/iot-demo-tools",
   },
 } as const;
 
@@ -294,7 +299,8 @@ export const API_ENDPOINTS = {
     DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
-    PLANS: "/rag/v1/plans/",
+    TREATMENT_PLANS: "/rag/v1/treatment-plans/",
+    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
   },
 
   DISEASES: {

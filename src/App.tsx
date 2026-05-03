@@ -6,7 +6,6 @@ import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { VerifyEmailPage } from "./features/auth/pages/VerifyEmailPage";
 import { DashboardLayout } from "./layouts/DashboardLayout";
-import { AdminLayout } from "./layouts/AdminLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
 import { AdminRoute } from "./components/AdminRoute";
@@ -14,27 +13,23 @@ import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBoot
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
-
-import { AdminOverviewPage } from "./features/admin/overview";
-import { UserManagementPage } from "./features/admin/users";
-import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
 import { ContentModerationPage } from "./features/admin/content-moderation";
-import { DocumentIngestionPage } from "./features/admin/knowledge-base";
 import { SystemHealthPage } from "./features/admin/health";
 import { AnalyticsDashboardPage } from "./features/admin/analytics";
-import {
-  PlantsPage,
-  PlantDetailPage as AdminPlantDetailPage,
-  SpeciesPage,
-  SpeciesDetailPage,
-  PlantEventsPage,
-  PlantEventDetailPage,
-  DiseasePage,
-} from "./features/admin/plant-disease";
+import { PlantEventsPage, PlantsPage, SpeciesPage, PlantDetailPage as AdminPlantDetailPage, SpeciesDetailPage, PlantEventDetailPage, DiseasePage } from "./features/admin/plant-disease";
 import { ProfileManagementPage, ProfileDetailPage } from "./features/admin/profiles";
 import { CertificateApprovalPage } from "./features/admin/certificates";
 import { DataSeedingPage } from "./features/admin/seeding";
 import { DataSyncPage } from "./features/admin/sync";
+import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
+import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
+import { FarmZoneDetailPage, FarmPlotDetailPage, FarmOverviewPage } from "./features/admin/farm";
+import { UserManagementPage } from "./features/admin/users";
+import { AdminOverviewPage } from "./features/admin/overview";
+import { AdminLayout } from "./layouts/AdminLayout";
+import { RagChatPage, RagTreatmentPlanDetailPage } from "./features/rag-chat";
+import { DiseasePredictionPage } from "./features/disease-detection";
+import { DocumentIngestionPage } from "./features/admin/knowledge-base";
 
 const AgricultureOverviewPage = lazy(() =>
   import("./features/plant-management/overview/pages/AgricultureOverviewPage"),
@@ -239,6 +234,12 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route path="rag-panel" element={<RagChatPage />} />
+              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
+              <Route
+                path="rag-panel/treatment-plans/:planId"
+                element={<RagTreatmentPlanDetailPage />}
+              />
               <Route
                 path="devices/onboarding"
                 element={
@@ -415,6 +416,7 @@ function App() {
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
               <Route path="plants/:id" element={<AdminPlantDetailPage />} />
+              
               <Route path="species" element={<SpeciesPage />} />
               <Route path="species/:id" element={<SpeciesDetailPage />} />
               <Route path="plant-events" element={<PlantEventsPage />} />
@@ -434,6 +436,12 @@ function App() {
               />
               <Route path="seeding" element={<DataSeedingPage />} />
               <Route path="sync" element={<DataSyncPage />} />
+              {isIotDemoToolsEnabled() && (
+                <Route
+                  path="iot-demo-tools"
+                  element={<IotDemoToolsPage />}
+                />
+              )}
             </Route>
           </Route>
 
