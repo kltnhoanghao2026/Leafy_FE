@@ -5,11 +5,11 @@ import { Avatar } from '../../../components/ui/Avatar'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../lib/routes'
 
-export function FollowersList({ userId }: { userId: string }) {
+export function FollowersList({ profileId }: { profileId: string }) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['profile-followers', userId],
-    queryFn: () => profilesApi.getFollowersProfiles(userId, { size: 50 }),
-    enabled: !!userId,
+    queryKey: ['profile-followers', profileId],
+    queryFn: () => profilesApi.getFollowersProfiles(profileId, { size: 50 }),
+    enabled: !!profileId,
   })
 
   if (isLoading) {

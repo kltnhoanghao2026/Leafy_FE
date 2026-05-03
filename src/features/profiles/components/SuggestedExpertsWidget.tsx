@@ -81,8 +81,8 @@ export function SuggestedExpertsWidget() {
       ) : (
         <div className="space-y-5 mb-6">
           {experts.map((expert) => {
-            const isFollowed = localFollowState[expert.userId] ?? expert.isFollowing;
-            const isConsulted = localConsultState[expert.userId] ?? expert.hasPendingConsultRequest;
+            const isFollowed = localFollowState[expert.id] ?? expert.isFollowing;
+            const isConsulted = localConsultState[expert.id] ?? expert.hasPendingConsultRequest;
             return (
               <div key={expert.id} className="flex items-center justify-between group">
                 <div className="flex items-center gap-3">
@@ -110,7 +110,7 @@ export function SuggestedExpertsWidget() {
                 
                 <div className="flex items-center gap-2">
                   <button 
-                    onClick={() => isFollowed ? unfollowMutation.mutate(expert.userId) : followMutation.mutate(expert.userId)}
+                    onClick={() => isFollowed ? unfollowMutation.mutate(expert.id) : followMutation.mutate(expert.id)}
                     disabled={followMutation.isPending || unfollowMutation.isPending}
                     className={`px-4 py-1.5 rounded-full text-[13px] font-bold transition-colors ${
                       isFollowed 
@@ -121,7 +121,7 @@ export function SuggestedExpertsWidget() {
                     {isFollowed ? 'Đang theo dõi' : 'Theo dõi'}
                   </button>
                   <button 
-                    onClick={() => isConsulted ? cancelConsultMutation.mutate(expert.userId) : consultMutation.mutate(expert.userId)}
+                    onClick={() => isConsulted ? cancelConsultMutation.mutate(expert.id) : consultMutation.mutate(expert.id)}
                     disabled={consultMutation.isPending || cancelConsultMutation.isPending}
                     className={`w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
                       isConsulted

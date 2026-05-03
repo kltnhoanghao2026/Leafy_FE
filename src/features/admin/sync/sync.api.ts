@@ -66,6 +66,13 @@ export interface ChatUserSyncResult {
   errorMessage: string;
 }
 
+export interface NotificationUserSyncResult {
+  success: boolean;
+  profilesFetched: number;
+  notificationUsersUpserted: number;
+  errorMessage: string;
+}
+
 // ── API calls ─────────────────────────────────────────────────────────────────
 
 export const syncApi = {
@@ -145,6 +152,13 @@ export const syncApi = {
   syncChatUsers: () =>
     apiClient.post<ApiEnvelope<ChatUserSyncResult>>(
       API_ENDPOINTS.ADMIN.SYNC.CHAT_USERS_SYNC,
+      null,
+    ),
+
+  /** Sync NotificationUser cache in notification-service from profile-service. */
+  syncNotificationUsers: () =>
+    apiClient.post<ApiEnvelope<NotificationUserSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.NOTIFICATION_USERS_SYNC,
       null,
     ),
 };

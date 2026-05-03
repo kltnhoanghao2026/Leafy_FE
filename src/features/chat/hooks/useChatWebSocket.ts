@@ -1,169 +1,223 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { Client } from '@stomp/stompjs';
-import SockJS from 'sockjs-client';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
-import type { MessageResponse, ConversationResponse } from '../api/chatApi';
-
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws';
+import type { MessageResponse, ConversationResponse, ChatNotification } from '../api/chatApi';
+import { normalizeChatNotification, chatApi } from '../api/chatApi';
+import { useWebSocketClient } from '../../../providers/WebSocketProvider';
 
 export const useChatWebSocket = (activeConversationId?: string | null) => {
-  const { user, accessToken: token, isInitializing } = useAuthStore();
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const stompClientRef = useRef<Client | null>(null);
-  const [connected, setConnected] = useState(false);
-  // Keep a ref so the STOMP subscription closure always reads the latest
-  // active conversation without needing to reconnect.
+  const { client, connected } = useWebSocketClient();
+
   const activeConversationIdRef = useRef<string | null | undefined>(activeConversationId);
   useEffect(() => { activeConversationIdRef.current = activeConversationId; }, [activeConversationId]);
 
-  const connect = useCallback(() => {
-    if (stompClientRef.current?.active) return;
-    if (!token || !user) return;
+  useEffect(() => {
+    if (!connected || !client || !user) return;
 
-    console.log(`[WebSocket] Attempting to connect to ${WS_URL}...`);
-    const socket = new SockJS(WS_URL);
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-      connectHeaders: {
-        Authorization: `Bearer ${token}`
-      },
-      onConnect: () => {
-        console.log(`[WebSocket] Connected successfully for user: ${user.id}`);
-        setConnected(true);
+    // ────────── /queue/messages ──────────
+    // Backend pushes ChatNotification (has `timestamp`, `isFromMe`, `unreadCount`).
+    // We normalize it to MessageResponse shape so the cache stays consistent.
+    const messagesSub = client.subscribe('/user/queue/messages', (payload) => {
+      try {
+        const notification = JSON.parse(payload.body) as ChatNotification;
+        const conversationId = notification.conversationId;
+        if (!conversationId) return;
 
-        // ────────── /queue/messages ──────────
-        client.subscribe('/user/queue/messages', (payload) => {
-          const msg = JSON.parse(payload.body) as MessageResponse;
-          const conversationId = msg.conversationId;
-          if (!conversationId) return;
+        // Normalize ChatNotification → MessageResponse for the live messages cache
+        const msg = normalizeChatNotification(notification);
 
-          // Update messages cache
+        // ── Update live messages cache (separate from paginated V2 cache) ──
+        queryClient.setQueryData(
+          ['chat-live-messages', conversationId],
+          (oldData: MessageResponse[] | undefined) => {
+            if (!oldData) return [msg];
+            // Deduplicate by id
+            if (oldData.some(m => m.id === msg.id)) return oldData;
+            // Append newest at end (display order ASC)
+            return [...oldData, msg];
+          }
+        );
+
+        // ── Update conversations cache ──
+        queryClient.setQueryData(
+          ['conversations'],
+          (oldData: ConversationResponse[] | undefined) => {
+            if (!oldData) return oldData;
+            const convIndex = oldData.findIndex(c => c.id === conversationId);
+
+            // ─ Fix: senderId is profileId, compare with user.profileId (not user.id) ─
+            const isFromMe = notification.isFromMe; // backend already personalises this field
+
+            if (convIndex >= 0) {
+              const conv = oldData[convIndex];
+              const updatedConv: ConversationResponse = {
+                ...conv,
+                lastMessage: {
+                  id: msg.id,
+                  content: msg.content,
+                  timestamp: notification.timestamp,
+                  isFromMe,
+                  type: msg.type,
+                  status: msg.status,
+                  senderName: msg.senderName,
+                  senderId: msg.senderId,
+                },
+                // Backend sends the personalised unreadCount in the notification
+                unreadCount: isFromMe || conversationId === activeConversationIdRef.current
+                  ? 0
+                  : notification.unreadCount,
+              };
+              const updated = [
+                updatedConv,
+                ...oldData.slice(0, convIndex),
+                ...oldData.slice(convIndex + 1),
+              ].sort((a, b) =>
+                new Date(b.lastMessage?.timestamp || 0).getTime() -
+                new Date(a.lastMessage?.timestamp || 0).getTime()
+              );
+              return updated;
+            } else {
+              // New conversation appeared — refetch
+              queryClient.invalidateQueries({ queryKey: ['conversations'] });
+              return oldData;
+            }
+          }
+        );
+
+        // ── Tell backend to mark as read if we are actively viewing ──
+        if (conversationId === activeConversationIdRef.current && !notification.isFromMe) {
+          chatApi.markAsRead(conversationId).catch(() => {});
+        }
+      } catch (e) {
+        console.error('[WS] Failed to parse /queue/messages payload', e);
+      }
+    });
+
+    // ────────── /queue/conversations ──────────
+    // Full ConversationResponse pushed on any group/conversation change.
+    const convSub = client.subscribe('/user/queue/conversations', (payload) => {
+      try {
+        const conv = JSON.parse(payload.body) as ConversationResponse;
+        queryClient.setQueryData(
+          ['conversations'],
+          (oldData: ConversationResponse[] | undefined) => {
+            if (!oldData) {
+              queryClient.invalidateQueries({ queryKey: ['conversations'] });
+              return oldData;
+            }
+            const idx = oldData.findIndex(c => c.id === conv.id);
+            const isViewing = conv.id === activeConversationIdRef.current;
+            const updatedConv = {
+              ...conv,
+              unreadCount: isViewing ? 0 : conv.unreadCount
+            };
+
+            let updated: ConversationResponse[];
+            if (idx >= 0) {
+              updated = [...oldData];
+              updated[idx] = updatedConv;
+            } else {
+              updated = [updatedConv, ...oldData];
+            }
+            return updated.sort((a, b) =>
+              new Date(b.lastMessage?.timestamp || 0).getTime() -
+              new Date(a.lastMessage?.timestamp || 0).getTime()
+            );
+          }
+        );
+      } catch {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
+    });
+
+    // ────────── /queue/status-updates ──────────
+    // Handles MESSAGE_STATUS_UPDATE (revoke/delete) and MESSAGE_EDIT_UPDATE (edit).
+    const statusSub = client.subscribe('/user/queue/status-updates', (payload) => {
+      try {
+        const data = JSON.parse(payload.body) as {
+          type: string;
+          conversationId: string;
+          messageId: string;
+          newStatus?: string;
+          content?: string;
+        };
+
+        if (!data.conversationId || !data.messageId) return;
+
+        if (data.type === 'MESSAGE_STATUS_UPDATE' && data.newStatus) {
+          // Patch the specific message's status in the live cache and trigger V2 invalidation
           queryClient.setQueryData(
-            ['chat-messages', conversationId],
+            ['chat-live-messages', data.conversationId],
             (oldData: MessageResponse[] | undefined) => {
-              if (!oldData) return [msg]; // seed cache for brand-new conversations
-              if (oldData.some(m => m.id === msg.id)) return oldData;
-              return [msg, ...oldData]; // prepend since newer messages are usually at the beginning of the array in Leafy
+              if (!oldData) return oldData;
+              return oldData.map(m =>
+                m.id === data.messageId
+                  ? { ...m, status: data.newStatus as any, content: null, replyTo: null }
+                  : m
+              );
             }
           );
-
-          // Update conversations cache
+          // Also invalidate the paginated V2 cache so historic messages update
+          queryClient.invalidateQueries({ queryKey: ['chat-messages-v2', data.conversationId] });
+          // Also update lastMessage in conversations if it was the last message
           queryClient.setQueryData(
             ['conversations'],
             (oldData: ConversationResponse[] | undefined) => {
               if (!oldData) return oldData;
-              const convIndex = oldData.findIndex(c => c.id === conversationId);
-              if (convIndex >= 0) {
-                const conv = oldData[convIndex];
-                const isFromMe = msg.senderId === user.id;
-                const updatedConv: ConversationResponse = {
+              return oldData.map(conv => {
+                if (conv.id !== data.conversationId) return conv;
+                if (conv.lastMessage?.id !== data.messageId) return conv;
+                return {
                   ...conv,
-                  lastMessage: {
-                    id: msg.id,
-                    content: msg.content,
-                    timestamp: msg.timestamp || msg.createdAt || new Date().toISOString(),
-                    isFromMe,
-                    type: msg.type,
-                    status: msg.status,
-                    senderName: msg.senderName,
-                    senderId: msg.senderId,
-                  },
-                  unreadCount: isFromMe || conversationId === activeConversationIdRef.current
-                    ? 0  // user is viewing this conversation – keep unread at 0
-                    : (conv.unreadCount || 0) + 1,
+                  lastMessage: { ...conv.lastMessage, content: null, status: data.newStatus as any },
                 };
-                return [updatedConv, ...oldData.slice(0, convIndex), ...oldData.slice(convIndex + 1)].sort((a, b) => 
-                  new Date(b.lastMessage?.timestamp || 0).getTime() - new Date(a.lastMessage?.timestamp || 0).getTime()
-                );
-              } else {
-                // Brand-new conversation not yet in cache –
-                // The /queue/conversations event will upsert it; we just trigger a refetch as fallback
-                queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                return oldData;
-              }
+              });
             }
           );
-        });
-
-        // ────────── /queue/conversations ──────────
-        client.subscribe('/user/queue/conversations', (payload) => {
-          try {
-            const conv = JSON.parse(payload.body) as ConversationResponse;
-            queryClient.setQueryData(
-              ['conversations'],
-              (oldData: ConversationResponse[] | undefined) => {
-                if (!oldData) {
-                  // Cache not initialised yet – schedule a refetch and bail
-                  queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                  return oldData;
-                }
-                const idx = oldData.findIndex(c => c.id === conv.id);
-                let updated: ConversationResponse[];
-                if (idx >= 0) {
-                  // Update existing conversation in-place
-                  updated = [...oldData];
-                  updated[idx] = conv;
-                } else {
-                  // Brand-new conversation – prepend to list
-                  updated = [conv, ...oldData];
-                }
-                return updated.sort((a, b) =>
-                  new Date(b.lastMessage?.timestamp || 0).getTime() -
-                  new Date(a.lastMessage?.timestamp || 0).getTime()
-                );
-              }
-            );
-          } catch {
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-          }
-        });
-
-        // ────────── /queue/status-updates ──────────
-        client.subscribe('/user/queue/status-updates', (payload) => {
-          try {
-            const data = JSON.parse(payload.body);
-            if (data.conversationId) {
-              queryClient.invalidateQueries({ queryKey: ['chat-messages', data.conversationId] });
-              queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        } else if (data.type === 'MESSAGE_EDIT_UPDATE' && data.content !== undefined) {
+          // Patch the specific message's content in live cache
+          queryClient.setQueryData(
+            ['chat-live-messages', data.conversationId],
+            (oldData: MessageResponse[] | undefined) => {
+              if (!oldData) return oldData;
+              return oldData.map(m =>
+                m.id === data.messageId
+                  ? { ...m, content: data.content!, isEdited: true }
+                  : m
+              );
             }
-          } catch (e) {
-            console.error('Failed to parse status update', e);
-          }
-        });
-      },
-      onStompError: (frame) => {
-        console.error('[WebSocket] STOMP error', frame.headers['message'], frame.body);
-      },
-      onWebSocketError: (event) => {
-        console.error('[WebSocket] Native WebSocket error', event);
-      },
-      onDisconnect: () => {
-        console.log('[WebSocket] Disconnected');
-        setConnected(false);
+          );
+          // Also invalidate the paginated V2 cache so history reflects the edit
+          queryClient.invalidateQueries({ queryKey: ['chat-messages-v2', data.conversationId] });
+          // Update last message content if applicable
+          queryClient.setQueryData(
+            ['conversations'],
+            (oldData: ConversationResponse[] | undefined) => {
+              if (!oldData) return oldData;
+              return oldData.map(conv => {
+                if (conv.id !== data.conversationId) return conv;
+                if (conv.lastMessage?.id !== data.messageId) return conv;
+                return {
+                  ...conv,
+                  lastMessage: { ...conv.lastMessage, content: data.content! },
+                };
+              });
+            }
+          );
+        }
+      } catch (e) {
+        console.error('[WS] Failed to parse /queue/status-updates payload', e);
       }
     });
 
-    client.activate();
-    stompClientRef.current = client;
-  }, [user, token, queryClient]);
-
-  const disconnect = useCallback(() => {
-    if (stompClientRef.current) {
-      stompClientRef.current.deactivate();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isInitializing) return;
-    if (user && token) {
-      connect();
-    } else {
-      disconnect();
-    }
-    return () => disconnect();
-  }, [user, token, isInitializing, connect, disconnect]);
+    return () => {
+      messagesSub.unsubscribe();
+      convSub.unsubscribe();
+      statusSub.unsubscribe();
+    };
+  }, [client, connected, user, queryClient]);
 
   return { connected };
 };

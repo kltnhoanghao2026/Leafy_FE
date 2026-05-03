@@ -183,11 +183,7 @@ export function ConversationList({ conversations, activeId, onSelect, onNewChat,
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 pr-6">
-                      {conv.isGroup && (
-                        <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-1.5 py-0.5 rounded shrink-0">
-                          {memberCount} TV
-                        </span>
-                      )}
+
                       <p className={`text-xs truncate ${
                         conv.unreadCount > 0 && !isDisbanded
                           ? 'text-gray-900 font-semibold'

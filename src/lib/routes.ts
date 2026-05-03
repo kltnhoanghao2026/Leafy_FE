@@ -49,6 +49,7 @@ export const ROUTES = {
     COMMUNITY: "/dashboard/community",
     EXPERTS: "/dashboard/experts",
     CHAT: "/dashboard/chat",
+    NOTIFICATIONS: "/dashboard/notifications",
     SETTINGS: "/dashboard/settings",
     MY_PROFILE: "/dashboard/profile",
     PROFILE_VIEW: (profileId: string) => `/dashboard/profile/${profileId}`,
@@ -373,6 +374,8 @@ export const API_ENDPOINTS = {
     CONVERSATION: (id: string) => `/conversations/${id}`,
     MESSAGES: (conversationId: string) =>
       `/conversations/${conversationId}/messages`,
+    MESSAGES_V2: (conversationId: string) =>
+      `/v2/conversations/${conversationId}/messages`,
     MEDIA: (conversationId: string) =>
       `/conversations/${conversationId}/media`,
     FILES: (conversationId: string) =>
@@ -405,6 +408,8 @@ export const API_ENDPOINTS = {
       FAILED_EVENTS_RETRY_ALL: "/search/failed-events/retry/all",
       // ChatUser sync — message-service /conversations/admin/sync-chat-users
       CHAT_USERS_SYNC: "/conversations/admin/sync-chat-users",
+      // NotificationUser sync — notification-service /notifications/admin/sync-notification-users
+      NOTIFICATION_USERS_SYNC: "/notifications/admin/sync-notification-users",
     },
     SEED: {
       ACCOUNTS: "/admin/seed/accounts",
@@ -467,6 +472,10 @@ export const ERROR_CODES = {
   REGISTRATION_DATA_EXPIRED: 2015,
   VALIDATION_ERROR: 2200,
   ACC_PASSWORD_MISMATCH: 2207,
+  PUSH_TOKEN_NOT_FOUND: 6001,
+  PUSH_DELIVERY_FAILED: 6002,
+  EMAIL_DELIVERY_FAILED: 6003,
+  PUSH_NOTIFICATION_DISABLED: 6004,
   SYS_UNCATEGORIZED: 9999,
 } as const;
 
@@ -522,6 +531,10 @@ export const getErrorMessage = (code: number): string => {
       "Registration data expired. Start again.",
     [ERROR_CODES.VALIDATION_ERROR]: "Please review the highlighted fields.",
     [ERROR_CODES.ACC_PASSWORD_MISMATCH]: "Passwords do not match.",
+    [ERROR_CODES.PUSH_TOKEN_NOT_FOUND]: "Push token not found.",
+    [ERROR_CODES.PUSH_DELIVERY_FAILED]: "Failed to deliver push notification.",
+    [ERROR_CODES.EMAIL_DELIVERY_FAILED]: "Failed to send email.",
+    [ERROR_CODES.PUSH_NOTIFICATION_DISABLED]: "Push notifications are currently disabled.",
     [ERROR_CODES.SYS_UNCATEGORIZED]: "An unexpected error occurred.",
   };
 

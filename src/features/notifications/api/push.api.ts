@@ -5,7 +5,7 @@ import { API_ENDPOINTS } from "../../../lib/routes";
 
 export const pushApi = {
   async registerToken(payload: RegisterPushTokenPayload) {
-    const response = await apiClient.post<ApiEnvelope<null> | string>(
+    const response = await apiClient.post<ApiEnvelope<null>>(
       API_ENDPOINTS.PUSH_TOKENS.REGISTER,
       payload,
     );
@@ -13,10 +13,11 @@ export const pushApi = {
   },
 
   async deactivateToken(fcmToken: string) {
-    const response = await apiClient.post<ApiEnvelope<null> | string>(
+    const response = await apiClient.post<ApiEnvelope<null>>(
       API_ENDPOINTS.PUSH_TOKENS.DEACTIVATE,
       { fcmToken },
     );
     return response.data;
   },
 };
+

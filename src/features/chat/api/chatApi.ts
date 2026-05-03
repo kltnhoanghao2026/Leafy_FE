@@ -2,7 +2,7 @@ import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Shared types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────── Shared types ───────────────────────────────────
 
 export interface AttachmentRequest {
   key: string;
@@ -27,6 +27,25 @@ export interface LinkPreviewResponse {
   memberPreviews: LinkPreviewMemberSnapshot[];
 }
 
+export interface JoinGroupPreviewMember {
+  name: string;
+  avatar: string | null;
+}
+
+export interface JoinGroupPreview {
+  conversationId: string;
+  groupName: string;
+  groupAvatar: string | null;
+  memberCount: number;
+  createdByName: string;
+  memberPreviews: JoinGroupPreviewMember[];
+  isAlreadyMember: boolean;
+  isBlockedFromGroup: boolean;
+  membershipApprovalEnabled: boolean;
+  hasPendingRequest: boolean;
+  joinQuestion: string | null;
+}
+
 export interface AttachmentInfoResponse {
   key: string;
   url: string;
@@ -37,7 +56,7 @@ export interface AttachmentInfoResponse {
 }
 
 export interface ConversationMember {
-  userId: string;     // now stores profileId (for backward compat)
+  userId: string;     // stores profileId (backward compat)
   profileId: string;  // explicit profileId
   fullName: string;
   avatar: string | null;
@@ -59,8 +78,8 @@ export type JoinRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED"
 export interface JoinRequestResponse {
   id: string;
   conversationId: string;
-  userId: string;    // now stores profileId
-  profileId: string; // explicit profileId
+  userId: string;    // stores profileId
+  profileId: string;
   fullName: string;
   avatar: string | null;
   status: JoinRequestStatus;
@@ -101,6 +120,10 @@ export interface ConversationResponse {
 export type MessageType = 'CHAT' | 'IMAGE' | 'VIDEO' | 'FILE' | 'LINK' | 'SYSTEM' | 'CALL';
 export type MessageStatus = 'NORMAL' | 'REVOKED' | 'DELETED_BY_ADMIN';
 
+/**
+ * Shape returned by the HTTP GET /conversations/{id}/messages endpoint.
+ * Backend field is `createdAt` (OffsetDateTime), NOT `timestamp`.
+ */
 export interface MessageResponse {
   id: string;
   conversationId: string;
@@ -108,12 +131,15 @@ export interface MessageResponse {
   senderName: string | null;
   senderAvatar: string | null;
   content: string | null;
-  timestamp: string;
-  createdAt?: string;
+  clientMessageId?: string | null;
+  /** ISO string — primary timestamp field from backend */
+  createdAt: string;
+  lastModifiedAt?: string | null;
   type: MessageType;
   status: MessageStatus;
-  isEdited?: boolean;
-  edited?: boolean;
+  /** true if the message was edited */
+  isEdited: boolean;
+  isForwarded?: boolean;
   replyTo: {
     messageId: string;
     senderId: string;
@@ -124,11 +150,82 @@ export interface MessageResponse {
   metadata?: Record<string, any> | null;
   attachments?: AttachmentInfoResponse[];
   linkPreview?: LinkPreviewResponse | null;
+  reactions?: Record<string, string[]> | null;
+}
+
+/**
+ * Shape of the real-time WebSocket payload pushed on /queue/messages.
+ * Backend: ChatNotification.java — has `timestamp` (not `createdAt`)
+ * and personal `isFromMe` / `unreadCount` fields.
+ */
+export interface ChatNotification {
+  id: string;
+  conversationId: string;
+  senderId: string;       // profileId
+  senderName: string | null;
+  senderAvatar: string | null;
+  content: string | null;
+  type: MessageType;
+  clientMessageId?: string | null;
+  /** ISO string — ChatNotification uses `timestamp` */
+  timestamp: string;
+  unreadCount: number;
+  replyTo: {
+    messageId: string;
+    senderId: string;
+    senderName: string | null;
+    content: string | null;
+    type: string;
+  } | null;
+  isForwarded: boolean;
+  isEdited: boolean;
+  isFromMe: boolean;
+  status: MessageStatus;
+  metadata?: Record<string, any> | null;
+  attachments?: AttachmentInfoResponse[];
+  linkPreview?: LinkPreviewResponse | null;
+  reactions?: Record<string, string[]> | null;
+}
+
+/**
+ * Normalize a ChatNotification (WebSocket) into a MessageResponse (cache shape).
+ * This lets the message list render WS messages and HTTP messages identically.
+ */
+export function normalizeChatNotification(n: ChatNotification): MessageResponse {
+  return {
+    id: n.id,
+    conversationId: n.conversationId,
+    senderId: n.senderId,
+    senderName: n.senderName,
+    senderAvatar: n.senderAvatar,
+    content: n.content,
+    clientMessageId: n.clientMessageId,
+    createdAt: n.timestamp,   // ChatNotification.timestamp → MessageResponse.createdAt
+    lastModifiedAt: null,
+    type: n.type,
+    status: n.status,
+    isEdited: n.isEdited,
+    isForwarded: n.isForwarded,
+    replyTo: n.replyTo,
+    metadata: n.metadata,
+    attachments: n.attachments,
+    linkPreview: n.linkPreview,
+    reactions: n.reactions,
+  };
+}
+
+export interface CursorPageResponse<T> {
+  data: T[];
+  olderCursor: string | null;
+  newerCursor: string | null;
+  hasMoreOlder: boolean;
+  hasMoreNewer: boolean;
+  isJumpResult: boolean;
 }
 
 export interface SearchMemberResponse {
-  userId: string;     // now stores profileId
-  profileId: string;  // explicit profileId
+  userId: string;     // stores profileId
+  profileId: string;
   fullName: string;
   avatar: string | null;
   phoneNumber: string | null;
@@ -137,8 +234,8 @@ export interface SearchMemberResponse {
 }
 
 export interface GroupMemberListItem {
-  userId: string;     // now stores profileId
-  profileId: string;  // explicit profileId
+  userId: string;     // stores profileId
+  profileId: string;
   fullName: string;
   avatar: string | null;
   phoneNumber: string | null;
@@ -167,13 +264,23 @@ export interface PinnedMessageInfo {
   pinnedAt: string | null;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ Request types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────── Request types ──────────────────────────────────
+
+export interface ReplyMetadata {
+  messageId: string;
+  senderId: string;
+  senderName: string | null;
+  content: string | null;
+  type: string;
+}
 
 export interface SendMessageRequest {
   conversationId?: string;
   recipientId?: string;
   content?: string;
   attachments?: AttachmentRequest[];
+  replyTo?: ReplyMetadata;
+  clientMessageId?: string;
 }
 
 export interface CreateGroupRequest {
@@ -182,11 +289,48 @@ export interface CreateGroupRequest {
   memberIds: string[];
 }
 
+export interface MyGroupsParams {
+  query?: string;
+  sort?: 'activity_newest' | 'name_asc' | 'name_desc' | 'member_count' | 'joined_oldest';
+  filter?: 'all' | 'owner' | 'admin' | 'member';
+  page?: number;
+  size?: number;
+}
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export interface GroupsPageResponse {
+  data: ConversationResponse[];
+  totalPages: number;
+  totalElements: number;
+}
+
+export interface UnreadAnchorResponse {
+  firstUnreadMessageId: string | null;
+  unreadCount: number;
+}
+
+export interface JoinGroupPreviewMember {
+  name: string;
+  avatar: string | null;
+}
+
+export interface JoinGroupPreviewResponse {
+  conversationId: string;
+  groupName: string;
+  groupAvatar: string | null;
+  memberCount: number;
+  createdByName: string | null;
+  memberPreviews: JoinGroupPreviewMember[];
+  isAlreadyMember: boolean;
+  isBlockedFromGroup: boolean;
+  membershipApprovalEnabled: boolean;
+  hasPendingRequest: boolean;
+  joinQuestion: string | null;
+}
+
+// ─────────────────────────── API ────────────────────────────────────────────
 
 export const chatApi = {
-  // â”€â”€ Conversations â”€â”€
+  // ── Conversations ──
 
   getConversations: async (page = 0, size = 20): Promise<ConversationResponse[]> => {
     const response = await apiClient.get<ApiEnvelope<{ data: ConversationResponse[] }>>(
@@ -213,13 +357,41 @@ export const chatApi = {
     await apiClient.delete(`${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}`);
   },
 
-  // â”€â”€ Messages â”€â”€
+  // ── Messages ──
 
-  getMessages: async (conversationId: string, page = 0, size = 50): Promise<MessageResponse[]> => {
+  /** Legacy offset-based pagination — kept for compatibility */
+  getMessages: async (conversationId: string, page = 0, size = 20): Promise<MessageResponse[]> => {
     const response = await apiClient.get<ApiEnvelope<{ data: MessageResponse[] }>>(
       `${API_ENDPOINTS.MESSAGES.MESSAGES(conversationId)}?page=${page}&size=${size}`
     );
     return response.data.data?.data || [];
+  },
+
+  /**
+   * V2 cursor-based pagination.
+   * direction: "OLDER" (scroll up) | "NEWER" (scroll down)
+   * cursor: ISO timestamp string from previous response's olderCursor/newerCursor
+   */
+  getMessagesV2: async (
+    conversationId: string,
+    params: {
+      cursor?: string | null;
+      limit?: number;
+      direction?: 'OLDER' | 'NEWER';
+      aroundMessageId?: string | null;
+    } = {}
+  ): Promise<CursorPageResponse<MessageResponse>> => {
+    const { cursor, limit = 20, direction = 'OLDER', aroundMessageId } = params;
+    const query = new URLSearchParams();
+    if (cursor) query.set('cursor', cursor);
+    query.set('limit', String(limit));
+    query.set('direction', direction);
+    if (aroundMessageId) query.set('aroundMessageId', aroundMessageId);
+
+    const response = await apiClient.get<ApiEnvelope<CursorPageResponse<MessageResponse>>>(
+      `${API_ENDPOINTS.MESSAGES.MESSAGES_V2(conversationId)}?${query.toString()}`
+    );
+    return response.data.data ?? { data: [], olderCursor: null, newerCursor: null, hasMoreOlder: false, hasMoreNewer: false, isJumpResult: false };
   },
 
   getMediaMessages: async (conversationId: string, types: string[], page = 0, size = 50): Promise<MessageResponse[]> => {
@@ -227,7 +399,7 @@ export const chatApi = {
     types.forEach(t => params.append('types', t));
     params.append('page', page.toString());
     params.append('size', size.toString());
-    
+
     const response = await apiClient.get<ApiEnvelope<{ data: MessageResponse[] }>>(
       `${API_ENDPOINTS.MESSAGES.MEDIA(conversationId)}?${params.toString()}`
     );
@@ -261,7 +433,7 @@ export const chatApi = {
     );
   },
 
-  // â”€â”€ Group management â”€â”€
+  // ── Group management ──
 
   createGroup: async (data: CreateGroupRequest): Promise<ConversationResponse> => {
     const response = await apiClient.post<ApiEnvelope<ConversationResponse>>(
@@ -319,7 +491,6 @@ export const chatApi = {
       `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}/groups`
     );
   },
-
 
   pinConversation: async (conversationId: string): Promise<void> => {
     await apiClient.post(
@@ -423,7 +594,7 @@ export const chatApi = {
     );
   },
 
-  // â”€â”€ Member search (friends directory) â”€â”€
+  // ── Member search (friends directory) ──
 
   getFriendsDirectory: async (conversationId?: string): Promise<Record<string, SearchMemberResponse[]>> => {
     const params = conversationId ? `?conversationId=${conversationId}` : "";
@@ -560,5 +731,113 @@ export const chatApi = {
     );
     return response.data.data ?? { data: [], totalPages: 0, totalElements: 0 };
   },
-};
 
+  // ── Group discovery ──
+
+  /**
+   * My group conversations with optional search, sort and filter.
+   * Backend: GET /conversations/groups/mine
+   */
+  getMyGroupConversations: async (params: MyGroupsParams = {}): Promise<GroupsPageResponse> => {
+    const { query, sort = 'activity_newest', filter = 'all', page = 0, size = 20 } = params;
+    const qs = new URLSearchParams({ sort, filter, page: String(page), size: String(size) });
+    if (query) qs.set('query', query);
+    const response = await apiClient.get<ApiEnvelope<GroupsPageResponse>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/groups/mine?${qs}`
+    );
+    return response.data.data ?? { data: [], totalPages: 0, totalElements: 0 };
+  },
+
+  // ── Unread anchor ──
+
+  /**
+   * Get the first unread message ID and unread count for a conversation.
+   * Use this to jump the message list to the unread separator.
+   * Backend: GET /conversations/{id}/unread-anchor
+   */
+  getUnreadAnchor: async (conversationId: string): Promise<UnreadAnchorResponse> => {
+    const response = await apiClient.get<ApiEnvelope<UnreadAnchorResponse>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}/unread-anchor`
+    );
+    return response.data.data ?? { firstUnreadMessageId: null, unreadCount: 0 };
+  },
+
+  // ── Join by invite link ──
+
+  /**
+   * Fetch preview info for a group invite link before joining.
+   * Backend: GET /conversations/join/{token}/preview
+   */
+  getJoinLinkPreview: async (token: string): Promise<JoinGroupPreviewResponse> => {
+    const response = await apiClient.get<ApiEnvelope<JoinGroupPreviewResponse>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}/preview`
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * Join a group conversation via an invite link token.
+   * If the group requires approval, a pending join request is created instead.
+   * Backend: POST /conversations/join/{token}
+   */
+  joinByLink: async (token: string, joinAnswer?: string): Promise<ConversationResponse> => {
+    const body = joinAnswer ? { joinAnswer } : undefined;
+    const response = await apiClient.post<ApiEnvelope<ConversationResponse>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}`,
+      body
+    );
+    return response.data.data!;
+  },
+
+  // ── Group invites (non-friends) ──
+
+  /**
+   * Send group invites to users who are not yet friends.
+   * Backend: POST /conversations/groups/{conversationId}/invites
+   */
+  sendGroupInvites: async (conversationId: string, userIds: string[]): Promise<void> => {
+    await apiClient.post<ApiEnvelope<void>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/groups/${conversationId}/invites`,
+      { userIds }
+    );
+  },
+
+  // ── Admin message moderation ──
+
+  /**
+   * Delete a member's message in a group (Admin/Owner only).
+   * Admins cannot delete the Owner's messages.
+   * Backend: DELETE /conversations/{conversationId}/messages/{messageId}/admin
+   */
+  deleteGroupMemberMessage: async (conversationId: string, messageId: string): Promise<void> => {
+    await apiClient.delete<ApiEnvelope<void>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATION(conversationId)}/messages/${messageId}/admin`
+    );
+  },
+
+  // ── Group join link ──
+
+  /**
+   * Fetch the group preview info before joining via invite link.
+   * Backend: GET /conversations/join/{token}/preview
+   */
+  getJoinPreview: async (token: string): Promise<JoinGroupPreview> => {
+    const response = await apiClient.get<ApiEnvelope<JoinGroupPreview>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}/preview`
+    );
+    return response.data.data!;
+  },
+
+  /**
+   * Join a group via invite link token.
+   * If membership approval is enabled, this creates a pending join request.
+   * Backend: POST /conversations/join/{token}
+   */
+  joinByLink: async (token: string, joinAnswer?: string): Promise<ConversationResponse> => {
+    const response = await apiClient.post<ApiEnvelope<ConversationResponse>>(
+      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}`,
+      joinAnswer ? { joinAnswer } : {}
+    );
+    return response.data.data!;
+  },
+};

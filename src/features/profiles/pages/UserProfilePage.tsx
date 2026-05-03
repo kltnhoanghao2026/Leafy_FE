@@ -45,7 +45,7 @@ export function UserProfilePage() {
   const [localConsulted, setLocalConsulted] = useState<boolean | null>(null)
 
   const followMutation = useMutation({
-    mutationFn: (userId: string) => profilesApi.followUser(userId),
+    mutationFn: (profileId: string) => profilesApi.followUser(profileId),
     onSuccess: () => {
       setLocalFollowing(true)
       toast.success('Đã theo dõi!')
@@ -55,7 +55,7 @@ export function UserProfilePage() {
   })
 
   const unfollowMutation = useMutation({
-    mutationFn: (userId: string) => profilesApi.unfollowUser(userId),
+    mutationFn: (profileId: string) => profilesApi.unfollowUser(profileId),
     onSuccess: () => {
       setLocalFollowing(false)
       toast.success('Đã hủy theo dõi!')
@@ -65,7 +65,7 @@ export function UserProfilePage() {
   })
 
   const consultMutation = useMutation({
-    mutationFn: (userId: string) => profilesApi.requestConsultation(userId),
+    mutationFn: (profileId: string) => profilesApi.requestConsultation(profileId),
     onSuccess: () => {
       setLocalConsulted(true)
       toast.success('Đã gửi yêu cầu tư vấn!')
@@ -74,7 +74,7 @@ export function UserProfilePage() {
   })
 
   const cancelConsultMutation = useMutation({
-    mutationFn: (userId: string) => profilesApi.cancelConsultation(userId),
+    mutationFn: (profileId: string) => profilesApi.cancelConsultation(profileId),
     onSuccess: () => {
       setLocalConsulted(false)
       toast.success('Đã hủy yêu cầu tư vấn!')
@@ -167,8 +167,8 @@ export function UserProfilePage() {
                 <button
                   onClick={() =>
                     isFollowing
-                      ? unfollowMutation.mutate(profile.userId)
-                      : followMutation.mutate(profile.userId)
+                      ? unfollowMutation.mutate(profile.id)
+                      : followMutation.mutate(profile.id)
                   }
                   disabled={actionPending}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-bold transition-colors disabled:opacity-60 ${
@@ -185,8 +185,8 @@ export function UserProfilePage() {
                   <button
                     onClick={() =>
                       isConsulted
-                        ? cancelConsultMutation.mutate(profile.userId)
-                        : consultMutation.mutate(profile.userId)
+                        ? cancelConsultMutation.mutate(profile.id)
+                        : consultMutation.mutate(profile.id)
                     }
                     disabled={actionPending}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-bold transition-colors disabled:opacity-60 ${
@@ -296,7 +296,7 @@ export function UserProfilePage() {
 
       {activeTab === 'followers' && (
         <div className="max-w-5xl mx-auto px-4 md:px-8">
-          <FollowersList userId={profile.userId} />
+          <FollowersList profileId={profile.id} />
         </div>
       )}
     </div>

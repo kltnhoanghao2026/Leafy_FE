@@ -130,7 +130,7 @@ export function GroupInfoMain({ conversation, currentUserId, currentRole, onNavi
 
       {/* Quick Nav */}
       <div className="px-4 py-3 border-b border-gray-100 space-y-0.5">
-        <NavRow icon={<IconUsers />} label="Thành viên" badge={memberCount} onClick={() => onNavigate('MEMBERS')} />
+        <NavRow icon={<IconUsers />} label="Thành viên" badge={memberCount} badgeType="count" onClick={() => onNavigate('MEMBERS')} />
         {canEditInfo && (
           <NavRow icon={<IconClock />} label="Yêu cầu tham gia" badge={pendingCount > 0 ? Number(pendingCount) : undefined} onClick={() => onNavigate('JOIN_REQUESTS')} />
         )}

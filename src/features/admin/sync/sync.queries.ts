@@ -149,3 +149,19 @@ export const useSyncChatUsers = () =>
     },
     onError: () => toast.error("Không thể đồng bộ ChatUser"),
   });
+
+export const useSyncNotificationUsers = () =>
+  useMutation({
+    mutationFn: () => syncApi.syncNotificationUsers(),
+    onSuccess: (res) => {
+      const d = res.data.data;
+      if (d?.success) {
+        toast.success(
+          `NotificationUser sync hoàn thành: ${d.notificationUsersUpserted?.toLocaleString() ?? 0} bản ghi`,
+        );
+      } else {
+        toast.error(`Sync thất bại: ${d?.errorMessage ?? "Lỗi không xác định"}`);
+      }
+    },
+    onError: () => toast.error("Không thể đồng bộ NotificationUser"),
+  });
