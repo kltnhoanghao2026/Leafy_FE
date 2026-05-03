@@ -31,6 +31,7 @@ interface RegisterState {
 
 const initialState = {
   formData: {
+    fullName: '',
     phone: '',
     email: '',
     password: '',

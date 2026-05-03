@@ -17,6 +17,7 @@ import {
   CalendarDays,
   MapPinned,
   RadioTower,
+  BookOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { ROUTES } from "../lib/routes";
@@ -77,9 +78,10 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
       ],
     },
     {
-      label: "Nội dung & Cộng đồng",
+      label: "Nội dung & Tri thức",
       items: [
         { name: "Nội dung", path: ROUTES.ADMIN.CONTENT, icon: MessageSquare },
+        { name: "Cơ sở tri thức", path: ROUTES.ADMIN.KNOWLEDGE_BASE, icon: BookOpen },
       ],
     },
     {

@@ -13,27 +13,23 @@ import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBoot
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
-import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
-import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
-import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
-import { PlantEventsPage, PlantsPage, SpeciesPage } from "./features/admin/plant-disease/PlantDiseaseDBPage";
-import { PlantDetailPage as AdminPlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
-import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
-import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
-import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
-import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
-import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
-import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
-import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
-import DataSyncPage from "./features/admin/sync/DataSyncPage";
+import { ContentModerationPage } from "./features/admin/content-moderation";
+import { SystemHealthPage } from "./features/admin/health";
+import { AnalyticsDashboardPage } from "./features/admin/analytics";
+import { PlantEventsPage, PlantsPage, SpeciesPage, PlantDetailPage as AdminPlantDetailPage, SpeciesDetailPage, PlantEventDetailPage, DiseasePage } from "./features/admin/plant-disease";
+import { ProfileManagementPage, ProfileDetailPage } from "./features/admin/profiles";
+import { CertificateApprovalPage } from "./features/admin/certificates";
+import { DataSeedingPage } from "./features/admin/seeding";
+import { DataSyncPage } from "./features/admin/sync";
 import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
 import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
-import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
-import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
-import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
-import { UserManagementPage } from "./features/admin/users/UserManagementPage";
-import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
+import { FarmZoneDetailPage, FarmPlotDetailPage, FarmOverviewPage } from "./features/admin/farm";
+import { UserManagementPage } from "./features/admin/users";
+import { AdminOverviewPage } from "./features/admin/overview";
 import { AdminLayout } from "./layouts/AdminLayout";
+import { RagChatPage, RagTreatmentPlanDetailPage } from "./features/rag-chat";
+import { DiseasePredictionPage } from "./features/disease-detection";
+import { DocumentIngestionPage } from "./features/admin/knowledge-base";
 
 const AgricultureOverviewPage = lazy(() =>
   import("./features/plant-management/pages/AgricultureOverviewPage"),
@@ -213,6 +209,12 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route path="rag-panel" element={<RagChatPage />} />
+              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
+              <Route
+                path="rag-panel/treatment-plans/:planId"
+                element={<RagTreatmentPlanDetailPage />}
+              />
               <Route
                 path="devices/onboarding"
                 element={
@@ -344,6 +346,7 @@ function App() {
                 element={<FarmZoneDetailPage />}
               />
               <Route path="content" element={<ContentModerationPage />} />
+              <Route path="knowledge-base" element={<DocumentIngestionPage />} />
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />

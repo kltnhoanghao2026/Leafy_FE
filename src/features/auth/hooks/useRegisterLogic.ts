@@ -10,11 +10,12 @@ import { mapAuthError } from "../services/authErrorMapper";
 
 const registerSchema = z
   .object({
+    fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
     phone: z
       .string()
       .regex(/^(0[2-9]|84[2-9])(\d{8})$/, "Số điện thoại không hợp lệ"),
     email: z.string().email("Email không hợp lệ"),
-    password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    password: z.string().min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
     confirmPassword: z.string(),
     agreedToTerms: z.boolean().refine((val) => val === true, {
       message: "Bạn phải đồng ý với điều khoản",
@@ -70,6 +71,7 @@ export function useRegisterLogic() {
       await mutation.mutateAsync({
         email: formData.email || "",
         phoneNumber: formData.phone || "",
+        fullName: formData.fullName || "",
         password: formData.password || "",
       });
 

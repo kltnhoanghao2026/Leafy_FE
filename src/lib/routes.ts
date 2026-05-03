@@ -26,6 +26,10 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
+    DISEASE_PREDICTION: "/dashboard/disease-prediction",
+    RAG_PANEL: "/dashboard/rag-panel",
+    RAG_TREATMENT_PLAN: (planId: string) =>
+      `/dashboard/rag-panel/treatment-plans/${planId}`,
     ALERTS: "/dashboard/alerts",
     ALERT_RULES: "/dashboard/alert-rules",
     DEVICES: "/dashboard/devices",
@@ -65,6 +69,7 @@ export const ROUTES = {
     PROFILES: "/admin/profiles",
     PROFILE_DETAIL: (profileId: string) => `/admin/profiles/${profileId}`,
     CERTIFICATES: "/admin/certificates",
+    KNOWLEDGE_BASE: "/admin/knowledge-base",
     SEEDING: "/admin/seeding",
     SYNC: "/admin/sync",
     IOT_DEMO_TOOLS: "/admin/iot-demo-tools",
@@ -272,6 +277,16 @@ export const API_ENDPOINTS = {
     HEALTH: "/rag/health",
     CHAT: "/rag/v1/chat",
     CHAT_STREAM: "/rag/v1/chat/stream",
+    CONVERSATIONS: "/rag/v1/conversations",
+    CONVERSATION: (conversationId: string) =>
+      `/rag/v1/conversations/${conversationId}`,
+    TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
+    INGEST: "/rag/v1/ingest",
+    PREVIEW: "/rag/v1/preview",
+    DOCUMENTS: "/rag/v1/documents",
+    DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
+    TASKS: "/rag/v1/tasks",
+    TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
     TREATMENT_PLANS: "/rag/v1/treatment-plans/",
     TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
   },
@@ -320,8 +335,7 @@ export const API_ENDPOINTS = {
     DASHBOARD_OVERVIEW: "/iot/dashboard/overview",
     FARM_ZONE_OVERVIEW: (zoneId: string) =>
       `/iot/farm-zones/${zoneId}/overview`,
-    FARM_ZONE_CHARTS: (zoneId: string) =>
-      `/iot/farm-zones/${zoneId}/charts`,
+    FARM_ZONE_CHARTS: (zoneId: string) => `/iot/farm-zones/${zoneId}/charts`,
     ALERT_EVENTS: "/iot/alert-events",
     ALERT_EVENT: (alertEventId: string) => `/iot/alert-events/${alertEventId}`,
     ALERT_EVENT_ACKNOWLEDGE: (alertEventId: string) =>
