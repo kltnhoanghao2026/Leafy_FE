@@ -3,6 +3,7 @@ export type PushSupportState = 'idle' | 'checking' | 'supported' | 'unsupported'
 export type PushPermissionState = NotificationPermission | 'unsupported' | 'unconfigured'
 
 export interface RegisterPushTokenPayload {
+  userId: string
   platform: 'WEB'
   deviceIdentifier: string
   fcmToken: string

@@ -10,6 +10,7 @@ import type {
   ChartRange,
   DeviceConfigResponse,
   DeviceDetailResponse,
+  DeviceMediaEventResponse,
 } from "../../../types/iot";
 
 const DEVICE_ID = "11111111-1111-1111-1111-111111111111";
@@ -72,6 +73,26 @@ const baseConfig: DeviceConfigResponse = {
   lastPushError: null,
 };
 
+const uploadedMedia: DeviceMediaEventResponse = {
+  id: "media-1",
+  requestId: "request-1",
+  deviceId: DEVICE_ID,
+  zoneId: ZONE_ID,
+  fileId: "file-1",
+  mediaType: "IMAGE",
+  triggerType: "MANUAL",
+  status: "UPLOADED",
+  contentType: "image/jpeg",
+  sizeBytes: 123456,
+  width: 640,
+  height: 480,
+  error: null,
+  requestedAt: "2026-04-16T03:00:00Z",
+  commandSentAt: "2026-04-16T03:00:01Z",
+  uploadedAt: "2026-04-16T03:00:05Z",
+  capturedAt: "2026-04-16T03:00:05Z",
+};
+
 const chartResponse = (sensorCode: string, rangeType: ChartRange) => ({
   deviceId: DEVICE_ID,
   zoneId: null,
@@ -102,9 +123,11 @@ const renderDevicePage = () =>
 const useDeviceHandlers = ({
   detail = deviceDetail,
   config = baseConfig,
+  media = [],
 }: {
   detail?: DeviceDetailResponse | null;
   config?: DeviceConfigResponse;
+  media?: DeviceMediaEventResponse[];
 } = {}) => {
   server.use(
     http.get("*/api/iot/devices/:deviceId/detail", () => {
@@ -127,6 +150,16 @@ const useDeviceHandlers = ({
     }),
     http.post("*/api/iot/devices/:deviceId/config/push", () => {
       return HttpResponse.json({ ...config, lastPushStatus: "SENT" });
+    }),
+    http.get("*/api/iot/devices/:deviceId/media", () => {
+      return HttpResponse.json(media);
+    }),
+    http.get("*/api/files/presigned-url/:fileId", ({ params }) => {
+      return HttpResponse.json({
+        code: 1000,
+        message: "Success",
+        data: `https://files.test/${params.fileId}.jpg`,
+      });
     }),
   );
 };
@@ -336,6 +369,80 @@ describe("DeviceDetailPage", () => {
     expect(
       screen.getByText("Waiting for device acknowledgement."),
     ).toBeInTheDocument();
+  });
+
+  it("calls backend capture endpoint and shows pending state", async () => {
+    let captureCalled = false;
+    useDeviceHandlers({
+      media: [
+        {
+          ...uploadedMedia,
+          id: "media-pending",
+          requestId: "request-pending",
+          fileId: null,
+          status: "COMMAND_SENT",
+          uploadedAt: null,
+        },
+      ],
+    });
+    server.use(
+      http.post("*/api/iot/devices/:deviceId/camera/capture", async ({ request }) => {
+        captureCalled = true;
+        expect(await request.json()).toEqual({
+          quality: "MEDIUM",
+          resolution: "VGA",
+        });
+        return HttpResponse.json({
+          requestId: "request-pending",
+          deviceId: DEVICE_ID,
+          status: "COMMAND_SENT",
+          requestedAt: "2026-04-16T03:00:00Z",
+        });
+      }),
+    );
+
+    renderDevicePage();
+
+    await screen.findByText("Demo Zone Sensor Hub");
+    await userEvent.click(screen.getByRole("button", { name: "Chụp ảnh hiện tại" }));
+
+    await waitFor(() => {
+      expect(captureCalled).toBe(true);
+    });
+    expect(
+      await screen.findByText("Đang chờ thiết bị upload ảnh..."),
+    ).toBeInTheDocument();
+  });
+
+  it("renders uploaded media from backend file id", async () => {
+    useDeviceHandlers({ media: [uploadedMedia] });
+
+    renderDevicePage();
+
+    const image = await screen.findByAltText("Latest device capture");
+    expect(image).toHaveAttribute("src", "https://files.test/file-1.jpg");
+    expect(screen.getByText("UPLOADED")).toBeInTheDocument();
+  });
+
+  it("shows failed media event without fake preview", async () => {
+    useDeviceHandlers({
+      media: [
+        {
+          ...uploadedMedia,
+          id: "media-failed",
+          fileId: null,
+          status: "FAILED",
+          error: "CAMERA_CAPTURE_FAILED",
+          uploadedAt: null,
+        },
+      ],
+    });
+
+    renderDevicePage();
+
+    expect((await screen.findAllByText("CAMERA_CAPTURE_FAILED")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Chưa có ảnh upload thành công.")).toBeInTheDocument();
+    expect(screen.queryByAltText("Latest device capture")).not.toBeInTheDocument();
   });
 
   it("renders ACKED config state", async () => {

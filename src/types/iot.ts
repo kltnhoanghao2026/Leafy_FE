@@ -49,6 +49,46 @@ export interface DeviceMediaSummaryResponse {
   zoneId: string;
 }
 
+export type DeviceMediaEventStatus =
+  | "REQUESTED"
+  | "COMMAND_SENT"
+  | "UPLOADING"
+  | "UPLOADED"
+  | "FAILED"
+  | "TIMEOUT";
+
+export interface CameraCaptureRequest {
+  quality?: "LOW" | "MEDIUM" | "HIGH";
+  resolution?: "QVGA" | "VGA";
+}
+
+export interface CameraCaptureResponse {
+  requestId: string;
+  deviceId: string;
+  status: DeviceMediaEventStatus;
+  requestedAt: string;
+}
+
+export interface DeviceMediaEventResponse {
+  id: string;
+  requestId: string | null;
+  deviceId: string;
+  zoneId: string | null;
+  fileId: string | null;
+  mediaType: string;
+  triggerType: string;
+  status: DeviceMediaEventStatus | string;
+  contentType: string | null;
+  sizeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  error: string | null;
+  requestedAt: string | null;
+  commandSentAt: string | null;
+  uploadedAt: string | null;
+  capturedAt: string | null;
+}
+
 export interface DeviceConfigSnapshotResponse {
   configVersion: number | null;
   samplingIntervalSec: number | null;

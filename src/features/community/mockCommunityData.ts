@@ -14,6 +14,9 @@ export const MOCK_POSTS: Post[] = [
     images: ['https://placehold.co/600x400/E2E8F0/64748B?text=Ảnh+lá+cà+phê'],
     isUrgent: true,
     likes: 24,
+    upvotes: 24,
+    downvotes: 0,
+    currentUserVoteType: null,
     comments: 2, // 2 comments shown below
     shares: 0,
     commentsList: [
@@ -55,6 +58,9 @@ export const MOCK_POSTS: Post[] = [
     images: ['https://placehold.co/600x400/FEF3C7/D97706?text=Cà+phê+chín'],
     isUrgent: false,
     likes: 156,
+    upvotes: 156,
+    downvotes: 0,
+    currentUserVoteType: null,
     comments: 0,
     shares: 5,
     commentsList: []
