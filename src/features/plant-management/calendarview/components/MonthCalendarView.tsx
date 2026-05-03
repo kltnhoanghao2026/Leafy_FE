@@ -1,6 +1,5 @@
-import { useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { GroupedEventList } from './GroupedEventList';
+import { useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 import type { PlantEventResponse } from '../../shared/types';
@@ -13,7 +12,9 @@ interface MonthCalendarViewProps {
   month: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
-  onEdit: (e: PlantEventResponse) => void;
+  selectedDate: string | null;
+  onSelectDate: (d: string | null) => void;
+  hoveredDateRange?: { start: string; end: string; color: string } | null;
 }
 
 function buildCalendarGrid(month: Date): (string | null)[][] {
@@ -38,33 +39,36 @@ export function MonthCalendarView({
   month,
   onPrevMonth,
   onNextMonth,
-  onEdit,
+  selectedDate,
+  onSelectDate,
+  hoveredDateRange,
 }: MonthCalendarViewProps) {
   const todayStr = toLocalDateOnly(new Date());
-  const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
 
   // Build eventsByDate map (handle multi-day spans)
-  const eventsByDate = new Map<string, PlantEventResponse[]>();
-  for (const evt of events) {
-    const start = evt.calculatedStartDate;
-    const end = evt.calculatedEndDate ?? start;
-    if (!start) continue;
-    const startD = new Date(start + 'T00:00:00');
-    const endD = new Date((end ?? start) + 'T00:00:00');
-    for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-      const key = toLocalDateOnly(d);
-      if (!eventsByDate.has(key)) eventsByDate.set(key, []);
-      const list = eventsByDate.get(key)!;
-      if (!list.some(e => e.id === evt.id)) list.push(evt);
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, PlantEventResponse[]>();
+    for (const evt of events) {
+      const start = evt.calculatedStartDate;
+      const end   = evt.calculatedEndDate ?? start;
+      if (!start) continue;
+      const startD = new Date(start + 'T00:00:00');
+      const endD   = new Date((end ?? start) + 'T00:00:00');
+      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
+        const key = toLocalDateOnly(d);
+        if (!map.has(key)) map.set(key, []);
+        const list = map.get(key)!;
+        if (!list.some(e => e.id === evt.id)) list.push(evt);
+      }
     }
-  }
+    return map;
+  }, [events]);
 
   const rows = buildCalendarGrid(month);
   const now = new Date();
   const isCurrentMonth =
     month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-  const selectedEvents = selectedDate ? (eventsByDate.get(selectedDate) ?? []) : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,7 +84,7 @@ export function MonthCalendarView({
             <span className="text-sm font-bold capitalize text-slate-800">{monthLabel}</span>
             {!isCurrentMonth && (
               <button type="button"
-                onClick={() => setSelectedDate(todayStr)}
+                onClick={() => onSelectDate(todayStr)}
                 className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700">
                 Hôm nay
               </button>
@@ -105,29 +109,49 @@ export function MonthCalendarView({
             <div key={ri} className="grid grid-cols-7">
               {row.map((dateStr, ci) => {
                 if (!dateStr) return <div key={ci} />;
-                const isToday = dateStr === todayStr;
+                const isToday    = dateStr === todayStr;
                 const isSelected = dateStr === selectedDate;
-                const dayEvts = eventsByDate.get(dateStr) ?? [];
-                const uniqueColors = [...new Set(dayEvts.map(e => CATEGORY_DOT_COLORS[getEventCategory(e.eventType)]))].slice(0, 3);
-                const hasMore = uniqueColors.length > 3;
+                const isHovered  = !!hoveredDateRange && dateStr >= hoveredDateRange.start && dateStr <= hoveredDateRange.end;
+                const dayEvts    = eventsByDate.get(dateStr) ?? [];
+                const allColors  = [...new Set(dayEvts.map(e => CATEGORY_DOT_COLORS[getEventCategory(e.eventType)]))];
+                const hasMore    = allColors.length > 3;
+                const uniqueColors = allColors.slice(0, 3);
                 const day = parseInt(dateStr.slice(8), 10);
 
+                let cellStyle: React.CSSProperties;
+                if (isHovered) {
+                  const isVisualStart = dateStr === hoveredDateRange!.start || ci === 0;
+                  const isVisualEnd   = dateStr === hoveredDateRange!.end   || ci === 6;
+                  const hc = hoveredDateRange!.color;
+                  cellStyle = {
+                    borderWidth: 0,
+                    backgroundColor: `${hc}2e`,
+                    borderTopLeftRadius:     isVisualStart ? 10 : 0,
+                    borderBottomLeftRadius:  isVisualStart ? 10 : 0,
+                    borderTopRightRadius:    isVisualEnd   ? 10 : 0,
+                    borderBottomRightRadius: isVisualEnd   ? 10 : 0,
+                  };
+                } else if (isSelected) {
+                  cellStyle = { borderRadius: 10, borderWidth: 1, borderColor: '#86efac', backgroundColor: '#f0fdf4' };
+                } else {
+                  cellStyle = { borderRadius: 10, borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' };
+                }
+
                 return (
-                  <button key={dateStr} type="button"
-                    onClick={() => setSelectedDate(prev => prev === dateStr ? null : dateStr)}
-                    style={{
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: isSelected ? '#86efac' : 'transparent',
-                      backgroundColor: isSelected ? '#f0fdf4' : 'transparent',
-                    }}
-                    className="flex flex-col items-center py-1 transition-all hover:bg-slate-50">
+                  <button
+                    key={dateStr}
+                    type="button"
+                    onClick={() => onSelectDate(selectedDate === dateStr ? null : dateStr)}
+                    style={cellStyle}
+                    className="flex flex-col items-center py-1 transition-all hover:bg-slate-50"
+                  >
                     <div
                       style={{
                         width: 28, height: 28, borderRadius: 14,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         backgroundColor: isSelected ? SELECTED_COLOR : isToday ? 'rgba(47,127,52,0.12)' : 'transparent',
-                      }}>
+                      }}
+                    >
                       <span style={{
                         fontSize: 13,
                         fontWeight: isSelected || isToday ? 700 : 500,
@@ -139,8 +163,7 @@ export function MonthCalendarView({
                     {/* Dots */}
                     <div className="mt-1 flex h-1.5 items-center justify-center gap-0.5">
                       {uniqueColors.map((color, i) => (
-                        <span key={i} className="inline-block h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : color }} />
+                        <span key={i} className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
                       ))}
                       {hasMore && <span className="text-[6px] text-slate-400">+</span>}
                     </div>
@@ -166,49 +189,6 @@ export function MonthCalendarView({
         </div>
       </div>
 
-      {/* Selected date events */}
-      {selectedDate && (
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-bold capitalize text-slate-700">
-              {new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN', {
-                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-              })}
-            </span>
-            <span className="text-xs font-medium text-slate-400">
-              {selectedEvents.length} sự kiện
-            </span>
-          </div>
-          {selectedEvents.length === 0 ? (
-            <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-              <CalendarDays className="mb-3 h-8 w-8 text-slate-200" />
-              <p className="text-sm font-medium text-slate-500">Không có sự kiện trong ngày này</p>
-            </div>
-          ) : (
-            <GroupedEventList events={selectedEvents} onEdit={onEdit} />
-          )}
-        </div>
-      )}
-
-      {/* No day selected: show all month events */}
-      {!selectedDate && (
-        <div>
-          <p className="mb-2 text-sm font-bold text-slate-700">Sự kiện trong tháng</p>
-          {events.length === 0 ? (
-            <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-8 shadow-sm">
-              <CalendarDays className="mb-3 h-8 w-8 text-slate-200" />
-              <p className="text-sm font-medium text-slate-500">Không có sự kiện trong tháng này</p>
-            </div>
-          ) : (
-            <GroupedEventList
-              events={[...events].sort((a, b) =>
-                (a.calculatedStartDate ?? '').localeCompare(b.calculatedStartDate ?? ''),
-              )}
-              onEdit={onEdit}
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 }
