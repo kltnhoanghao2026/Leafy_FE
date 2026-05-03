@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,6 +7,7 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   useAlertRules,
@@ -15,6 +16,9 @@ import {
   useUpdateAlertRule,
   useUpdateAlertRuleEnabled,
 } from "../queries";
+import { useAlertScopeOptions } from "../../alerts/hooks/useAlertScopeOptions";
+import { useInferredSensorTypeOptions } from "../../alerts/hooks/useInferredSensorTypeOptions";
+import { useFarmZones } from "../../farm-management/queries";
 import type {
   AlertRuleResponse,
   AlertRulesParams,
@@ -118,10 +122,7 @@ const buildPayload = (form: RuleFormState): CreateAlertRuleRequest => ({
 
 const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
   if (!payload.sensorTypeId) return "Sensor type ID is required.";
-  if (
-    payload.minThreshold == null &&
-    payload.maxThreshold == null
-  ) {
+  if (payload.minThreshold == null && payload.maxThreshold == null) {
     return "At least one threshold is required.";
   }
   if (
@@ -132,7 +133,7 @@ const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
     return "Minimum threshold must be lower than maximum threshold.";
   }
   if (!payload.deviceId && !payload.zoneId && !payload.farmPlotId) {
-    return "At least one scope ID is required.";
+    return "Select at least one scope: farm plot, zone, or device.";
   }
   if (
     payload.cooldownMinutes !== null &&
@@ -145,17 +146,419 @@ const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
   return null;
 };
 
+interface RuleFormDialogProps {
+  form: RuleFormState;
+  editingRule: AlertRuleResponse | null;
+  isSubmitting: boolean;
+  validationMessage: string | null;
+  requestFailed: boolean;
+  onClose: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onFormChange: (updater: (current: RuleFormState) => RuleFormState) => void;
+}
+
+function RuleFormDialog({
+  form,
+  editingRule,
+  isSubmitting,
+  validationMessage,
+  requestFailed,
+  onClose,
+  onSubmit,
+  onFormChange,
+}: RuleFormDialogProps) {
+  const {
+    farmPlots,
+    zones,
+    devices,
+    plotsQuery,
+    zonesQuery,
+    devicesQuery,
+  } = useAlertScopeOptions({
+    farmPlotId: form.farmPlotId,
+    zoneId: form.zoneId,
+  });
+  const { sensorOptions, isLoading: sensorOptionsLoading } =
+    useInferredSensorTypeOptions(form.deviceId, form.zoneId);
+
+  const hasSelectedSensorOption = sensorOptions.some(
+    (option) => option.id === form.sensorTypeId,
+  );
+
+  useEffect(() => {
+    if (
+      form.deviceId &&
+      devices.length > 0 &&
+      !devices.some((device) => device.id === form.deviceId)
+    ) {
+      onFormChange((current) => ({ ...current, deviceId: "" }));
+    }
+  }, [devices, form.deviceId, onFormChange]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-[22px] font-black text-slate-900">
+              {editingRule ? "Edit alert rule" : "Create alert rule"}
+            </h3>
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              Pick farm, zone, and device where possible. Sensor type requires
+              a real backend UUID.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+            aria-label="Close alert rule dialog"
+          >
+            <X className="h-4 w-4" strokeWidth={3} />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-5">
+          <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
+            <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
+              Scope
+            </h4>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Farm plot
+                </span>
+                <select
+                  aria-label="Rule farm plot"
+                  value={form.farmPlotId}
+                  onChange={(event) => {
+                    const farmPlotId = event.target.value;
+                    onFormChange((current) => ({
+                      ...current,
+                      farmPlotId,
+                      zoneId: "",
+                      deviceId: "",
+                    }));
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  disabled={plotsQuery.isLoading}
+                >
+                  <option value="">
+                    {plotsQuery.isLoading ? "Loading farms..." : "No farm scope"}
+                  </option>
+                  {farmPlots.map((plot) => (
+                    <option key={plot.id} value={plot.id}>
+                      {plot.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Zone
+                </span>
+                <select
+                  aria-label="Rule zone"
+                  value={form.zoneId}
+                  onChange={(event) => {
+                    const zoneId = event.target.value;
+                    onFormChange((current) => ({
+                      ...current,
+                      zoneId,
+                      deviceId: "",
+                    }));
+                  }}
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  disabled={!form.farmPlotId || zonesQuery.isLoading}
+                >
+                  <option value="">
+                    {!form.farmPlotId
+                      ? "Select farm first"
+                      : zonesQuery.isLoading
+                        ? "Loading zones..."
+                        : "No zone scope"}
+                  </option>
+                  {zones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.zoneName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Device
+                </span>
+                <select
+                  aria-label="Rule device"
+                  value={form.deviceId}
+                  onChange={(event) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      deviceId: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  disabled={devicesQuery.isLoading}
+                >
+                  <option value="">
+                    {devicesQuery.isLoading
+                      ? "Loading devices..."
+                      : "No device scope"}
+                  </option>
+                  {devices.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.deviceName || device.deviceCode || compactId(device.id)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4">
+            <h4 className="text-sm font-black uppercase tracking-widest text-amber-700">
+              Sensor type
+            </h4>
+            <p className="mt-2 text-sm font-semibold text-amber-700">
+              Alert rules require a real sensorTypeId UUID. The app can infer
+              options only from existing readings. A complete picker requires a
+              backend sensor type list endpoint.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-700">
+                  Inferred sensor type
+                </span>
+                <select
+                  aria-label="Inferred sensor type"
+                  value={hasSelectedSensorOption ? form.sensorTypeId : ""}
+                  onChange={(event) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      sensorTypeId: event.target.value,
+                    }))
+                  }
+                  className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
+                  disabled={sensorOptionsLoading || sensorOptions.length === 0}
+                >
+                  <option value="">
+                    {sensorOptionsLoading
+                      ? "Loading readings..."
+                      : sensorOptions.length === 0
+                        ? "No inferred sensor types"
+                        : "Select sensor type"}
+                  </option>
+                  {sensorOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name} ({option.code}
+                      {option.unit ? `, ${option.unit}` : ""})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-widest text-amber-700">
+                  Advanced sensorTypeId
+                </span>
+                <input
+                  aria-label="Advanced sensorTypeId"
+                  value={form.sensorTypeId}
+                  onChange={(event) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      sensorTypeId: event.target.value,
+                    }))
+                  }
+                  placeholder="Paste sensorTypeId UUID"
+                  className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
+                />
+              </label>
+            </div>
+          </section>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Min threshold
+              </span>
+              <input
+                aria-label="Min threshold"
+                value={form.minThreshold}
+                onChange={(event) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    minThreshold: event.target.value,
+                  }))
+                }
+                type="number"
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Max threshold
+              </span>
+              <input
+                aria-label="Max threshold"
+                value={form.maxThreshold}
+                onChange={(event) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    maxThreshold: event.target.value,
+                  }))
+                }
+                type="number"
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Severity
+              </span>
+              <select
+                aria-label="Severity"
+                value={form.severity}
+                onChange={(event) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    severity: event.target.value as AlertSeverity,
+                  }))
+                }
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              >
+                {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
+                  (severity) => (
+                    <option key={severity} value={severity}>
+                      {severity}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Cooldown minutes
+              </span>
+              <input
+                aria-label="Cooldown minutes"
+                value={form.cooldownMinutes}
+                onChange={(event) =>
+                  onFormChange((current) => ({
+                    ...current,
+                    cooldownMinutes: event.target.value,
+                  }))
+                }
+                type="number"
+                min={0}
+                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {[
+              ["notifyWeb", "Notify web"],
+              ["notifyMobile", "Notify mobile"],
+              ["enabled", "Enabled"],
+            ].map(([key, label]) => (
+              <label
+                key={key}
+                className="inline-flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={Boolean(form[key as keyof RuleFormState])}
+                  onChange={(event) =>
+                    onFormChange((current) => ({
+                      ...current,
+                      [key]: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 accent-[#245A34]"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+
+          {validationMessage ? (
+            <p role="alert" className="text-sm font-bold text-red-600">
+              {validationMessage}
+            </p>
+          ) : null}
+          {requestFailed ? (
+            <p role="alert" className="text-sm font-bold text-red-600">
+              Alert rule request failed. Please check the values and try again.
+            </p>
+          ) : null}
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting
+                ? "Saving..."
+                : editingRule
+                  ? "Save rule"
+                  : "Create rule"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function AlertRulesPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
-  const [sensorTypeId, setSensorTypeId] = useState("");
-  const [deviceId, setDeviceId] = useState("");
-  const [zoneId, setZoneId] = useState("");
-  const [farmPlotId, setFarmPlotId] = useState("");
+  const [filterSensorTypeId, setFilterSensorTypeId] = useState("");
+  const [filterDeviceId, setFilterDeviceId] = useState("");
+  const [filterZoneId, setFilterZoneId] = useState("");
+  const [filterFarmPlotId, setFilterFarmPlotId] = useState("");
   const [editingRule, setEditingRule] = useState<AlertRuleResponse | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [form, setForm] = useState<RuleFormState>(emptyRuleForm);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AlertRuleResponse | null>(null);
+
+  const {
+    farmPlots,
+    zones,
+    devices,
+    farmPlotMap,
+    zoneMap,
+    deviceMap,
+    plotsQuery,
+    zonesQuery,
+    devicesQuery,
+  } = useAlertScopeOptions({
+    farmPlotId: filterFarmPlotId,
+    zoneId: filterZoneId,
+  });
+  const effectiveFilterDeviceId =
+    devices.length > 0 &&
+    filterDeviceId &&
+    !devices.some((device) => device.id === filterDeviceId)
+      ? ""
+      : filterDeviceId;
 
   const params = useMemo<AlertRulesParams>(
     () => ({
@@ -165,12 +568,20 @@ export function AlertRulesPage() {
       sortDir: "desc",
       enabled:
         enabledFilter === "all" ? undefined : enabledFilter === "true",
-      sensorTypeId: sensorTypeId.trim() || undefined,
-      deviceId: deviceId.trim() || undefined,
-      zoneId: zoneId.trim() || undefined,
-      farmPlotId: farmPlotId.trim() || undefined,
+      sensorTypeId: filterSensorTypeId.trim() || undefined,
+      deviceId: effectiveFilterDeviceId || undefined,
+      zoneId: filterZoneId || undefined,
+      farmPlotId: filterFarmPlotId || undefined,
     }),
-    [deviceId, enabledFilter, farmPlotId, page, sensorTypeId, size, zoneId],
+    [
+      enabledFilter,
+      effectiveFilterDeviceId,
+      filterFarmPlotId,
+      filterSensorTypeId,
+      filterZoneId,
+      page,
+      size,
+    ],
   );
 
   const rulesQuery = useAlertRules(params);
@@ -182,10 +593,31 @@ export function AlertRulesPage() {
   const pagedRules = rulesQuery.data;
   const rules = pagedRules?.items ?? [];
   const isSubmitting = createRule.isPending || updateRule.isPending;
+  const ruleLookupFarmPlotId =
+    filterFarmPlotId || rules.find((rule) => rule.farmPlotId)?.farmPlotId || "";
+  const ruleZonesQuery = useFarmZones(ruleLookupFarmPlotId, !!ruleLookupFarmPlotId);
+  const ruleZoneMap = useMemo(
+    () =>
+      new Map(
+        [...zones, ...(ruleZonesQuery.data ?? [])].map((zone) => [
+          zone.id,
+          zone,
+        ]),
+      ),
+    [ruleZonesQuery.data, zones],
+  );
 
   const resetToFirstPage = () => setPage(0);
 
-  const resetForm = () => {
+  const openCreateDialog = () => {
+    setEditingRule(null);
+    setForm(emptyRuleForm);
+    setValidationMessage(null);
+    setIsFormOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsFormOpen(false);
     setEditingRule(null);
     setForm(emptyRuleForm);
     setValidationMessage(null);
@@ -195,6 +627,7 @@ export function AlertRulesPage() {
     setEditingRule(rule);
     setForm(toFormState(rule));
     setValidationMessage(null);
+    setIsFormOpen(true);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -211,7 +644,7 @@ export function AlertRulesPage() {
         await createRule.mutateAsync(payload);
       }
 
-      resetForm();
+      closeDialog();
     } catch {
       // Mutation error state is rendered below the form.
     }
@@ -228,12 +661,41 @@ export function AlertRulesPage() {
     }
   };
 
-  const handleDelete = async (ruleId: string) => {
+  const handleDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
     try {
-      await deleteRule.mutateAsync(ruleId);
+      await deleteRule.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
     } catch {
       // Mutation error state is surfaced by TanStack Query state.
     }
+  };
+
+  const resolveFarmLabel = (farmPlotId: string | null) => {
+    if (!farmPlotId) return "No farm";
+    return farmPlotMap.get(farmPlotId)?.name || `Farm ${compactId(farmPlotId)}`;
+  };
+
+  const resolveZoneLabel = (zoneId: string | null) => {
+    if (!zoneId) return "No zone";
+    return (
+      ruleZoneMap.get(zoneId)?.zoneName ||
+      zoneMap.get(zoneId)?.zoneName ||
+      `Zone ${compactId(zoneId)}`
+    );
+  };
+
+  const resolveDeviceLabel = (deviceId: string | null) => {
+    if (!deviceId) return "No device";
+    const device = deviceMap.get(deviceId);
+    return (
+      device?.deviceName ||
+      device?.deviceCode ||
+      `Device ${compactId(deviceId)}`
+    );
   };
 
   return (
@@ -244,13 +706,13 @@ export function AlertRulesPage() {
             Alert rules
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Manage collector alert rules for sensor thresholds and notification
-            delivery.
+            Manage collector alert rules with farm, zone, device, and sensor
+            type context.
           </p>
         </div>
         <button
           type="button"
-          onClick={resetForm}
+          onClick={openCreateDialog}
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
         >
           <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
@@ -259,47 +721,85 @@ export function AlertRulesPage() {
       </div>
 
       <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          <input
-            aria-label="Filter sensor type ID"
-            value={sensorTypeId}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
+          <select
+            aria-label="Filter farm plot"
+            value={filterFarmPlotId}
             onChange={(event) => {
-              setSensorTypeId(event.target.value);
+              setFilterFarmPlotId(event.target.value);
+              setFilterZoneId("");
+              setFilterDeviceId("");
               resetToFirstPage();
             }}
-            placeholder="Sensor type ID"
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          />
-          <input
-            aria-label="Filter device ID"
-            value={deviceId}
+            disabled={plotsQuery.isLoading}
+          >
+            <option value="">
+              {plotsQuery.isLoading ? "Loading farms..." : "All farm plots"}
+            </option>
+            {farmPlots.map((plot) => (
+              <option key={plot.id} value={plot.id}>
+                {plot.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Filter zone"
+            value={filterZoneId}
             onChange={(event) => {
-              setDeviceId(event.target.value);
+              setFilterZoneId(event.target.value);
+              setFilterDeviceId("");
               resetToFirstPage();
             }}
-            placeholder="Device ID"
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          />
-          <input
-            aria-label="Filter zone ID"
-            value={zoneId}
+            disabled={!filterFarmPlotId || zonesQuery.isLoading}
+          >
+            <option value="">
+              {!filterFarmPlotId
+                ? "Select farm first"
+                : zonesQuery.isLoading
+                  ? "Loading zones..."
+                  : "All zones"}
+            </option>
+            {zones.map((zone) => (
+              <option key={zone.id} value={zone.id}>
+                {zone.zoneName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Filter device"
+            value={effectiveFilterDeviceId}
             onChange={(event) => {
-              setZoneId(event.target.value);
+              setFilterDeviceId(event.target.value);
               resetToFirstPage();
             }}
-            placeholder="Zone ID"
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          />
+            disabled={devicesQuery.isLoading}
+          >
+            <option value="">
+              {devicesQuery.isLoading ? "Loading devices..." : "All devices"}
+            </option>
+            {devices.map((device) => (
+              <option key={device.id} value={device.id}>
+                {device.deviceName || device.deviceCode || compactId(device.id)}
+              </option>
+            ))}
+          </select>
+
           <input
-            aria-label="Filter farm plot ID"
-            value={farmPlotId}
+            aria-label="Advanced filter sensorTypeId"
+            value={filterSensorTypeId}
             onChange={(event) => {
-              setFarmPlotId(event.target.value);
+              setFilterSensorTypeId(event.target.value);
               resetToFirstPage();
             }}
-            placeholder="Farm plot ID"
+            placeholder="Advanced sensorTypeId"
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
           />
+
           <select
             aria-label="Filter enabled"
             value={enabledFilter}
@@ -329,217 +829,6 @@ export function AlertRulesPage() {
             ))}
           </select>
         </div>
-      </section>
-
-      <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
-              {editingRule ? "Edit alert rule" : "Create alert rule"}
-            </h3>
-            <p className="text-sm font-semibold text-slate-500">
-              Provide a sensor type and at least one target scope.
-            </p>
-          </div>
-          {editingRule ? (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
-            >
-              Cancel edit
-            </button>
-          ) : null}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Sensor type ID
-              </span>
-              <input
-                value={form.sensorTypeId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    sensorTypeId: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Device ID
-              </span>
-              <input
-                value={form.deviceId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    deviceId: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Zone ID
-              </span>
-              <input
-                value={form.zoneId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    zoneId: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Farm plot ID
-              </span>
-              <input
-                value={form.farmPlotId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    farmPlotId: event.target.value,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Min threshold
-              </span>
-              <input
-                value={form.minThreshold}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    minThreshold: event.target.value,
-                  }))
-                }
-                type="number"
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Max threshold
-              </span>
-              <input
-                value={form.maxThreshold}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    maxThreshold: event.target.value,
-                  }))
-                }
-                type="number"
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Severity
-              </span>
-              <select
-                value={form.severity}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    severity: event.target.value as AlertSeverity,
-                  }))
-                }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              >
-                {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
-                  (severity) => (
-                    <option key={severity} value={severity}>
-                      {severity}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Cooldown minutes
-              </span>
-              <input
-                value={form.cooldownMinutes}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    cooldownMinutes: event.target.value,
-                  }))
-                }
-                type="number"
-                min={0}
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {[
-              ["notifyWeb", "Notify web"],
-              ["notifyMobile", "Notify mobile"],
-              ["enabled", "Enabled"],
-            ].map(([key, label]) => (
-              <label
-                key={key}
-                className="inline-flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700"
-              >
-                <input
-                  type="checkbox"
-                  checked={Boolean(form[key as keyof RuleFormState])}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      [key]: event.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 accent-[#245A34]"
-                />
-                {label}
-              </label>
-            ))}
-          </div>
-
-          {validationMessage ? (
-            <p role="alert" className="text-sm font-bold text-red-600">
-              {validationMessage}
-            </p>
-          ) : null}
-          {createRule.isError || updateRule.isError ? (
-            <p role="alert" className="text-sm font-bold text-red-600">
-              Alert rule request failed. Please check the values and try again.
-            </p>
-          ) : null}
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isSubmitting
-              ? "Saving..."
-              : editingRule
-                ? "Save rule"
-                : "Create rule"}
-          </button>
-        </form>
       </section>
 
       {rulesQuery.isLoading ? (
@@ -577,6 +866,12 @@ export function AlertRulesPage() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {deleteRule.isError ? (
+        <p role="alert" className="text-sm font-bold text-red-600">
+          Alert rule delete failed. Please try again.
+        </p>
       ) : null}
 
       {pagedRules && !rulesQuery.isError ? (
@@ -655,9 +950,9 @@ export function AlertRulesPage() {
                           Sensor {compactId(rule.sensorTypeId)}
                         </p>
                         <p className="mt-1 text-xs font-semibold text-slate-500">
-                          Device {compactId(rule.deviceId)} - Zone{" "}
-                          {compactId(rule.zoneId)} - Farm{" "}
-                          {compactId(rule.farmPlotId)}
+                          {resolveDeviceLabel(rule.deviceId)} -{" "}
+                          {resolveZoneLabel(rule.zoneId)} -{" "}
+                          {resolveFarmLabel(rule.farmPlotId)}
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
@@ -706,7 +1001,7 @@ export function AlertRulesPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => void handleDelete(rule.id)}
+                            onClick={() => setDeleteTarget(rule)}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-red-100 text-red-600 hover:bg-red-50"
                             aria-label={`Delete rule ${rule.id}`}
                           >
@@ -720,6 +1015,55 @@ export function AlertRulesPage() {
               </table>
             </div>
           )}
+        </div>
+      ) : null}
+
+      {isFormOpen ? (
+        <RuleFormDialog
+          form={form}
+          editingRule={editingRule}
+          isSubmitting={isSubmitting}
+          validationMessage={validationMessage}
+          requestFailed={createRule.isError || updateRule.isError}
+          onClose={closeDialog}
+          onSubmit={handleSubmit}
+          onFormChange={setForm}
+        />
+      ) : null}
+
+      {deleteTarget ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
+            <h3 className="text-xl font-black text-slate-900">
+              Delete alert rule?
+            </h3>
+            <p className="mt-2 text-sm font-semibold text-slate-600">
+              This will delete the rule for sensor{" "}
+              {compactId(deleteTarget.sensorTypeId)}. Existing alert events may
+              remain for history.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDelete()}
+                disabled={deleteRule.isPending}
+                className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteRule.isPending ? "Deleting..." : "Confirm delete"}
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
