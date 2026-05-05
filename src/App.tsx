@@ -13,30 +13,29 @@ import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBoot
 import { Toaster, toast } from "react-hot-toast";
 import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
-import { ContentModerationPage } from "./features/admin/content-moderation/ContentModerationPage";
-import { SystemHealthPage } from "./features/admin/health/SystemHealthPage";
-import { AnalyticsDashboardPage } from "./features/admin/analytics/AnalyticsDashboardPage";
-import { PlantEventsPage, PlantsPage, SpeciesPage } from "./features/admin/plant-disease/PlantDiseaseDBPage";
-import { PlantDetailPage as AdminPlantDetailPage } from "./features/admin/plant-disease/PlantDetailPage";
-import { SpeciesDetailPage } from "./features/admin/plant-disease/SpeciesDetailPage";
-import { PlantEventDetailPage } from "./features/admin/plant-disease/PlantEventDetailPage";
-import { DiseasePage } from "./features/admin/plant-disease/DiseasePage";
-import { ProfileManagementPage } from "./features/admin/profiles/ProfileManagementPage";
-import { ProfileDetailPage } from "./features/admin/profiles/ProfileDetailPage";
-import { CertificateApprovalPage } from "./features/admin/certificates/CertificateApprovalPage";
-import DataSeedingPage from "./features/admin/seeding/DataSeedingPage";
-import DataSyncPage from "./features/admin/sync/DataSyncPage";
+import { I18nProvider } from "./i18n";
+import { WebSocketProvider } from "./providers/WebSocketProvider";
+
+import { AdminOverviewPage } from "./features/admin/overview";
+import { UserManagementPage } from "./features/admin/users";
+import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
+import { ContentModerationPage } from "./features/admin/content-moderation";
+import { SystemHealthPage } from "./features/admin/health";
+import { AnalyticsDashboardPage } from "./features/admin/analytics";
+import { PlantEventsPage, PlantsPage, SpeciesPage, PlantDetailPage as AdminPlantDetailPage, SpeciesDetailPage, PlantEventDetailPage, DiseasePage } from "./features/admin/plant-disease";
+import { ProfileManagementPage, ProfileDetailPage } from "./features/admin/profiles";
+import { CertificateApprovalPage } from "./features/admin/certificates";
+import { DataSeedingPage } from "./features/admin/seeding";
+import { DataSyncPage } from "./features/admin/sync";
 import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
 import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
-import { FarmZoneDetailPage } from "./features/admin/farm/FarmZoneDetailPage";
-import { FarmPlotDetailPage } from "./features/admin/farm/FarmPlotDetailPage";
-import { FarmOverviewPage } from "./features/admin/farm/FarmOverviewPage";
-import { UserManagementPage } from "./features/admin/users/UserManagementPage";
-import { AdminOverviewPage } from "./features/admin/overview/AdminOverviewPage";
 import { AdminLayout } from "./layouts/AdminLayout";
 
+import { DiseasePredictionPage } from "./features/disease-detection";
+import { DocumentIngestionPage } from "./features/admin/knowledge-base";
+
 const AgricultureOverviewPage = lazy(() =>
-  import("./features/plant-management/pages/AgricultureOverviewPage"),
+  import("./features/plant-management/overview/pages/AgricultureOverviewPage"),
 );
 const DashboardPage = lazy(() =>
   import("./features/metrics-view/pages/DashboardPage").then((module) => ({
@@ -74,38 +73,38 @@ const DiseaseDiagnosisPage = lazy(() =>
   })),
 );
 const PlantDetailPage = lazy(() =>
-  import("./features/plant-management/pages/PlantDetailPage").then((module) => ({
+  import("./features/plant-management/plant/pages/PlantDetailPage").then((module) => ({
     default: module.PlantDetailPage,
   })),
 );
 const PlantListPage = lazy(() =>
-  import("./features/plant-management/pages/PlantListPage").then((module) => ({
+  import("./features/plant-management/plant/pages/PlantListPage").then((module) => ({
     default: module.PlantListPage,
   })),
 );
 const PlantEventsCalendarPage = lazy(() =>
-  import("./features/plant-management/pages/PlantEventsCalendarPage").then((module) => ({
+  import("./features/plant-management/calendarview/pages/PlantEventsCalendarPage").then((module) => ({
     default: module.PlantEventsCalendarPage,
   })),
 );
-const TreatmentPlanDetailPage = lazy(() =>
-  import("./features/plant-management/pages/TreatmentPlanDetailPage").then((module) => ({
-    default: module.TreatmentPlanDetailPage,
+const PlanDetailPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanDetailPage").then((module) => ({
+    default: module.PlanDetailPage,
   })),
 );
-const TreatmentPlansPage = lazy(() =>
-  import("./features/plant-management/pages/TreatmentPlansPage").then((module) => ({
-    default: module.TreatmentPlansPage,
+const PlansPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlansPage").then((module) => ({
+    default: module.PlansPage,
   })),
 );
-const AiAssistantPage = lazy(() =>
-  import("./features/rag-assistant/pages/AiAssistantPage").then((module) => ({
-    default: module.AiAssistantPage,
+const RagChatPage = lazy(() =>
+  import("./features/rag-chat/pages/RagChatPage").then((module) => ({
+    default: module.RagChatPage,
   })),
 );
-const RagTreatmentPlansPage = lazy(() =>
-  import("./features/rag-assistant/pages/RagTreatmentPlansPage").then((module) => ({
-    default: module.RagTreatmentPlansPage,
+const RagPlanDetailPage = lazy(() =>
+  import("./features/rag-chat/pages/RagPlanDetailPage").then((module) => ({
+    default: module.RagPlanDetailPage,
   })),
 );
 const AlertsPage = lazy(() =>
@@ -133,6 +132,41 @@ const SettingsView = lazy(() =>
     default: module.SettingsView,
   })),
 );
+const ChatPage = lazy(() =>
+  import("./features/chat/pages/ChatPage").then((module) => ({
+    default: module.ChatPage,
+  })),
+);
+const ExpertsPage = lazy(() =>
+  import("./features/profiles/pages/ExpertsPage").then((module) => ({
+    default: module.ExpertsPage,
+  })),
+);
+const PendingRequestsPage = lazy(() =>
+  import("./features/profiles/pages/PendingRequestsPage").then((module) => ({
+    default: module.PendingRequestsPage,
+  })),
+);
+const MyProfilePage = lazy(() =>
+  import("./features/profiles/pages/MyProfilePage").then((module) => ({
+    default: module.MyProfilePage,
+  })),
+);
+const UserProfilePage = lazy(() =>
+  import('./features/profiles/pages/UserProfilePage').then((module) => ({
+    default: module.UserProfilePage,
+  }))
+);
+const NotificationsPage = lazy(() =>
+  import('./features/notifications/pages/NotificationsPage').then((module) => ({
+    default: module.NotificationsPage,
+  }))
+);
+const GroupJoinPage = lazy(() =>
+  import('./features/chat/pages/GroupJoinPage').then((module) => ({
+    default: module.GroupJoinPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-sm font-bold text-slate-500">
@@ -148,9 +182,11 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        {/* Runs before route guards: attempts silent refresh on page load */}
-        <AuthSessionBootstrap />
+      <I18nProvider>
+        <WebSocketProvider>
+          <BrowserRouter>
+          {/* Runs before route guards: attempts silent refresh on page load */}
+          <AuthSessionBootstrap />
         <Routes>
           {/* Guest-only routes */}
           <Route element={<GuestOnlyRoute />}>
@@ -213,6 +249,15 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
+              <Route
+                path="rag-panel/treatment-plans/:planId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <RagPlanDetailPage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="devices/onboarding"
                 element={
@@ -246,18 +291,18 @@ function App() {
                 }
               />
               <Route
-                path="treatment-plans"
+                path="plans"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <TreatmentPlansPage />
+                    <PlansPage />
                   </Suspense>
                 }
               />
               <Route
-                path="treatment-plans/:planId"
+                path="plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <TreatmentPlanDetailPage />
+                    <PlanDetailPage />
                   </Suspense>
                 }
               />
@@ -286,18 +331,18 @@ function App() {
                 }
               />
               <Route
-                path="ai-assistant"
+                path="rag-panel"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <AiAssistantPage />
+                    <RagChatPage />
                   </Suspense>
                 }
               />
               <Route
-                path="ai-assistant/treatment-plans"
+                path="rag-panel/plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <RagTreatmentPlansPage />
+                    <RagPlanDetailPage />
                   </Suspense>
                 }
               />
@@ -318,6 +363,46 @@ function App() {
                 }
               />
               <Route
+                path="experts"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExpertsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="pending-requests"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PendingRequestsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <MyProfilePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile/:profileId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <UserProfilePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="chat"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ChatPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="settings"
                 element={
                   <Suspense fallback={<PageLoader />}>
@@ -325,7 +410,27 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="notifications"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <NotificationsPage />
+                  </Suspense>
+                }
+              />
             </Route>
+          </Route>
+
+          {/* Join link — protected but no layout wrapper */}
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="chat/join/:token"
+              element={
+                <Suspense fallback={<PageLoader />}>
+                  <GroupJoinPage />
+                </Suspense>
+              }
+            />
           </Route>
 
           {/* Admin routes */}
@@ -344,10 +449,12 @@ function App() {
                 element={<FarmZoneDetailPage />}
               />
               <Route path="content" element={<ContentModerationPage />} />
+              <Route path="knowledge-base" element={<DocumentIngestionPage />} />
               <Route path="health" element={<SystemHealthPage />} />
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
               <Route path="plants/:id" element={<AdminPlantDetailPage />} />
+              
               <Route path="species" element={<SpeciesPage />} />
               <Route path="species/:id" element={<SpeciesDetailPage />} />
               <Route path="plant-events" element={<PlantEventsPage />} />
@@ -397,7 +504,9 @@ function App() {
             },
           }}
         />
-      </BrowserRouter>
+          </BrowserRouter>
+        </WebSocketProvider>
+      </I18nProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );

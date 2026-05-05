@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FileText, Sparkles } from "lucide-react";
+import { FileText, Leaf, Sparkles } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { ChatInput } from "../components/ChatInput";
 import { ChatPanel } from "../components/ChatPanel";
-import { CreateTreatmentPlanFromRagDialog } from "../components/CreateTreatmentPlanFromRagDialog";
+import { CreatePlanFromRagDialog } from "../components/CreatePlanFromRagDialog";
 import { useRagHealth, useSendRagChatMutation } from "../queries";
-import type { ChatMessage, RagTreatmentPlan } from "../types";
+import type { ChatMessage, RagPlan } from "../types";
 import {
   getChatAnswer,
   getThreadId,
@@ -52,7 +52,7 @@ export function AiAssistantPage() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [planForCreate, setPlanForCreate] = useState<RagTreatmentPlan | null>(
+  const [planForCreate, setPlanForCreate] = useState<RagPlan | null>(
     null,
   );
   const healthQuery = useRagHealth();
@@ -91,7 +91,7 @@ export function AiAssistantPage() {
         role: "assistant",
         content: getChatAnswer(result),
         createdAt: new Date().toISOString(),
-        treatmentPlan: getTreatmentPlanFromChat(result),
+        plan: getTreatmentPlanFromChat(result),
         sources: normalizeSources(result),
       };
       setMessages((current) => [...current, assistantMessage]);
@@ -115,7 +115,7 @@ export function AiAssistantPage() {
           </p>
         </div>
         <Link
-          to={ROUTES.DASHBOARD.RAG_TREATMENT_PLANS}
+          to={ROUTES.DASHBOARD.RAG_PANEL}
           className="inline-flex items-center justify-center rounded-2xl border border-[#245A34] bg-white px-5 py-3 text-sm font-bold text-[#245A34] hover:bg-green-50"
         >
           <FileText className="mr-2 h-4 w-4" strokeWidth={2.5} />
@@ -151,7 +151,7 @@ export function AiAssistantPage() {
           <ChatPanel
             messages={messages}
             isThinking={chatMutation.isPending}
-            onCreateTreatmentPlan={setPlanForCreate}
+            onCreatePlan={setPlanForCreate}
           />
           {error ? (
             <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
@@ -185,12 +185,26 @@ export function AiAssistantPage() {
       </section>
 
       {planForCreate ? (
-        <CreateTreatmentPlanFromRagDialog
+        <CreatePlanFromRagDialog
           plan={planForCreate}
           context={diseaseContext}
           onClose={() => setPlanForCreate(null)}
         />
       ) : null}
+
+      <section className="rounded-4xl border border-amber-100 bg-amber-50 p-5">
+        <div className="flex gap-3">
+          <Leaf className="mt-1 h-5 w-5 text-amber-700" />
+          <div>
+            <h3 className="text-base font-black text-amber-950">
+              Lưu ý an toàn khi dùng AI
+            </h3>
+            <p className="mt-1 text-sm font-semibold leading-6 text-amber-900">
+              Kết quả chẩn đoán và kế hoạch AI chỉ mang tính hỗ trợ. Cần kiểm tra thực tế tại vườn trước khi áp dụng thuốc hoặc can thiệp.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

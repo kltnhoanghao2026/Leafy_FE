@@ -20,8 +20,6 @@ export function AuthSessionBootstrap() {
 
   const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-  // On mount: first try the web HttpOnly cookie refresh, then fall back to
-  // refreshToken-in-body for the current backend desktop-browser response.
   useEffect(() => {
     if (accessToken) {
       setIsInitializing(false);
@@ -116,6 +114,7 @@ export function AuthSessionBootstrap() {
 
     const nextUser = {
       id: profile.userId,
+      profileId: profile.id,
       name: profile.fullName,
       email: profile.email ?? undefined,
       phone: profile.phoneNumber ?? undefined,

@@ -8,7 +8,7 @@ export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="flex bg-[var(--app-bg)] min-h-screen font-sans transition-colors">
+    <div className="flex bg-[var(--app-bg)] h-screen font-sans transition-colors">
       {/* Sidebar - Desktop is handled by CSS, Mobile needs state */}
       <Sidebar />
 
@@ -20,11 +20,20 @@ export function DashboardLayout() {
         />
       )}
 
+      {/* Mobile Sidebar Wrapper */}
+      <div
+        className={`fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <Sidebar />
+      </div>
+
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
+        <main className="flex-1 min-h-0 overflow-y-auto flex flex-col p-4 lg:p-8 gap-6">
           <PushNotificationsBootstrap />
           <Outlet />
         </main>

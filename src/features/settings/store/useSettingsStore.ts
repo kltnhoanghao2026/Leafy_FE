@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Locale } from "../../../i18n/types";
 
 export type ThemeMode = "light" | "dark";
 
@@ -11,6 +12,11 @@ const applyThemeToDocument = (theme: ThemeMode) => {
 export interface SettingsState {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
+
+  /** Active UI locale. Default: 'vi'. Synced to backend via languageEn. */
+  locale: Locale;
+  setLocale: (locale: Locale) => void;
+
   resetProfile: () => void;
 }
 
@@ -21,6 +27,10 @@ export const useSettingsStore = create<SettingsState>((set) => ({
     applyThemeToDocument(theme);
     set({ theme });
   },
+
+  locale: "vi",
+  setLocale: (locale) => set({ locale }),
+
   resetProfile: () => {
     // Profile data is now managed by TanStack Query.
     // Cache clearing happens in useLogout via queryClient.clear().

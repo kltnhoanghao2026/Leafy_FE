@@ -1,4 +1,4 @@
-import type { SearchPostsParams, SearchProfilesParams } from "../types";
+import type { SearchPostsParams, SearchProfilesParams, UnifiedSearchParams } from "../types";
 
 export const searchKeys = {
   all: () => ["search"] as const,
@@ -6,4 +6,6 @@ export const searchKeys = {
     [...searchKeys.all(), "posts", params] as const,
   profiles: (params: SearchProfilesParams) =>
     [...searchKeys.all(), "profiles", params] as const,
+  unified: (params: UnifiedSearchParams) =>
+    [...searchKeys.all(), "unified", params] as const,
 };

@@ -62,7 +62,97 @@ export interface UserPreferenceResponse {
     showAllFriends: boolean;
     languageEn: boolean;
   };
+  securitySettings: SecuritySettings;
+  privacySettings: PrivacySettings;
+  syncSettings: SyncSettings;
   appearanceSettings: AppearanceSettings;
+  messageSettings: MessageSettings;
+  notificationSettings: NotificationSettings;
+  utilitiesSettings: UtilitiesSettings;
+}
+
+export interface SecuritySettings {
+  twoFactorEnabled: boolean;
+}
+
+export interface SecuritySettingsUpdateRequest {
+  twoFactorEnabled?: boolean;
+}
+
+export interface PrivacySettings {
+  showDob: string; // FULL_DATE, MONTH_DAY, YEAR, NONE
+  showActiveStatus: boolean;
+  showReadStatus: boolean;
+  canText: string; // EVERYBODY, FRIENDS, NOBODY
+  canCall: string; // EVERYBODY, FRIENDS, NOBODY
+  showPosts: boolean;
+  showPostAfter: string | null;
+  allowSearchOnPhoneNumber: boolean;
+}
+
+export interface PrivacySettingsUpdateRequest {
+  showDob?: string;
+  showActiveStatus?: boolean;
+  showReadStatus?: boolean;
+  canText?: string;
+  canCall?: string;
+  showPosts?: boolean;
+  showPostAfter?: string | null;
+  allowSearchOnPhoneNumber?: boolean;
+}
+
+export interface SyncSettings {
+  syncSuggestion: boolean;
+  showSyncProgress: boolean;
+}
+
+export interface SyncSettingsUpdateRequest {
+  syncSuggestion?: boolean;
+  showSyncProgress?: boolean;
+}
+
+export interface MessageSettings {
+  quickResponseEnable: boolean;
+  separatePriorityAndOtherEnable: boolean;
+  showTypingStatus: boolean;
+}
+
+export interface MessageSettingsUpdateRequest {
+  quickResponseEnable?: boolean;
+  separatePriorityAndOtherEnable?: boolean;
+  showTypingStatus?: boolean;
+}
+
+export interface NotificationSettings {
+  notifyNewMessageFromDirect: boolean;
+  previewNewMessageFromDirect: boolean;
+  notifyNewMessageFromGroup: boolean;
+  notifyCall: boolean;
+  notifyNewPostFromFriend: boolean;
+  notifyDOB: boolean;
+  notifyNewMessage: boolean;
+  shakeOnNewMessage: boolean;
+  previewNewMessage: boolean;
+}
+
+export interface NotificationSettingsUpdateRequest {
+  notifyNewMessageFromDirect?: boolean;
+  previewNewMessageFromDirect?: boolean;
+  notifyNewMessageFromGroup?: boolean;
+  notifyCall?: boolean;
+  notifyNewPostFromFriend?: boolean;
+  notifyDOB?: boolean;
+  notifyNewMessage?: boolean;
+  shakeOnNewMessage?: boolean;
+  previewNewMessage?: boolean;
+}
+
+export interface UtilitiesSettings {
+  stickerSuggestion: boolean;
+}
+
+export interface UtilitiesSettingsUpdateRequest {
+  stickerSuggestion?: boolean;
 }
 
 export interface AppearanceSettings {
@@ -74,6 +164,13 @@ export interface AppearanceSettings {
 
 export interface AppearanceSettingsUpdateRequest {
   theme: boolean;
+}
+
+export interface GeneralSettingsUpdateRequest {
+  /**
+   * Backend contract: true = English, false = Vietnamese.
+   */
+  languageEn: boolean;
 }
 
 export interface FileResponse {

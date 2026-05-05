@@ -3,7 +3,7 @@ import type { SpringPage } from "../types";
 import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 
-// ── Response types ──────────────────────────────────────────────────────────
+// ── Response types ────────────────────────────────────────────────────────────
 
 export type SyncTaskStatus = "STARTING" | "RUNNING" | "COMPLETED" | "FAILED";
 
@@ -25,7 +25,13 @@ export interface ProfileSyncStatus {
   completedAt: string | null;
 }
 
+/** Result shape for both profile and post reindex / reset operations. */
 export interface PostSyncResult {
+  indexedCount: number;
+}
+
+/** Dedicated result type for profile reindex / reset operations. */
+export interface ProfileSyncResult {
   indexedCount: number;
 }
 
@@ -53,7 +59,21 @@ export interface FailedEventsListParams {
   size?: number;
 }
 
-// ── API calls ───────────────────────────────────────────────────────────────
+export interface ChatUserSyncResult {
+  success: boolean;
+  profilesFetched: number;
+  chatUsersUpserted: number;
+  errorMessage: string;
+}
+
+export interface NotificationUserSyncResult {
+  success: boolean;
+  profilesFetched: number;
+  notificationUsersUpserted: number;
+  errorMessage: string;
+}
+
+// ── API calls ─────────────────────────────────────────────────────────────────
 
 export const syncApi = {
   startProfileSync: () =>
@@ -83,6 +103,18 @@ export const syncApi = {
       API_ENDPOINTS.ADMIN.SYNC.POSTS_RESET,
     ),
 
+  reindexProfiles: (size?: number) =>
+    apiClient.post<ApiEnvelope<ProfileSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PROFILES_REINDEX,
+      null,
+      { params: size != null ? { size } : undefined },
+    ),
+
+  resetProfileIndex: () =>
+    apiClient.post<ApiEnvelope<ProfileSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PROFILES_RESET,
+    ),
+
   listFailedEvents: (params: FailedEventsListParams = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<FailedEventDto>>>(
       API_ENDPOINTS.ADMIN.SYNC.FAILED_EVENTS_LIST,
@@ -108,5 +140,25 @@ export const syncApi = {
   retryAllFailedEvents: () =>
     apiClient.post<ApiEnvelope<void>>(
       API_ENDPOINTS.ADMIN.SYNC.FAILED_EVENTS_RETRY_ALL,
+    ),
+
+  syncCommunityProfiles: () =>
+    apiClient.post<ApiEnvelope<{ seededProfileCount: number }>>(
+      API_ENDPOINTS.ADMIN.SEED.COMMUNITY_PROFILES,
+      null,
+    ),
+
+  /** Sync ChatUser cache in message-service from profile-service (profileId migration). */
+  syncChatUsers: () =>
+    apiClient.post<ApiEnvelope<ChatUserSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.CHAT_USERS_SYNC,
+      null,
+    ),
+
+  /** Sync NotificationUser cache in notification-service from profile-service. */
+  syncNotificationUsers: () =>
+    apiClient.post<ApiEnvelope<NotificationUserSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.NOTIFICATION_USERS_SYNC,
+      null,
     ),
 };

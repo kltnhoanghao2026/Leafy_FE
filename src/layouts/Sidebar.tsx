@@ -2,18 +2,20 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Home,
   Search,
+  Bot,
+  ScanSearch,
   Bell,
   BellRing,
   Cpu,
-  Bot,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
   Sprout,
-  Stethoscope,
   Users,
   Settings,
   LogOut,
+  MessageSquare,
+  UserSquare,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
 import { useFilePreviewUrl } from "../features/settings/queries";
@@ -21,14 +23,23 @@ import { isFileServiceReference } from "../lib/api/fileApi";
 import { useLogout } from "../features/auth/hooks/useLogout";
 import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
+import { Avatar } from "../components/ui/Avatar";
+import { useNotificationState } from "../features/notifications/queries/queries";
+import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
+import { useTranslation } from "../i18n";
 
 export function Sidebar() {
   const location = useLocation();
+  const { t } = useTranslation();
   const { data: profile } = useMyProfile();
   const logout = useLogout();
   const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
 
-  const displayName = profile?.fullName || "Đang tải...";
+  // Live unread count — WebSocket keeps this fresh
+  useNotificationWebSocket();
+  const { data: stateData } = useNotificationState();
+  const unreadCount = stateData?.data?.unreadCount ?? 0;
+  const displayName = profile?.fullName || t('nav.loadingUser');
   const displayRole = profile?.role
     ? ROLE_LABELS[profile.role] || profile.role
     : "";
@@ -38,84 +49,74 @@ export function Sidebar() {
       ? profile.avatar
       : null) ||
     profile?.profilePicture ||
-    "https://i.pravatar.cc/150?img=11";
+    undefined;
 
   const coreNavItems = [
-    { name: "Trang chủ", path: ROUTES.DASHBOARD.ROOT, icon: Home },
-    { name: "Tra cứu bệnh", path: ROUTES.DASHBOARD.SEARCH, icon: Search },
-    { name: "Cảnh báo", path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
-    { name: "Quy tắc", path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    {
-      name: "Thiết bị",
-      path: ROUTES.DASHBOARD.DEVICE_ONBOARDING,
-      activePath: ROUTES.DASHBOARD.DEVICES,
-      icon: Cpu,
-    },
+    { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
+    { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
+    { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
+    { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
+    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
   ];
 
   const agricultureNavItems = [
-    {
-      name: "Tổng quan",
-      path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW,
-      icon: LayoutDashboard,
-    },
-    { name: "Cây trồng", path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
-    {
-      name: "Kế hoạch",
-      path: ROUTES.DASHBOARD.TREATMENT_PLANS,
-      icon: ClipboardList,
-    },
-    {
-      name: "Lịch chăm sóc",
-      path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR,
-      icon: CalendarDays,
-    },
-    {
-      name: "Chẩn đoán",
-      path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS,
-      icon: Stethoscope,
-    },
-    {
-      name: "Trợ lý AI",
-      path: ROUTES.DASHBOARD.AI_ASSISTANT,
-      icon: Bot,
-    },
+    { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
+    { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
+    { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
+    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
+    { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
   ];
 
   const utilityNavItems = [
-    { name: "Cộng đồng", path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
-    { name: "Cài đặt", path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
+    { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
+    { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
+    { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
+    { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
 
   const renderNavItem = (
     item: (typeof coreNavItems | typeof agricultureNavItems | typeof utilityNavItems)[number],
-  ) => (
-    <NavLink
-      key={item.name}
-      to={item.path}
-      className={() => {
-        const isHome = item.path === ROUTES.DASHBOARD.ROOT;
-        const activePath =
-          "activePath" in item && item.activePath ? item.activePath : item.path;
-        const isCurrentlyActive = isHome
-          ? location.pathname === ROUTES.DASHBOARD.ROOT ||
-            location.pathname.startsWith("/dashboard/metrics")
-          : location.pathname.startsWith(activePath);
+    badge?: number,
+  ) => {
+    const isHome = item.path === ROUTES.DASHBOARD.ROOT;
+    const activePath =
+      'activePath' in item && item.activePath ? item.activePath : item.path;
+    const isCurrentlyActive = isHome
+      ? location.pathname === ROUTES.DASHBOARD.ROOT ||
+        location.pathname.startsWith('/dashboard/metrics')
+      : location.pathname.startsWith(activePath);
 
-        return `flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
+    return (
+      <NavLink
+        key={item.name}
+        to={item.path}
+        className={`flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
           isCurrentlyActive
-            ? "bg-[#245A34] text-white"
-            : "text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]"
-        }`;
-      }}
-    >
-      <item.icon
-        className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
-        strokeWidth={2.5}
-      />
-      {item.name}
-    </NavLink>
-  );
+            ? 'bg-[#245A34] text-white'
+            : 'text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]'
+        }`}
+      >
+        <item.icon
+          className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
+          strokeWidth={2.5}
+        />
+        <span className="flex-1">{item.name}</span>
+        {badge != null && badge > 0 && (
+          <span
+            className={`ml-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full leading-none ${
+              isCurrentlyActive
+                ? 'bg-white/30 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            {badge > 99 ? '99+' : badge}
+          </span>
+        )}
+      </NavLink>
+    );
+  };
+
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10">
@@ -141,22 +142,27 @@ export function Sidebar() {
             Coffee Monitor
           </span>
           <span className="text-xs font-semibold text-slate-400">
-            Hệ thống giám sát
+            {t('nav.systemMonitor')}
           </span>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-6 overflow-y-auto space-y-2 px-3">
-        {coreNavItems.map(renderNavItem)}
+        {coreNavItems.map((item) => renderNavItem(item))}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Nông nghiệp thông minh
+          {t('nav.sectionAgriculture')}
         </div>
-        {agricultureNavItems.map(renderNavItem)}
+        {agricultureNavItems.map((item) => renderNavItem(item))}
         <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          Khác
+          {t('nav.sectionOther')}
         </div>
-        {utilityNavItems.map(renderNavItem)}
+        {utilityNavItems.map((item) =>
+          renderNavItem(
+            item,
+            item.path === ROUTES.DASHBOARD.NOTIFICATIONS ? unreadCount : undefined,
+          )
+        )}
       </nav>
 
       {/* User Profile & Logout */}
@@ -165,10 +171,11 @@ export function Sidebar() {
           to={ROUTES.DASHBOARD.SETTINGS}
           className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100"
         >
-          <img
+          <Avatar
             src={avatarSrc}
-            alt={displayName}
-            className="w-10 h-10 rounded-full border border-slate-200 shrink-0 object-cover"
+            name={displayName}
+            size="lg"
+            className="border border-slate-200"
           />
           <div className="ml-3 flex-1 min-w-0">
             <p className="text-xs font-bold text-gray-900 truncate">
@@ -192,7 +199,7 @@ export function Sidebar() {
             className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
             strokeWidth={2.5}
           />
-          Đăng xuất
+          {t('auth.logout')}
         </button>
       </div>
     </aside>

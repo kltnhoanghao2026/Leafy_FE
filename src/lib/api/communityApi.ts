@@ -5,6 +5,7 @@ import type {
   CommunityCommentResponse,
   CommunityPostResponse,
   CommunitySpringPage,
+  CommunityVoteResponse,
   CreateCommunityCommentRequest,
   CreateCommunityPostRequest,
   VoteCommunityRequest,
@@ -84,5 +85,16 @@ export const communityApi = {
       { params: { type } },
     );
     return response.data ? unwrapApiData(response.data) : undefined;
+  },
+
+  getVotesByPost: async (
+    postId: string,
+    type: "UPVOTE" | "DOWNVOTE",
+    params: CommunityPageParams = {},
+  ) => {
+    const response = await apiClient.get<
+      ApiEnvelope<CommunitySpringPage<CommunityVoteResponse>> | CommunitySpringPage<CommunityVoteResponse>
+    >(API_ENDPOINTS.COMMUNITY.VOTES_BY_POST(postId), { params: { type, ...params } });
+    return unwrapApiData(response.data);
   },
 };

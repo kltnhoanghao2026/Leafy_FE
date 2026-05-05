@@ -30,6 +30,8 @@ export interface PlantSeedResult {
   seededPlantCount: number;
   deletedEventCount: number;
   seededEventCount: number;
+  deletedPlanCount: number;
+  seededPlanCount: number;
   sourceFarmPlotCount: number;
   sourceFarmZoneCount: number;
 }
@@ -53,6 +55,7 @@ export interface CommunitySeedResult {
   seededCommentCount: number;
   seededVoteCount: number;
   sourceProfileCount: number;
+  seededProfileCount: number;
 }
 
 export interface CertificateSeedResult {
@@ -101,9 +104,16 @@ export const seedingApi = {
       { startPage, pages, perPage },
     ),
 
-  seedCommunity: () =>
+  seedCommunity: (postCount?: number, commentCount?: number, voteCount?: number) =>
+    postWithParams<CommunitySeedResult>(API_ENDPOINTS.ADMIN.SEED.COMMUNITY, {
+      postCount,
+      commentCount,
+      voteCount,
+    }),
+
+  syncCommunityProfiles: () =>
     apiClient.post<ApiEnvelope<CommunitySeedResult>>(
-      API_ENDPOINTS.ADMIN.SEED.COMMUNITY,
+      API_ENDPOINTS.ADMIN.SEED.COMMUNITY_PROFILES,
       undefined,
     ),
 
@@ -115,4 +125,7 @@ export const seedingApi = {
         certsPerRequest,
       },
     ),
+
+  seedExperts: (count: number) =>
+    postWithParams<number>(API_ENDPOINTS.ADMIN.SEED.EXPERTS, { count }),
 };

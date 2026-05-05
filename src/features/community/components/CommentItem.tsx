@@ -7,7 +7,9 @@ import {
   useCreateCommunityComment,
   useVoteComment,
 } from "../queries";
-import { CommunityAvatar } from "./CommunityAvatar";
+import { Avatar } from '../../../components/ui/Avatar'
+import { Link } from 'react-router-dom';
+import { ROUTES } from '../../../lib/routes';
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CommentItemProps {
@@ -59,18 +61,23 @@ export function CommentItem({
 
   return (
     <div className={`flex gap-3 ${isReply ? "mt-4" : "mt-6"}`}>
-      <CommunityAvatar
-        source={comment.author.avatar}
-        name={comment.author.name}
-        alt={comment.author.name}
-        className={`${isReply ? "w-8 h-8" : "w-10 h-10"} rounded-full object-cover shrink-0 border border-slate-200`}
-      />
+      <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(comment.author.id)} className="block shrink-0">
+        <Avatar
+          src={comment.author.avatar}
+          name={comment.author.name}
+          alt={comment.author.name}
+          className={`\${isReply ? "w-8 h-8" : "w-10 h-10"} rounded-full object-cover border border-slate-200`}
+        />
+      </Link>
 
       <div className="flex-1">
         <div className="bg-slate-50 border border-slate-100/60 rounded-2xl px-4 py-3">
-          <span className="text-[14px] font-bold text-gray-900 block mb-0.5">
+          <Link
+            to={ROUTES.DASHBOARD.PROFILE_VIEW(comment.author.id)}
+            className="text-[14px] font-bold text-gray-900 block mb-0.5 hover:text-[#10B981] hover:underline transition-colors inline-block"
+          >
             {comment.author.name}
-          </span>
+          </Link>
           <p className="text-[14px] text-gray-800 leading-snug">
             {comment.content}
           </p>
@@ -130,8 +137,8 @@ export function CommentItem({
 
         {isReplying ? (
           <form onSubmit={handleSubmitReply} className="mt-4 flex gap-3 items-end">
-            <CommunityAvatar
-              source={currentUser.avatar}
+            <Avatar
+              src={currentUser.avatar}
               name={currentUser.name}
               alt={currentUser.name}
               className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
@@ -198,3 +205,4 @@ export function CommentItem({
     </div>
   );
 }
+

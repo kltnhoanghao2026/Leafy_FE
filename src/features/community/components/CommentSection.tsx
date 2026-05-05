@@ -7,7 +7,7 @@ import {
   useCommunityComments,
   useCreateCommunityComment,
 } from "../queries";
-import { CommunityAvatar } from "./CommunityAvatar";
+import { Avatar } from '../../../components/ui/Avatar'
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 
 interface CommentSectionProps {
@@ -43,8 +43,8 @@ export function CommentSection({ post }: CommentSectionProps) {
   return (
     <div className="pt-6 border-t border-slate-100/80 mt-4 animate-in slide-in-from-top-2 duration-300">
       <form onSubmit={handleSubmit} className="flex gap-3 items-start mb-6">
-        <CommunityAvatar
-          source={currentUser.avatar}
+        <Avatar
+          src={currentUser.avatar}
           name={currentUser.name}
           alt={currentUser.name}
           className="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200"
@@ -148,3 +148,4 @@ export function CommentSection({ post }: CommentSectionProps) {
     </div>
   );
 }
+

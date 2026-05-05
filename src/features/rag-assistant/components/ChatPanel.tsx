@@ -1,17 +1,17 @@
 import { Bot, Sparkles } from "lucide-react";
-import type { ChatMessage, RagTreatmentPlan } from "../types";
+import type { ChatMessage, RagPlan } from "../types";
 import { ChatMessageBubble } from "./ChatMessageBubble";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   isThinking?: boolean;
-  onCreateTreatmentPlan?: (plan: RagTreatmentPlan) => void;
+  onCreatePlan?: (plan: RagPlan) => void;
 }
 
 export function ChatPanel({
   messages,
   isThinking,
-  onCreateTreatmentPlan,
+  onCreatePlan,
 }: ChatPanelProps) {
   if (!messages.length && !isThinking) {
     return (
@@ -35,7 +35,7 @@ export function ChatPanel({
         <ChatMessageBubble
           key={message.id}
           message={message}
-          onCreateTreatmentPlan={onCreateTreatmentPlan}
+          onCreatePlan={onCreatePlan}
         />
       ))}
       {isThinking ? (
