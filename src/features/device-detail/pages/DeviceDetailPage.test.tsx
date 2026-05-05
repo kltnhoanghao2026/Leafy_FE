@@ -215,7 +215,7 @@ describe("DeviceDetailPage", () => {
     renderDevicePage();
 
     await screen.findByText("Air Temperature");
-    await userEvent.click(screen.getByRole("button", { name: "7 days" }));
+    await userEvent.click(screen.getByRole("button", { name: "7d" }));
 
     await waitFor(() => {
       expect(requestedRanges).toContain("D7");

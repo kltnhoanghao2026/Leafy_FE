@@ -10,8 +10,12 @@ import {
 } from "recharts";
 
 export interface SensorTrend {
-  time: string;
+  timestamp: string;
+  label: string;
   value: number;
+  minValue?: number | null;
+  maxValue?: number | null;
+  sampleCount?: number | null;
 }
 
 export interface MetricData {
@@ -43,9 +47,10 @@ export function IoTMetricCard({
   isError = false,
 }: IoTMetricCardProps) {
   const chartPointCount = data.trend.length;
+  const chartHeight = 112;
 
   return (
-    <div className="bg-white rounded-3xl p-6 flex flex-col h-[240px] shadow-sm border border-slate-100/50 justify-between">
+    <div className="bg-white rounded-3xl p-6 flex min-w-0 flex-col h-[260px] shadow-sm border border-slate-100/50 justify-between">
       <div className="flex items-start justify-between w-full shrink-0">
         <div className="flex items-center gap-3">
           <div
@@ -81,24 +86,27 @@ export function IoTMetricCard({
         {chartPointCount} chart points
       </p>
 
-      <div className="flex-1 mt-2 w-full relative">
+      <div className="mt-2 h-28 min-h-28 w-full min-w-0 relative">
         <div
           className={`absolute inset-x-0 bottom-0 h-14 ${iconBgClass} rounded-t-none rounded-b-[1.25rem]`}
         />
         {chartPointCount > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={chartHeight} minWidth={0}>
             <BarChart
               data={data.trend}
               margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+              barCategoryGap="18%"
             >
               <XAxis
-                dataKey="time"
+                dataKey="timestamp"
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 10, fill: "#94a3b8", fontWeight: 600 }}
+                tickFormatter={(_, index) => data.trend[index]?.label ?? ""}
+                interval="preserveStartEnd"
                 dy={10}
               />
-              <YAxis hide domain={["dataMin", "dataMax + 2"]} />
+              <YAxis hide domain={["dataMin", "dataMax"]} />
               <Tooltip
                 cursor={{ fill: "rgba(0,0,0,0.05)" }}
                 contentStyle={{
@@ -119,12 +127,33 @@ export function IoTMetricCard({
                   marginBottom: "2px",
                   textTransform: "uppercase",
                 }}
-                formatter={(value) => [`${value} ${data.unit}`, title]}
+                labelFormatter={(_, payload) => {
+                  const point = payload?.[0]?.payload as SensorTrend | undefined;
+                  return point?.label ?? "";
+                }}
+                formatter={(value, _name, props) => {
+                  const point = props.payload as SensorTrend | undefined;
+                  const formattedValue =
+                    typeof value === "number"
+                      ? new Intl.NumberFormat("en", {
+                          maximumFractionDigits: 2,
+                        }).format(value)
+                      : String(value);
+                  const sampleSuffix = point?.sampleCount
+                    ? ` (${point.sampleCount} samples)`
+                    : "";
+                  return [`${formattedValue} ${data.unit}${sampleSuffix}`, title];
+                }}
               />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+              <Bar
+                dataKey="value"
+                radius={[6, 6, 0, 0]}
+                maxBarSize={28}
+                isAnimationActive={false}
+              >
                 {data.trend.map((point, index) => (
                   <Cell
-                    key={`${point.time}-${index}`}
+                    key={`${point.timestamp}-${index}`}
                     fill={barColor}
                     fillOpacity={index === data.trend.length - 1 ? 1 : 0.6}
                   />

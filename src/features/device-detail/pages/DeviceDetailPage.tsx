@@ -24,6 +24,12 @@ import {
   formatNumber,
 } from "../../metrics-view/utils/format";
 import {
+  chartToTrend,
+  DISPLAY_CHART_RANGE_OPTIONS,
+  type DisplayChartRange,
+  toApiChartRange,
+} from "../../metrics-view/utils/chartRanges";
+import {
   useDeviceChart,
   useDeviceConfig,
   useDeviceDetail,
@@ -35,12 +41,10 @@ import {
 } from "../queries";
 import { ROUTES } from "../../../lib/routes";
 import type {
-  ChartRange,
   DeviceConfigResponse,
   DeviceDetailResponse,
   DeviceMediaEventResponse,
   LatestReadingItemResponse,
-  SensorChartResponse,
   UpdateDeviceConfigRequest,
 } from "../../../types/iot";
 
@@ -79,26 +83,10 @@ const SENSOR_CONFIG = [
   },
 ] as const;
 
-const CHART_RANGE_OPTIONS: Array<{ value: ChartRange; label: string }> = [
-  { value: "H24", label: "24 hours" },
-  { value: "D3", label: "3 days" },
-  { value: "D7", label: "7 days" },
-  { value: "D30", label: "30 days" },
-  { value: "D90", label: "90 days" },
-];
-
 const normalizeUnit = (unit?: string | null): string => {
   if (!unit) return "";
   return unit === "C" ? "deg C" : unit;
 };
-
-const chartToTrend = (chart?: SensorChartResponse) =>
-  chart?.points
-    .filter((point) => point.avgValue !== null)
-    .map((point) => ({
-      time: formatDateTime(point.bucketStart),
-      value: point.avgValue ?? 0,
-    })) ?? [];
 
 const readingValue = (reading?: LatestReadingItemResponse): number | string => {
   if (!reading || reading.value === null) return "-";
@@ -171,13 +159,19 @@ function InfoTile({ label, value }: InfoTileProps) {
 
 interface DeviceSensorCardProps {
   deviceId: string;
-  range: ChartRange;
+  apiRange: ReturnType<typeof toApiChartRange>;
+  displayRange: DisplayChartRange;
   reading: LatestReadingItemResponse;
 }
 
-function DeviceSensorCard({ deviceId, range, reading }: DeviceSensorCardProps) {
+function DeviceSensorCard({
+  deviceId,
+  apiRange,
+  displayRange,
+  reading,
+}: DeviceSensorCardProps) {
   const knownSensor = SENSOR_CONFIG.find((sensor) => sensor.code === reading.sensorCode);
-  const chartQuery = useDeviceChart(deviceId, reading.sensorCode, range);
+  const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange);
 
   return (
     <IoTMetricCard
@@ -187,7 +181,7 @@ function DeviceSensorCard({ deviceId, range, reading }: DeviceSensorCardProps) {
         value: readingValue(reading),
         unit: normalizeUnit(reading.unit || chartQuery.data?.unit),
         badge: reading.qualityStatus || "Live",
-        trend: chartToTrend(chartQuery.data),
+        trend: chartToTrend(chartQuery.data, displayRange),
       }}
       colorClass={knownSensor?.colorClass ?? "text-slate-600"}
       barColor={knownSensor?.barColor ?? "#64748B"}
@@ -436,7 +430,8 @@ function ConfigForm({
 export function DeviceDetailPage() {
   const { deviceId } = useParams();
   const resolvedDeviceId = deviceId ?? "";
-  const [range, setRange] = useState<ChartRange>("H24");
+  const [range, setRange] = useState<DisplayChartRange>("D1");
+  const apiChartRange = toApiChartRange(range);
   const [captureRequestId, setCaptureRequestId] = useState<string | null>(null);
   const pushWatchUntilRef = useRef(0);
   const completedCaptureRef = useRef<string | null>(null);
@@ -703,7 +698,7 @@ export function DeviceDetailPage() {
                 </p>
               </div>
               <div className="inline-flex items-center bg-white rounded-full p-1 border border-slate-200 shadow-sm shrink-0 overflow-x-auto">
-                {CHART_RANGE_OPTIONS.map((option) => (
+                {DISPLAY_CHART_RANGE_OPTIONS.map((option) => (
                   <button
                     key={option.value}
                     type="button"
@@ -745,7 +740,8 @@ export function DeviceDetailPage() {
                   <DeviceSensorCard
                     key={reading.sensorCode}
                     deviceId={deviceId}
-                    range={range}
+                    apiRange={apiChartRange}
+                    displayRange={range}
                     reading={reading}
                   />
                 ))}

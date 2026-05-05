@@ -83,7 +83,7 @@ apiClient.interceptors.request.use((config) => {
 let refreshPromise: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const { setTokens, logout } = useAuthStore.getState();
+  const { setTokens, logout, refreshToken } = useAuthStore.getState();
 
   try {
     // Use a plain axios instance to avoid interceptor recursion.
@@ -107,7 +107,39 @@ async function refreshAccessToken(): Promise<string> {
 
     setTokens(envelope.data.accessToken);
     return envelope.data.accessToken;
-  } catch {
+  } catch (webRefreshError) {
+    if (refreshToken) {
+      try {
+        const res = await axios.post<
+          ApiEnvelope<{ accessToken: string; refreshToken?: string }>
+        >(
+          `${apiClient.defaults.baseURL}${API_ENDPOINTS.AUTH.REFRESH}/mobile`,
+          { refreshToken },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "X-Device-ID": getOrCreateDeviceId(),
+            },
+            withCredentials: true,
+          },
+        );
+
+        const envelope = res.data;
+        if (!envelope.data?.accessToken) {
+          throw new Error(envelope.message || "Token refresh failed");
+        }
+
+        setTokens(
+          envelope.data.accessToken,
+          envelope.data.refreshToken ?? refreshToken,
+        );
+        return envelope.data.accessToken;
+      } catch {
+        // Fall through to logout below.
+      }
+    }
+
+    console.debug("Cookie refresh failed:", webRefreshError);
     logout();
     throw new Error("Session expired. Please log in again.");
   }

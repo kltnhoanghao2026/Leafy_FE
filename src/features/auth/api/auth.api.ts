@@ -39,6 +39,14 @@ export const authApi = {
   refreshAccessToken: () =>
     apiClient.post<ApiEnvelope<AuthResponse>>(API_ENDPOINTS.AUTH.REFRESH),
 
+  // Fallback for the current backend when desktop web is classified as DESKTOP
+  // and returns the refresh token in the login response instead of a cookie.
+  refreshAccessTokenWithToken: (refreshToken: string) =>
+    apiClient.post<ApiEnvelope<AuthResponse>>(
+      `${API_ENDPOINTS.AUTH.REFRESH}/mobile`,
+      { refreshToken },
+    ),
+
   logout: () => apiClient.post<ApiEnvelope<void>>(API_ENDPOINTS.AUTH.LOGOUT),
 
   logoutDevice: (body: LogoutDeviceRequest) =>

@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || "http://localhost:8060";
+const iotTestDataProxyTarget =
+  process.env.VITE_IOT_TEST_DATA_PROXY_TARGET || "http://localhost:8099";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -38,6 +40,16 @@ export default defineConfig({
             // Avoid forwarding the browser Origin header to downstream services.
             // Some backend services still enforce direct-browser CORS rules even
             // when the request is already going through the local dev proxy.
+            proxyReq.removeHeader("origin");
+          });
+        },
+      },
+      "/iot-test-data": {
+        target: iotTestDataProxyTarget,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/iot-test-data/, ""),
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
             proxyReq.removeHeader("origin");
           });
         },

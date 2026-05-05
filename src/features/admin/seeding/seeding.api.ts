@@ -2,8 +2,6 @@ import type { ApiEnvelope } from "../../../shared/types/api";
 import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 
-// ── Response types ──────────────────────────────────────────────────────────
-
 export interface AccountSeedResult {
   created: number;
   skipped: number;
@@ -64,66 +62,57 @@ export interface CertificateSeedResult {
   sourceProfileCount: number;
 }
 
-// ── API calls ───────────────────────────────────────────────────────────────
+const postWithParams = <T>(
+  url: string,
+  params?: Record<string, number | undefined>,
+) =>
+  apiClient.post<ApiEnvelope<T>>(url, undefined, {
+    params: Object.fromEntries(
+      Object.entries(params ?? {}).filter(([, value]) => value != null),
+    ),
+  });
 
 export const seedingApi = {
   seedAccounts: (count: number) =>
-    apiClient.post<ApiEnvelope<AccountSeedResult>>(
-      API_ENDPOINTS.ADMIN.SEED.ACCOUNTS,
-      null,
-      { params: { count } },
-    ),
+    postWithParams<AccountSeedResult>(API_ENDPOINTS.ADMIN.SEED.ACCOUNTS, {
+      count,
+    }),
 
   seedFarms: (plotsPerProfile?: number, zonesPerPlot?: number) =>
-    apiClient.post<ApiEnvelope<FarmSeedResult>>(
-      API_ENDPOINTS.ADMIN.SEED.FARMS,
-      null,
-      {
-        params: {
-          ...(plotsPerProfile != null && { plotsPerProfile }),
-          ...(zonesPerPlot != null && { zonesPerPlot }),
-        },
-      },
-    ),
+    postWithParams<FarmSeedResult>(API_ENDPOINTS.ADMIN.SEED.FARMS, {
+      plotsPerProfile,
+      zonesPerPlot,
+    }),
 
   seedPlants: (
     speciesCount?: number,
     plantCount?: number,
     eventsPerPlant?: number,
   ) =>
-    apiClient.post<ApiEnvelope<PlantSeedResult>>(
-      API_ENDPOINTS.ADMIN.SEED.PLANTS,
-      null,
-      {
-        params: {
-          ...(speciesCount != null && { speciesCount }),
-          ...(plantCount != null && { plantCount }),
-          ...(eventsPerPlant != null && { eventsPerPlant }),
-        },
-      },
-    ),
+    postWithParams<PlantSeedResult>(API_ENDPOINTS.ADMIN.SEED.PLANTS, {
+      speciesCount,
+      plantCount,
+      eventsPerPlant,
+    }),
 
   seedSpeciesPerenual: (startPage: number, pages: number, perPage: number) =>
-    apiClient.post<ApiEnvelope<SpeciesPerenualSeedResult>>(
+    postWithParams<SpeciesPerenualSeedResult>(
       API_ENDPOINTS.ADMIN.SEED.SPECIES_PERENUAL,
-      null,
-      { params: { startPage, pages, perPage } },
+      { startPage, pages, perPage },
     ),
 
   seedCommunity: () =>
     apiClient.post<ApiEnvelope<CommunitySeedResult>>(
       API_ENDPOINTS.ADMIN.SEED.COMMUNITY,
+      undefined,
     ),
 
   seedCertificates: (requestCount?: number, certsPerRequest?: number) =>
-    apiClient.post<ApiEnvelope<CertificateSeedResult>>(
+    postWithParams<CertificateSeedResult>(
       API_ENDPOINTS.ADMIN.SEED.CERTIFICATES,
-      null,
       {
-        params: {
-          ...(requestCount != null && { requestCount }),
-          ...(certsPerRequest != null && { certsPerRequest }),
-        },
+        requestCount,
+        certsPerRequest,
       },
     ),
 };

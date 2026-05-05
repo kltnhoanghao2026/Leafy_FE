@@ -12,12 +12,16 @@ import { RecentAlerts } from "../components/RecentAlerts";
 import { useZoneChart, useZoneOverview } from "../queries";
 import { ROUTES } from "../../../lib/routes";
 import type {
-  ChartRange,
   LatestReadingItemResponse,
-  SensorChartResponse,
 } from "../../../types/iot";
 import { useState } from "react";
 import { formatDateTime, formatNumber } from "../utils/format";
+import {
+  chartToTrend,
+  DISPLAY_CHART_RANGE_OPTIONS,
+  type DisplayChartRange,
+  toApiChartRange,
+} from "../utils/chartRanges";
 
 const SENSOR_CONFIG = [
   {
@@ -54,14 +58,6 @@ const SENSOR_CONFIG = [
   },
 ] as const;
 
-const CHART_RANGE_OPTIONS: Array<{ value: ChartRange; label: string }> = [
-  { value: "H24", label: "24 hours" },
-  { value: "D3", label: "3 days" },
-  { value: "D7", label: "7 days" },
-  { value: "D30", label: "30 days" },
-  { value: "D90", label: "90 days" },
-];
-
 const normalizeUnit = (unit?: string | null): string => {
   if (!unit) return "";
   return unit === "C" ? "deg C" : unit;
@@ -71,14 +67,6 @@ const readingValue = (reading?: LatestReadingItemResponse): number | string => {
   if (!reading || reading.value === null) return "-";
   return formatNumber(reading.value);
 };
-
-const chartToTrend = (chart?: SensorChartResponse) =>
-  chart?.points
-    .filter((point) => point.avgValue !== null)
-    .map((point) => ({
-      time: formatDateTime(point.bucketStart),
-      value: point.avgValue ?? 0,
-    })) ?? [];
 
 interface ZoneSummaryCardProps {
   label: string;
@@ -116,18 +104,20 @@ function ZoneSummaryCard({ label, value, detail, tone }: ZoneSummaryCardProps) {
 
 interface ZoneSensorCardProps {
   zoneId: string;
-  range: ChartRange;
+  apiRange: ReturnType<typeof toApiChartRange>;
+  displayRange: DisplayChartRange;
   sensor: (typeof SENSOR_CONFIG)[number];
   reading?: LatestReadingItemResponse;
 }
 
 function ZoneSensorCard({
   zoneId,
-  range,
+  apiRange,
+  displayRange,
   sensor,
   reading,
 }: ZoneSensorCardProps) {
-  const chartQuery = useZoneChart(zoneId, sensor.code, range);
+  const chartQuery = useZoneChart(zoneId, sensor.code, apiRange);
   const chart = chartQuery.data;
 
   return (
@@ -140,7 +130,7 @@ function ZoneSensorCard({
         badge:
           reading?.qualityStatus ||
           (chart ? `${formatNumber(chart.points.length)} samples` : undefined),
-        trend: chartToTrend(chart),
+        trend: chartToTrend(chart, displayRange),
       }}
       colorClass={sensor.colorClass}
       barColor={sensor.barColor}
@@ -153,7 +143,8 @@ function ZoneSensorCard({
 
 export function ZoneDetailMetricsPage() {
   const { zoneId } = useParams();
-  const [range, setRange] = useState<ChartRange>("H24");
+  const [range, setRange] = useState<DisplayChartRange>("D1");
+  const apiChartRange = toApiChartRange(range);
   const resolvedZoneId = zoneId ?? "";
   const zoneOverviewQuery = useZoneOverview(resolvedZoneId, !!zoneId);
   const zoneOverview = zoneOverviewQuery.data;
@@ -178,7 +169,7 @@ export function ZoneDetailMetricsPage() {
           </p>
         </div>
         <div className="inline-flex items-center bg-white rounded-full p-1 border border-slate-200 shadow-sm shrink-0">
-          {CHART_RANGE_OPTIONS.map((option) => (
+          {DISPLAY_CHART_RANGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"
@@ -296,7 +287,8 @@ export function ZoneDetailMetricsPage() {
                     <ZoneSensorCard
                       key={sensor.code}
                       zoneId={zoneId}
-                      range={range}
+                      apiRange={apiChartRange}
+                      displayRange={range}
                       sensor={sensor}
                       reading={findReading(sensor.code)}
                     />
