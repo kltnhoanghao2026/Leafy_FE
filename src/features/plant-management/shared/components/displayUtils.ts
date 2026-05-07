@@ -46,6 +46,7 @@ export const PLANT_STATUS_LABELS: Record<PlantStatus, string> = {
 
 export const TREATMENT_STATUS_LABELS: Record<TreatmentStatus, string> = {
   PENDING: "Chờ xử lý",
+  APPLYING: "Đang áp dụng",
   ACTIVE: "Đang điều trị",
   COMPLETED: "Hoàn tất",
   CANCELLED: "Đã hủy",

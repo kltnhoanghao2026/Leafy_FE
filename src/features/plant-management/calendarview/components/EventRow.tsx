@@ -19,6 +19,11 @@ import {
   Clock,
   DollarSign,
   Info,
+  CheckCircle2,
+  Circle,
+  ListChecks,
+  MapPin,
+  Leaf,
 } from 'lucide-react';
 import type { PlantEventResponse, PlantEventType } from '../../shared/types';
 import { EVENT_TYPE_LABELS } from '../../shared/components/displayUtils';
@@ -70,10 +75,14 @@ export interface EventRowProps {
   accent: EventAccentStyle;
   isLast: boolean;
   onEdit?: (event: PlantEventResponse) => void;
+  onDelete?: (event: PlantEventResponse) => void;
   onEventHover?: (event: PlantEventResponse | null) => void;
+  onToggleComplete?: (event: PlantEventResponse) => void;
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  onSelectEvent?: (event: PlantEventResponse) => void;
 }
 
-export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventRowProps) {
+export function EventRow({ event, accent, isLast, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent }: EventRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Droplets;
@@ -92,7 +101,8 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
     event.phiDays != null ||
     event.ppeRequired != null ||
     event.mrlNote != null ||
-    event.estimatedCost != null;
+    event.estimatedCost != null ||
+    (event.tasks != null && event.tasks.length > 0);
 
   return (
     <div
@@ -119,16 +129,30 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
         {/* Row content — py lives here so dot lines extend edge-to-edge */}
         <div className="flex flex-1 items-center gap-3 py-3">
 
+        {/* Complete toggle */}
+        {onToggleComplete && (
+          <button
+            type="button"
+            title={event.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
+            onClick={() => onToggleComplete(event)}
+            className="shrink-0 transition-colors hover:opacity-70"
+          >
+            {event.completed
+              ? <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              : <Circle className="h-5 w-5 text-slate-300" />}
+          </button>
+        )}
+
         {/* Icon badge */}
         <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${accent.iconBg}`}>
           <Icon className={`h-4 w-4 ${accent.iconText}`} />
         </span>
 
         {/* Content */}
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-800">
-            {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className={`text-sm font-semibold ${event.completed ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+              {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
+            </p>
           {(event.note || event.description) && (
             <p className="mt-0.5 truncate text-xs text-slate-400">
               {event.note || event.description}
@@ -142,6 +166,64 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
               </span>
             </p>
           )}
+          {/* Task progress inline badge */}
+          {event.tasks != null && event.tasks.length > 0 && (() => {
+            const tasks = event.tasks!;
+            const done = tasks.filter(t => t.completed).length;
+            const allDone = done === tasks.length;
+            const pct = Math.round((done / tasks.length) * 100);
+            return (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <ListChecks className="h-3 w-3 shrink-0" style={{ color: allDone ? '#10B981' : accent.dotColor }} />
+                <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-1 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: allDone ? '#10B981' : accent.dotColor,
+                    }}
+                  />
+                </div>
+                <span
+                  className="text-[10px] font-black tabular-nums"
+                  style={{ color: allDone ? '#10B981' : accent.dotColor }}
+                >
+                  {done}/{tasks.length}
+                </span>
+              </div>
+            );
+          })()}
+          {/* Broad-scope progress inline (ZONE / PLANT tracking) */}
+          {event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
+           event.progressTotal != null && event.progressTotal > 0 && (() => {
+            const total = event.progressTotal!;
+            const done  = event.progressCompleted ?? 0;
+            const allDone = done === total;
+            const pct = Math.round((done / total) * 100);
+            const isZone = event.trackingGranularity === 'ZONE';
+            const TrackIcon = isZone ? MapPin : Leaf;
+            const trackLabel = isZone ? 'vùng' : 'cây';
+            return (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <TrackIcon className="h-3 w-3 shrink-0" style={{ color: allDone ? '#10B981' : accent.dotColor }} />
+                <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-1 rounded-full transition-all duration-500"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: allDone ? '#10B981' : accent.dotColor,
+                    }}
+                  />
+                </div>
+                <span
+                  className="text-[10px] font-black tabular-nums"
+                  style={{ color: allDone ? '#10B981' : accent.dotColor }}
+                >
+                  {done}/{total} {trackLabel}
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Chi tiết button */}
@@ -189,7 +271,9 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
             )}
 
             {/* Metric cards */}
-            {(startLabel || endLabel || event.durationDays != null || event.estimatedCost != null || event.phiDays != null) && (
+            {(startLabel || endLabel || event.durationDays != null || event.estimatedCost != null || event.phiDays != null
+              || (event.trackingGranularity && event.trackingGranularity !== 'NONE' && event.progressTotal != null && event.progressTotal > 0)
+            ) && (
               <div className="grid grid-cols-2 gap-1.5">
                 {startLabel && (
                   <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
@@ -236,6 +320,41 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
                     </div>
                   </div>
                 )}
+                {event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
+                 event.progressTotal != null && event.progressTotal > 0 && (() => {
+                  const total = event.progressTotal!;
+                  const done  = event.progressCompleted ?? 0;
+                  const allDone = done === total;
+                  const isZone = event.trackingGranularity === 'ZONE';
+                  const TrackIcon = isZone ? MapPin : Leaf;
+                  return (
+                    <div className="col-span-2 flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
+                      <TrackIcon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${allDone ? 'text-emerald-500' : 'text-slate-400'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-slate-400">
+                          {isZone ? 'Tiến độ theo vùng' : 'Tiến độ theo cây'}
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-1.5 rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.round((done / total) * 100)}%`,
+                                backgroundColor: allDone ? '#10B981' : accent.dotColor,
+                              }}
+                            />
+                          </div>
+                          <span
+                            className="shrink-0 text-xs font-bold tabular-nums"
+                            style={{ color: allDone ? '#10B981' : accent.dotColor }}
+                          >
+                            {done}/{total}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                 })()}
               </div>
             )}
 
@@ -261,17 +380,76 @@ export function EventRow({ event, accent, isLast, onEdit, onEventHover }: EventR
               </div>
             )}
 
-            {/* Edit button */}
-            {onEdit && (
-              <div className="flex justify-end pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => onEdit(event)}
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${accent.badgeBg} ${accent.badgeBorder} ${accent.badgeText} hover:opacity-80`}
-                >
-                  <Pencil className="h-3 w-3" />
-                  Chỉnh sửa
-                </button>
+            {/* Task checklist */}
+            {event.tasks != null && event.tasks.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Công việc</p>
+                {event.tasks.map((task, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2"
+                  >
+                    <button
+                      type="button"
+                      title={task.completed ? 'Đánh dấu chưa xong' : 'Đánh dấu hoàn thành'}
+                      onClick={() => onToggleTask?.(event, idx)}
+                      className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
+                    >
+                      {task.completed
+                        ? <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        : <Circle className="h-4 w-4 text-slate-300" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-xs font-medium ${task.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="mt-0.5 text-[11px] text-slate-400">{task.description}</p>
+                      )}
+                    </div>
+                    {task.estimatedCost && (
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${accent.countBg} ${accent.countText}`}>
+                        {task.estimatedCost}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Edit / Delete buttons */}
+            {(onEdit || onDelete || (onSelectEvent && (event.farmPlotId || event.farmZoneId))) && (
+              <div className="flex justify-end gap-2 pt-0.5">
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(event)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Xóa
+                  </button>
+                )}
+                {onSelectEvent && (event.farmPlotId || event.farmZoneId) && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectEvent(event)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#245A34] hover:bg-[#245A34]/10 hover:text-[#245A34]"
+                  >
+                    <Leaf className="h-3 w-3" />
+                    Theo dõi
+                  </button>
+                )}
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(event)}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${accent.badgeBg} ${accent.badgeBorder} ${accent.badgeText} hover:opacity-80`}
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Chỉnh sửa
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -9,6 +9,7 @@ import { CreateGroupModal } from '../components/CreateGroupModal';
 import { ConversationInfoPanel } from '../components/ConversationInfoPanel';
 import { useAuthStore } from '../../../store/authStore';
 import { useChatWebSocket } from '../hooks/useChatWebSocket';
+import { useSidebarCollapsed } from '../../../layouts/SidebarContext';
 
 export function ChatPage() {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -18,6 +19,7 @@ export function ChatPage() {
   const { user } = useAuthStore();
   const currentUserId = user?.profileId || '';
   const queryClient = useQueryClient();
+  const sidebarCollapsed = useSidebarCollapsed();
 
   const { data: conversations = [] } = useQuery({
     queryKey: ['conversations'],
@@ -68,8 +70,8 @@ export function ChatPage() {
 
   return (
     <>
-      {/* Full-viewport chat shell — sits below header (top-16) and beside sidebar (lg:left-64) */}
-      <div className="fixed inset-0 top-16 lg:left-64 flex overflow-hidden bg-white z-10">
+      {/* Full-viewport chat shell — sits below header (top-16) and beside sidebar */}
+      <div className={`fixed inset-0 top-16 flex overflow-hidden bg-white z-10 transition-all duration-300 ${sidebarCollapsed ? 'lg:left-14' : 'lg:left-56'}`}>
 
         {/* Left: conversation list */}
         <ConversationList

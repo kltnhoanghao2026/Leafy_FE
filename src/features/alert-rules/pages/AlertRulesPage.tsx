@@ -7,8 +7,8 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  X,
 } from "lucide-react";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -196,32 +196,18 @@ function RuleFormDialog({
   }, [devices, form.deviceId, onFormChange]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <ModalShell
+      onClose={onClose}
+      title={editingRule ? "Edit alert rule" : "Create alert rule"}
+      subtitle={
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          Pick farm, zone, and device where possible. Sensor type requires a real backend UUID.
+        </p>
+      }
+      maxWidth="sm:max-w-5xl"
+      backdropColor="bg-slate-950/40"
     >
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-[22px] font-black text-slate-900">
-              {editingRule ? "Edit alert rule" : "Create alert rule"}
-            </h3>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              Pick farm, zone, and device where possible. Sensor type requires
-              a real backend UUID.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-            aria-label="Close alert rule dialog"
-          >
-            <X className="h-4 w-4" strokeWidth={3} />
-          </button>
-        </div>
-
+      <div className="p-6">
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
@@ -521,7 +507,7 @@ function RuleFormDialog({
           </div>
         </form>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1032,21 +1018,20 @@ export function AlertRulesPage() {
       ) : null}
 
       {deleteTarget ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
-            <h3 className="text-xl font-black text-slate-900">
-              Delete alert rule?
-            </h3>
+        <ModalShell
+          onClose={() => setDeleteTarget(null)}
+          title="Delete alert rule?"
+          subtitle={
             <p className="mt-2 text-sm font-semibold text-slate-600">
               This will delete the rule for sensor{" "}
               {compactId(deleteTarget.sensorTypeId)}. Existing alert events may
               remain for history.
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+          }
+          maxWidth="max-w-md"
+          backdropColor="bg-slate-950/40"
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
@@ -1063,8 +1048,8 @@ export function AlertRulesPage() {
                 {deleteRule.isPending ? "Deleting..." : "Confirm delete"}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        />
       ) : null}
     </div>
   );

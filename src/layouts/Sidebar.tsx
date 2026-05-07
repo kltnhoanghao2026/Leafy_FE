@@ -6,6 +6,7 @@ import {
   ScanSearch,
   Bell,
   BellRing,
+  ChevronDown,
   Cpu,
   CalendarDays,
   ClipboardList,
@@ -13,43 +14,26 @@ import {
   Sprout,
   Users,
   Settings,
-  LogOut,
   MessageSquare,
   UserSquare,
+  Stethoscope,
 } from "lucide-react";
+import { useState } from "react";
 import { useMyProfile } from "../features/settings/queries";
-import { useFilePreviewUrl } from "../features/settings/queries";
-import { isFileServiceReference } from "../lib/api/fileApi";
-import { useLogout } from "../features/auth/hooks/useLogout";
-import { ROLE_LABELS } from "../features/settings/types";
 import { ROUTES } from "../lib/routes";
-import { Avatar } from "../components/ui/Avatar";
 import { useNotificationState } from "../features/notifications/queries/queries";
 import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 import { useTranslation } from "../i18n";
 
-export function Sidebar() {
+export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const location = useLocation();
   const { t } = useTranslation();
   const { data: profile } = useMyProfile();
-  const logout = useLogout();
-  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar);
 
   // Live unread count — WebSocket keeps this fresh
   useNotificationWebSocket();
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
-  const displayName = profile?.fullName || t('nav.loadingUser');
-  const displayRole = profile?.role
-    ? ROLE_LABELS[profile.role] || profile.role
-    : "";
-  const avatarSrc =
-    avatarUrl ||
-    (profile?.avatar && !isFileServiceReference(profile.avatar)
-      ? profile.avatar
-      : null) ||
-    profile?.profilePicture ||
-    undefined;
 
   const coreNavItems = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
@@ -66,6 +50,9 @@ export function Sidebar() {
     { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
     { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
     { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
+    ...(profile?.role === 'EXPERT'
+      ? [{ name: 'Tư Vấn', path: ROUTES.DASHBOARD.CONSULTING, icon: Stethoscope }]
+      : []),
   ];
 
   const utilityNavItems = [
@@ -75,61 +62,96 @@ export function Sidebar() {
     { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
 
-  const renderNavItem = (
-    item: (typeof coreNavItems | typeof agricultureNavItems | typeof utilityNavItems)[number],
-    badge?: number,
-  ) => {
+  type NavItem = { name: string; path: string; activePath?: string; icon: React.ElementType };
+
+  const isSectionActive = (items: NavItem[]) =>
+    items.some((item) => {
+      const activePath = item.activePath ?? item.path;
+      return item.path === ROUTES.DASHBOARD.ROOT
+        ? location.pathname === ROUTES.DASHBOARD.ROOT || location.pathname.startsWith('/dashboard/metrics')
+        : location.pathname.startsWith(activePath);
+    });
+
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    core: true,
+    agriculture: true,
+    utility: true,
+  });
+
+  const toggleSection = (key: string) =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const renderNavItem = (item: NavItem, badge?: number) => {
     const isHome = item.path === ROUTES.DASHBOARD.ROOT;
-    const activePath =
-      'activePath' in item && item.activePath ? item.activePath : item.path;
+    const activePath = item.activePath ?? item.path;
     const isCurrentlyActive = isHome
-      ? location.pathname === ROUTES.DASHBOARD.ROOT ||
-        location.pathname.startsWith('/dashboard/metrics')
+      ? location.pathname === ROUTES.DASHBOARD.ROOT || location.pathname.startsWith('/dashboard/metrics')
       : location.pathname.startsWith(activePath);
 
     return (
       <NavLink
         key={item.name}
         to={item.path}
-        className={`flex items-center px-4 py-3 text-sm font-bold rounded-full transition-colors ${
+        title={collapsed ? item.name : undefined}
+        className={`relative flex items-center py-2.5 text-sm font-bold rounded-full transition-colors ${
+          collapsed ? 'justify-center px-0' : 'px-3.5'
+        } ${
           isCurrentlyActive
             ? 'bg-[#245A34] text-white'
             : 'text-slate-500 hover:bg-green-50/80 hover:text-[#245A34]'
         }`}
       >
-        <item.icon
-          className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
-          strokeWidth={2.5}
-        />
-        <span className="flex-1">{item.name}</span>
-        {badge != null && badge > 0 && (
-          <span
-            className={`ml-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full leading-none ${
-              isCurrentlyActive
-                ? 'bg-white/30 text-white'
-                : 'bg-red-500 text-white'
-            }`}
-          >
+        <item.icon className={`w-[1.05rem] h-[1.05rem] shrink-0 ${collapsed ? '' : 'mr-3'}`} strokeWidth={2.5} />
+        {!collapsed && <span className="flex-1">{item.name}</span>}
+        {!collapsed && badge != null && badge > 0 && (
+          <span className={`ml-1.5 min-w-[17px] h-[17px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full leading-none ${
+            isCurrentlyActive ? 'bg-white/30 text-white' : 'bg-red-500 text-white'
+          }`}>
             {badge > 99 ? '99+' : badge}
           </span>
+        )}
+        {collapsed && badge != null && badge > 0 && (
+          <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
         )}
       </NavLink>
     );
   };
 
+  const renderSection = (key: string, label: string, items: NavItem[], badgeMap?: Record<string, number>) => {
+    const isOpen = openSections[key] ?? true;
+    return (
+      <div key={key}>
+        {!collapsed ? (
+          <button
+            type="button"
+            onClick={() => toggleSection(key)}
+            className="flex w-full items-center px-3.5 pt-3.5 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <span className="flex-1 text-left">{label}</span>
+            <ChevronDown
+              className={`w-3 h-3 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
+              strokeWidth={3}
+            />
+          </button>
+        ) : (
+          <div className="mx-auto my-2 w-5 border-t border-slate-200" />
+        )}
+        {(collapsed || isOpen) && (
+          <div className="space-y-0.5 mt-0.5">
+            {items.map((item) => renderNavItem(item, badgeMap?.[item.path]))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10">
+    <aside className={`fixed inset-y-0 left-0 bg-white border-r border-gray-100 hidden lg:flex flex-col z-10 transition-all duration-300 ease-in-out overflow-hidden ${collapsed ? 'w-14' : 'w-56'}`}>
       {/* Logo */}
-      <div className="flex items-center h-20 px-6 shrink-0 mt-2">
-        <div className="flex items-center justify-center w-12 h-12 bg-[#245A34] rounded-full shrink-0 shadow-sm">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+      <div className={`flex items-center h-[68px] shrink-0 ${collapsed ? 'justify-center px-2' : 'px-5'}`}>
+        <div className="flex items-center justify-center w-10 h-10 bg-[#245A34] rounded-full shrink-0 shadow-sm">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M17 8H3V15C3 16.8565 3.7375 18.637 5.05025 19.9497C6.36301 21.2625 8.14348 22 10 22H11C12.35 22 13.6 21.45 14.5 20.6C15.65 19.5 16.5 18 16.85 16.25C18.6 15.6 20.15 14.5 21.15 13C22.15 11.5 22.5 9.8 22.15 8.05L21.75 6.05C21.6 5.3 21 4.75 20.25 4.75H17V8ZM17 10H19.9L20.2 11.45C20.4 12.65 20.1 13.8 19.45 14.8C18.8 15.8 17.8 16.45 16.65 16.8L17 15C17 14.35 17 13.65 17 13V10ZM15 8V4C15 3.45 14.55 3 14 3H6C5.45 3 5 3.45 5 4V8H15Z"
               fill="white"
@@ -137,71 +159,28 @@ export function Sidebar() {
             <path d="M5 4H15V2H6C4.9 2 4 2.9 4 4V8H5V4Z" fill="white" />
           </svg>
         </div>
-        <div className="ml-3 flex flex-col justify-center">
-          <span className="text-[17px] font-extrabold text-[#245A34] leading-tight tracking-tight">
-            Coffee Monitor
-          </span>
-          <span className="text-xs font-semibold text-slate-400">
-            {t('nav.systemMonitor')}
-          </span>
-        </div>
+        {!collapsed && (
+          <div className="ml-3 flex flex-col justify-center min-w-0">
+            <span className="text-[15px] font-extrabold text-[#245A34] leading-tight tracking-tight truncate">
+              Coffee Monitor
+            </span>
+            <span className="text-[11px] font-semibold text-slate-400 truncate">
+              {t('nav.systemMonitor')}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-6 overflow-y-auto space-y-2 px-3">
-        {coreNavItems.map((item) => renderNavItem(item))}
-        <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          {t('nav.sectionAgriculture')}
+      <nav className={`flex-1 py-3 overflow-y-auto space-y-0.5 ${collapsed ? 'px-1.5' : 'px-2.5'}`}>
+        <div className="space-y-0.5">
+          {coreNavItems.map((item) => renderNavItem(item))}
         </div>
-        {agricultureNavItems.map((item) => renderNavItem(item))}
-        <div className="px-4 pt-4 pb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-          {t('nav.sectionOther')}
-        </div>
-        {utilityNavItems.map((item) =>
-          renderNavItem(
-            item,
-            item.path === ROUTES.DASHBOARD.NOTIFICATIONS ? unreadCount : undefined,
-          )
-        )}
+        {renderSection('agriculture', t('nav.sectionAgriculture'), agricultureNavItems)}
+        {renderSection('utility', t('nav.sectionOther'), utilityNavItems, {
+          [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
+        })}
       </nav>
-
-      {/* User Profile & Logout */}
-      <div className="p-5 pb-8 shrink-0 space-y-2">
-        <NavLink
-          to={ROUTES.DASHBOARD.SETTINGS}
-          className="flex items-center px-4 py-3 rounded-full bg-slate-50 cursor-pointer transition-colors hover:bg-slate-100"
-        >
-          <Avatar
-            src={avatarSrc}
-            name={displayName}
-            size="lg"
-            className="border border-slate-200"
-          />
-          <div className="ml-3 flex-1 min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">
-              {displayName}
-            </p>
-            <p className="text-[10px] font-semibold text-slate-500 truncate">
-              {displayRole}
-            </p>
-          </div>
-          <Settings
-            className="w-4 h-4 text-slate-400 shrink-0"
-            strokeWidth={2.5}
-          />
-        </NavLink>
-
-        <button
-          onClick={() => void logout()}
-          className="flex items-center w-full px-4 py-2.5 rounded-full text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
-        >
-          <LogOut
-            className="w-[1.125rem] h-[1.125rem] mr-3.5 shrink-0"
-            strokeWidth={2.5}
-          />
-          {t('auth.logout')}
-        </button>
-      </div>
     </aside>
   );
 }

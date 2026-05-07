@@ -85,7 +85,10 @@ export const mapPostResponseToPost = (post: CommunityPostResponse): Post => ({
   sharedPost: post.sharedPostInfo
     ? mapPostToSharedSnapshot(post.sharedPostInfo)
     : undefined,
+  planId: post.planId ?? null,
+  planInfo: post.planInfo ?? null,
 });
+
 
 export const mapCommentResponseToComment = (
   comment: CommunityCommentResponse,
@@ -96,8 +99,8 @@ export const mapCommentResponseToComment = (
   timestamp: formatDateTime(comment.createdAt || comment.lastModifiedAt),
   likes: comment.upvoteCount ?? 0,
   downvotes: comment.downvoteCount ?? 0,
-  currentUserVoteType: null,
-  isLikedByMe: false,
+  currentUserVoteType: comment.currentUserVoteType ?? null,
+  isLikedByMe: comment.currentUserVoteType === 'UPVOTE',
   replyCount: comment.replyCount ?? 0,
   replies: undefined,
 });

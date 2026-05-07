@@ -20,6 +20,7 @@ import {
 } from '../queries'
 import { SharedPostEmbed } from './SharedPostEmbed'
 import { MediaImage } from './MediaImage'
+import { PlanReferenceCard } from './PlanReferenceCard'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 function formatStat(value: number): string {
@@ -70,6 +71,7 @@ export function CommentModal({
   const titleText = post.title?.trim() || null
   const bodyText = post.content || ''
   const isShare = post.postType === 'SHARE'
+  const isPlanShare = post.postType === 'PLAN_SHARE'
 
   // Focus input when modal opens
   useEffect(() => {
@@ -202,6 +204,13 @@ export function CommentModal({
               {isShare && post.sharedPost && (
                 <div className="mt-3">
                   <SharedPostEmbed post={post.sharedPost} />
+                </div>
+              )}
+
+              {/* Plan embed (compact) */}
+              {isPlanShare && post.planId && (
+                <div className="mt-3">
+                  <PlanReferenceCard planId={post.planId} planInfo={post.planInfo} />
                 </div>
               )}
             </div>

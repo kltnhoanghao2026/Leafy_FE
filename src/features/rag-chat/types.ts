@@ -2,6 +2,8 @@ export interface RagChatRequest {
   question: string;
   threadId?: string | null;
   language?: string;
+  farmPlotId?: string | null;
+  farmZoneId?: string | null;
 }
 
 export interface RagStreamState {
@@ -39,6 +41,8 @@ export interface RagConversationMessage {
     webResultsCount?: number;
     savedPlanId?: string;
     plan?: RagPlan | null;
+    documents?: RagDocument[];
+    webResults?: RagWebResult[];
   };
 }
 

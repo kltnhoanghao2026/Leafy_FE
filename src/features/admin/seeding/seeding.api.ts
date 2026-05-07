@@ -93,6 +93,7 @@ export const seedingApi = {
     speciesCount?: number,
     plantCount?: number,
     eventsPerPlant?: number,
+    planCount?: number,
   ) =>
     apiClient.post<ApiEnvelope<PlantSeedResult>>(
       API_ENDPOINTS.ADMIN.SEED.PLANTS,
@@ -102,6 +103,7 @@ export const seedingApi = {
           ...(speciesCount != null && { speciesCount }),
           ...(plantCount != null && { plantCount }),
           ...(eventsPerPlant != null && { eventsPerPlant }),
+          ...(planCount != null && { planCount }),
         },
       },
     ),
@@ -150,4 +152,5 @@ export const seedingApi = {
       null,
       { params: { count } },
     ),
+
 };

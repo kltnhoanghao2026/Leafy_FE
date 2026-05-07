@@ -1,5 +1,41 @@
 export type PlantStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
-export type TreatmentStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type TrackingGranularity = "NONE" | "ZONE" | "PLANT";
+
+export interface EventProgressResponse {
+  id: string;
+  eventId: string;
+  targetType: "ZONE" | "PLANT";
+  targetId: string;
+  farmPlotId?: string | null;
+  farmZoneId?: string | null;
+  plantId?: string | null;
+  completed: boolean;
+  completedAt?: string | null;
+  note?: string | null;
+  createdAt?: string | null;
+}
+
+export interface EventProgressUpdateRequest {
+  completed: boolean;
+  note?: string;
+}
+export type TreatmentStatus = "PENDING" | "APPLYING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+export interface EventTaskResponse {
+  title: string;
+  description: string | null;
+  order: number | null;
+  estimatedCost: string | null;
+  completed: boolean;
+}
+
+export interface EventTaskRequest {
+  title: string;
+  description?: string;
+  order?: number;
+  estimatedCost?: string;
+  completed?: boolean;
+}
 
 export type PlantEventType =
   | "IRRIGATION"
@@ -107,6 +143,13 @@ export interface PlantEventResponse {
   mrlNote: string | null;
   estimatedCost: string | null;
   sourcePlanId: string | null;
+  completed: boolean;
+  trackingGranularity?: TrackingGranularity | null;
+  excludedPlantIds?: string[] | null;
+  excludedFarmZoneIds?: string[] | null;
+  progressTotal?: number | null;
+  progressCompleted?: number | null;
+  tasks: EventTaskResponse[] | null;
   createdAt: string | null;
   lastModifiedAt: string | null;
   createdBy: string | null;
@@ -131,6 +174,10 @@ export interface PlantEventCreateRequest {
   mrlNote?: string;
   estimatedCost?: string;
   sourcePlanId?: string;
+  tasks?: EventTaskRequest[];
+  trackingGranularity?: TrackingGranularity;
+  excludedPlantIds?: string[];
+  excludedFarmZoneIds?: string[];
 }
 
 export interface PlantEventUpdateRequest {
@@ -149,19 +196,25 @@ export interface PlantEventUpdateRequest {
   mrlNote?: string;
   estimatedCost?: string;
   sourcePlanId?: string;
+  completed?: boolean;
+  /** Replace the entire task list. Omit to leave tasks unchanged. */
+  tasks?: EventTaskRequest[];
 }
 
 export interface PlantEventsCalendarParams {
   startDate: string;
   endDate: string;
+  profileId?: string;
   farmPlotId?: string;
   farmZoneId?: string;
   plantId?: string;
+  sourcePlanId?: string;
 }
 
 export interface PlanCreateRequest {
   ragPlanId?: string;
   question?: string;
+  planName?: string;
   source?: "websearch" | "documents";
   plantId?: string;
   farmPlotId?: string;
@@ -175,6 +228,18 @@ export interface PlanCreateRequest {
   successIndicators?: string;
   estimatedCost?: string;
   schedule?: PlantEventCreateRequest[];
+  /** Whether this plan should be visible to all users. Defaults to false (private). */
+  isPublic?: boolean;
+}
+
+export interface PlanApplyRequest {
+  startDate: string;
+  plantId?: string;
+  farmPlotId?: string;
+  farmZoneId?: string;
+  trackingGranularity?: TrackingGranularity;
+  excludedPlantIds?: string[];
+  excludedFarmZoneIds?: string[];
 }
 
 export interface PlanListParams {
@@ -183,6 +248,8 @@ export interface PlanListParams {
   sortBy?: string;
   sortDir?: "ASC" | "DESC";
   status?: TreatmentStatus | "";
+  plantId?: string;
+  search?: string;
 }
 
 export interface PlantListParams {
@@ -197,9 +264,43 @@ export interface PlantListParams {
   status?: PlantStatus | "";
 }
 
+export interface BulkPlantStatusUpdateRequest {
+  plantIds: string[];
+  status: PlantStatus;
+}
+
+export interface BulkPlantDeleteRequest {
+  plantIds: string[];
+}
+
+export interface BulkPlanStatusUpdateRequest {
+  planIds: string[];
+  status: TreatmentStatus;
+}
+
+export interface BulkPlanDeleteRequest {
+  planIds: string[];
+}
+
+export interface BulkOperationResult {
+  successCount: number;
+  failedCount: number;
+  failedIds: string[];
+}
+
+export interface AuthorInfo {
+  id: string | null;
+  fullName: string | null;
+  avatar: string | null;
+  role: string | null;
+  specialty: string | null;
+  isVerified: boolean | null;
+}
+
 export interface PlanResponse {
   id: string;
-  userId: string | null;
+  creatorId: string | null;
+  ownerId: string | null;
   ragPlanId: string | null;
   question: string | null;
   planName: string | null;
@@ -217,6 +318,13 @@ export interface PlanResponse {
   estimatedCost: string | null;
   plantEventIds: string[] | null;
   status: TreatmentStatus;
+  applyCount: number | null;
+  /** Whether this plan is publicly visible to all authenticated users. */
+  isPublic: boolean;
+  /** Whether this plan was created by an expert on behalf of a farmer. */
+  isConsulted: boolean;
+  ownerInfo: AuthorInfo | null;
+  creatorInfo: AuthorInfo | null;
   createdAt: string | null;
   lastModifiedAt: string | null;
   createdBy: string | null;

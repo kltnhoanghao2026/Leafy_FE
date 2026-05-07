@@ -3,16 +3,18 @@ import { API_ENDPOINTS } from "../../../../lib/routes";
 import type { ApiEnvelope } from "../../../../shared/types/api";
 import type {
   PageResponse,
+  BulkOperationResult,
+  BulkPlanDeleteRequest,
+  BulkPlanStatusUpdateRequest,
+  PlanApplyRequest,
   PlanCreateRequest,
   PlanListParams,
   PlanResponse,
   TreatmentStatus,
 } from "../../shared/types";
-import { unwrapApiData, unwrapPageContent } from "../../shared/api/apiUtils";
+import { unwrapApiData, unwrapPageContent, toPageResponse } from "../../shared/api/apiUtils";
 
-const pageParams = {
-  page: 0,
-  size: 100,
+const defaultParams = {
   sortBy: "createdAt",
   sortDir: "DESC",
 };
@@ -24,12 +26,14 @@ export const treatmentPlanApi = {
       | PageResponse<PlanResponse>
     >(API_ENDPOINTS.PLANS.MY, {
       params: {
-        ...pageParams,
+        ...defaultParams,
         ...params,
         status: params.status || undefined,
+        plantId: params.plantId || undefined,
+        search: params.search || undefined,
       },
     });
-    return unwrapPageContent(unwrapApiData(response.data));
+    return toPageResponse(unwrapApiData(response.data));
   },
 
   createPlan: async (payload: PlanCreateRequest) => {
@@ -88,9 +92,42 @@ export const treatmentPlanApi = {
     return unwrapApiData(response.data);
   },
 
+  togglePlanVisibility: async (planId: string) => {
+    const response = await apiClient.put<
+      ApiEnvelope<PlanResponse> | PlanResponse
+    >(API_ENDPOINTS.PLANS.ITEM(planId) + "/visibility/toggle");
+    return unwrapApiData(response.data);
+  },
+
+
   deletePlan: async (planId: string) => {
     await apiClient.delete<ApiEnvelope<void> | void>(
       API_ENDPOINTS.PLANS.ITEM(planId),
     );
+  },
+
+  applyPlan: async (planId: string, payload: PlanApplyRequest) => {
+    await apiClient.post<ApiEnvelope<void> | void>(
+      API_ENDPOINTS.PLANS.APPLY(planId),
+      payload,
+    );
+  },
+
+  bulkUpdatePlanStatus: async (
+    payload: BulkPlanStatusUpdateRequest,
+  ): Promise<BulkOperationResult> => {
+    const response = await apiClient.patch<
+      ApiEnvelope<BulkOperationResult> | BulkOperationResult
+    >(API_ENDPOINTS.PLANS.BULK_STATUS, payload);
+    return unwrapApiData(response.data) as BulkOperationResult;
+  },
+
+  bulkDeletePlans: async (
+    payload: BulkPlanDeleteRequest,
+  ): Promise<BulkOperationResult> => {
+    const response = await apiClient.delete<
+      ApiEnvelope<BulkOperationResult> | BulkOperationResult
+    >(API_ENDPOINTS.PLANS.BULK_DELETE, { data: payload });
+    return unwrapApiData(response.data) as BulkOperationResult;
   },
 };

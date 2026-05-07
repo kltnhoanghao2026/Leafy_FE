@@ -71,9 +71,9 @@ export function MonthCalendarView({
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col h-full">
       {/* Calendar card */}
-      <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+      <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         {/* Month navigation */}
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
           <button type="button" onClick={onPrevMonth}
@@ -104,9 +104,9 @@ export function MonthCalendarView({
         </div>
 
         {/* Day grid */}
-        <div className="px-1 pb-2">
+        <div className="flex flex-1 flex-col px-1 pb-2">
           {rows.map((row, ri) => (
-            <div key={ri} className="grid grid-cols-7">
+            <div key={ri} className="grid flex-1 grid-cols-7">
               {row.map((dateStr, ci) => {
                 if (!dateStr) return <div key={ci} />;
                 const isToday    = dateStr === todayStr;
@@ -143,7 +143,7 @@ export function MonthCalendarView({
                     type="button"
                     onClick={() => onSelectDate(selectedDate === dateStr ? null : dateStr)}
                     style={cellStyle}
-                    className="flex flex-col items-center py-1 transition-all hover:bg-slate-50"
+                    className="flex h-full flex-col items-center justify-center py-1 transition-all hover:bg-slate-50"
                   >
                     <div
                       style={{

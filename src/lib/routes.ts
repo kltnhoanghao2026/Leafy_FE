@@ -38,21 +38,28 @@ export const ROUTES = {
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
     PLANS: "/dashboard/plans",
+    PLANS_CREATE: "/dashboard/plans/create",
     PLAN_DETAIL: (planId: string) =>
       `/dashboard/plans/${planId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
-    RAG_PANEL: "/dashboard/rag-panel",
     RAG_PLAN: (planId: string) =>
-      `/dashboard/rag-panel/plans/${planId}`,
+      `/dashboard/plans/${planId}`,
     COMMUNITY: "/dashboard/community",
+    COMMUNITY_PLAN_VIEW: (planId: string) => `/dashboard/community/plans/${planId}`,
     EXPERTS: "/dashboard/experts",
     CHAT: "/dashboard/chat",
     NOTIFICATIONS: "/dashboard/notifications",
     SETTINGS: "/dashboard/settings",
     MY_PROFILE: "/dashboard/profile",
     PROFILE_VIEW: (profileId: string) => `/dashboard/profile/${profileId}`,
+    CONSULTING: "/dashboard/consulting",
+    CONSULTING_FARMER: (farmerProfileId: string) => `/dashboard/consulting/${farmerProfileId}`,
+    CONSULTING_CREATE_PLAN: (farmerProfileId: string) => `/dashboard/consulting/${farmerProfileId}/plans/create`,
+    CONSULTING_FARM_PLOT: (farmerProfileId: string, farmPlotId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}`,
+    CONSULTING_FARM_ZONE: (farmerProfileId: string, farmPlotId: string, farmZoneId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}/zones/${farmZoneId}`,
+    CONSULTING_PLANT: (farmerProfileId: string, plantId: string) => `/dashboard/consulting/${farmerProfileId}/plants/${plantId}`,
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -240,11 +247,24 @@ export const API_ENDPOINTS = {
     ADMIN_ZONES: "/farms/admin/zones",
   },
 
+  CONSULTING: {
+    FARM_PLOTS: "/farms/plots/consulting",
+    FARM_PLOT: (id: string) => `/farms/plots/consulting/${id}`,
+    FARM_ZONES: (plotId: string) => `/farms/plots/${plotId}/zones/consulting`,
+    FARMER_SUMMARY_BULK: "/farms/plots/consulting/summary/bulk",
+    PLANTS: "/plants/consulting",
+    PLANT: (id: string) => `/plants/consulting/${id}`,
+    PLANT_EVENTS: "/plant-events/consulting",
+    PLANS: "/plans/consulting",
+  },
+
   PLANTS: {
     LIST: "/plants",
     ITEM: (id: string) => `/plants/${id}`,
     BY_FARM_PLOT: (farmPlotId: string) => `/plants/farm-plot/${farmPlotId}`,
     BY_SPECIES: (speciesId: string) => `/plants/species/${speciesId}`,
+    BULK_STATUS: "/plants/bulk/status",
+    BULK_DELETE: "/plants/bulk",
   },
 
   SPECIES: {
@@ -272,6 +292,11 @@ export const API_ENDPOINTS = {
     BY_FARM_ZONE: (farmZoneId: string) =>
       `/plant-events/farm-zone/${farmZoneId}`,
     CALENDAR: "/plant-events/calendar",
+    PROGRESS: (eventId: string) => `/plant-events/${eventId}/progress`,
+    PROGRESS_ITEM: (eventId: string, progressId: string) =>
+      `/plant-events/${eventId}/progress/${progressId}`,
+    PROGRESS_GENERATE: (eventId: string) =>
+      `/plant-events/${eventId}/progress/generate`,
   },
 
   PLANS: {
@@ -279,6 +304,9 @@ export const API_ENDPOINTS = {
     CREATE: "/plans",
     ITEM: (planId: string) => `/plans/${planId}`,
     UPDATE_STATUS: (planId: string) => `/plans/${planId}/status`,
+    APPLY: (planId: string) => `/plans/${planId}/apply`,
+    BULK_STATUS: "/plans/bulk/status",
+    BULK_DELETE: "/plans/bulk",
     MY: "/plans/me",
     BY_PLANT: (plantId: string) => `/plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
@@ -415,6 +443,7 @@ export const API_ENDPOINTS = {
       ACCOUNTS: "/admin/seed/accounts",
       FARMS: "/admin/seed/farms",
       PLANTS: "/admin/seed/plants",
+      PLANS: "/admin/seed/plans",
       SPECIES_PERENUAL: "/admin/seed/species/perenual",
       COMMUNITY: "/admin/seed/community",
       COMMUNITY_PROFILES: "/admin/seed/profiles",

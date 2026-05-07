@@ -1,4 +1,5 @@
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { ModalShell } from "../../../components/ui/ModalShell";
 
 interface ConfirmDeleteDialogProps {
   title: string;
@@ -18,38 +19,15 @@ export function ConfirmDeleteDialog({
   onConfirm,
 }: ConfirmDeleteDialogProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-delete-title"
-    >
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600">
-              <AlertTriangle className="h-5 w-5" strokeWidth={2.5} />
-            </span>
-            <div>
-              <h2 id="confirm-delete-title" className="text-lg font-black text-slate-900">
-                {title}
-              </h2>
-              <p className="mt-2 text-sm font-semibold text-slate-500">
-                {description}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Đóng"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+    <ModalShell
+      onClose={onCancel}
+      icon={<AlertTriangle className="h-5 w-5 text-red-600" strokeWidth={2.5} />}
+      iconBg="bg-red-50"
+      title={title}
+      titleId="confirm-delete-title"
+      maxWidth="max-w-md"
+      footer={
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onCancel}
@@ -66,7 +44,9 @@ export function ConfirmDeleteDialog({
             {isDeleting ? "Đang xóa..." : confirmLabel}
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="px-6 py-4 text-sm font-semibold text-slate-500">{description}</p>
+    </ModalShell>
   );
 }

@@ -15,9 +15,6 @@ import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
 import { I18nProvider } from "./i18n";
 import { WebSocketProvider } from "./providers/WebSocketProvider";
-
-import { AdminOverviewPage } from "./features/admin/overview";
-import { UserManagementPage } from "./features/admin/users";
 import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
 import { ContentModerationPage } from "./features/admin/content-moderation";
 import { SystemHealthPage } from "./features/admin/health";
@@ -99,6 +96,11 @@ const PlansPage = lazy(() =>
     default: module.PlansPage,
   })),
 );
+const CreatePlanPage = lazy(() =>
+  import("./features/plant-management/plan/pages/CreatePlanPage").then((module) => ({
+    default: module.CreatePlanPage,
+  })),
+);
 const RagChatPage = lazy(() =>
   import("./features/rag-chat/pages/RagChatPage").then((module) => ({
     default: module.RagChatPage,
@@ -124,6 +126,12 @@ const CommunityView = lazy(() =>
     default: module.CommunityView,
   })),
 );
+const CommunityPlanViewPage = lazy(() =>
+  import("./features/community/pages/CommunityPlanViewPage").then((module) => ({
+    default: module.CommunityPlanViewPage,
+  })),
+);
+
 const SearchPage = lazy(() =>
   import("./features/search/pages/SearchPage").then((module) => ({
     default: module.SearchPage,
@@ -167,6 +175,35 @@ const NotificationsPage = lazy(() =>
 const GroupJoinPage = lazy(() =>
   import('./features/chat/pages/GroupJoinPage').then((module) => ({
     default: module.GroupJoinPage,
+  }))
+);
+
+const ConsultingDashboardPage = lazy(() =>
+  import('./features/consulting/pages/ConsultingDashboardPage').then((module) => ({
+    default: module.ConsultingDashboardPage,
+  }))
+);
+const ConsultingFarmerPage = lazy(() =>
+  import('./features/consulting/pages/ConsultingFarmerPage').then((module) => ({
+    default: module.ConsultingFarmerPage,
+  }))
+);const ConsultingCreatePlanPage = lazy(() =>
+  import('./features/consulting/pages/ConsultingCreatePlanPage').then((module) => ({
+    default: module.ConsultingCreatePlanPage,
+  })),
+);const ConsultingFarmPlotPage = lazy(() =>
+  import('./features/consulting/pages/ConsultingFarmPlotPage').then((module) => ({
+    default: module.ConsultingFarmPlotPage,
+  }))
+);
+const ConsultingFarmZonePage = lazy(() =>
+  import('./features/consulting/pages/ConsultingFarmZonePage').then((module) => ({
+    default: module.ConsultingFarmZonePage,
+  }))
+);
+const ConsultingPlantPage = lazy(() =>
+  import('./features/consulting/pages/ConsultingPlantPage').then((module) => ({
+    default: module.ConsultingPlantPage,
   }))
 );
 
@@ -301,6 +338,14 @@ function App() {
                 }
               />
               <Route
+                path="plans/create"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <CreatePlanPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
@@ -341,18 +386,18 @@ function App() {
                 }
               />
               <Route
-                path="rag-panel/plans/:planId"
-                element={
-                  <Suspense fallback={<PageLoader />}>
-                    <RagPlanDetailPage />
-                  </Suspense>
-                }
-              />
-              <Route
                 path="search"
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <SearchPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="community/plans/:planId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <CommunityPlanViewPage />
                   </Suspense>
                 }
               />
@@ -417,6 +462,54 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <NotificationsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingDashboardPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting/:farmerProfileId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingFarmerPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting/:farmerProfileId/plans/create"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingCreatePlanPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting/:farmerProfileId/farms/:farmPlotId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingFarmPlotPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting/:farmerProfileId/farms/:farmPlotId/zones/:farmZoneId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingFarmZonePage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="consulting/:farmerProfileId/plants/:plantId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ConsultingPlantPage />
                   </Suspense>
                 }
               />

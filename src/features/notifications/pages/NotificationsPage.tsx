@@ -22,6 +22,7 @@ const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null
   COMMENT_UPVOTE:  (id) => `/dashboard/community?post=${id}`,
   USER_FOLLOW:     (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   CONSULT_REQUEST: (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
+  PLAN_CONSULTING_CREATED: (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
   SYSTEM:          () => null,
 };
 

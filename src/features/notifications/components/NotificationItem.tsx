@@ -7,7 +7,8 @@ import {
   ThumbsUp, 
   UserPlus, 
   MessageSquare, 
-  Bell 
+  Bell,
+  ClipboardList
 } from 'lucide-react';
 
 function formatDistanceToNowNative(date: Date): string {
@@ -50,6 +51,15 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
 
   const timeAgo = formatDistanceToNowNative(new Date(notification.occurredAt));
 
+  /**
+   * The backend pre-renders `body` with the actor name + "và N người khác"
+   * baked in for batched notifications (e.g.
+   * "Alice và 3 người khác đã thích bài viết của bạn"). We treat any row with
+   * `actorCount > 1` as already-rendered and show the body verbatim.
+   * Single-actor rows keep the legacy "{displayName} {body}" prefix layout.
+   */
+  const isAggregated = (notification.actorCount ?? 1) > 1
+
   // Determine the overlay icon based on the notification type
   const getTypeConfig = (type: string) => {
     switch (type) {
@@ -63,6 +73,8 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
         return { Icon: UserPlus, colorClass: 'text-purple-500 bg-purple-50 border-purple-100' };
       case 'CONSULT_REQUEST':
         return { Icon: MessageSquare, colorClass: 'text-orange-500 bg-orange-50 border-orange-100' };
+      case 'PLAN_CONSULTING_CREATED':
+        return { Icon: ClipboardList, colorClass: 'text-emerald-500 bg-emerald-50 border-emerald-100' };
       case 'SYSTEM':
       default:
         return { Icon: Bell, colorClass: 'text-slate-500 bg-slate-50 border-slate-200' };
@@ -107,8 +119,16 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
           {notification.title}
         </p>
         <p className="text-[13px] text-slate-600 mt-1.5 line-clamp-2 leading-snug">
-          <span className="font-bold text-slate-800 mr-1">{displayName}</span>
-          {notification.body || 'đã tương tác với bạn'}
+          {isAggregated ? (
+            // Aggregated body already contains the actor name + "và N người khác"
+            // baked in by the backend renderer — render verbatim to avoid duplication.
+            <span className="text-slate-700">{notification.body}</span>
+          ) : (
+            <>
+              <span className="font-bold text-slate-800 mr-1">{displayName}</span>
+              {notification.body || 'đã tương tác với bạn'}
+            </>
+          )}
         </p>
         <p className={`text-[11px] mt-2 ${!notification.isRead ? 'text-[#245A34] font-bold' : 'text-slate-400 font-medium'}`}>
           {timeAgo}

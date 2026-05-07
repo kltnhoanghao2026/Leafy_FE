@@ -10,6 +10,19 @@ import { notificationKeys } from '../queries/keys';
 import { ROUTES } from '../../../lib/routes';
 import type { UserNotificationResponse } from '../types';
 
+// ─── Routing map — keep in sync with NotificationsPage ────────────────────────
+
+const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null> = {
+  POST_COMMENT:    (id) => `/dashboard/community?post=${id}`,
+  POST_UPVOTE:     (id) => `/dashboard/community?post=${id}`,
+  COMMENT_REPLY:   (id) => `/dashboard/community?post=${id}`,
+  COMMENT_UPVOTE:  (id) => `/dashboard/community?post=${id}`,
+  USER_FOLLOW:     (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
+  CONSULT_REQUEST: (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
+  PLAN_CONSULTING_CREATED: (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
+  SYSTEM:          () => null,
+};
+
 // ─── Skeleton ───────────────────────────────────────────────────────────────
 
 function NotificationSkeleton() {
@@ -121,15 +134,11 @@ export function NotificationPopover() {
     }
     setIsOpen(false);
 
-    if (notification.referenceId) {
-      switch (notification.type) {
-        case 'COMMENT':
-        case 'VOTE':
-        case 'POST':
-          navigate(`/dashboard/community?post=${notification.referenceId}`);
-          break;
-        default:
-          break;
+    if (notification.referenceId && notification.type) {
+      const routeFn = NOTIFICATION_ROUTES[notification.type];
+      if (routeFn) {
+        const path = routeFn(notification.referenceId);
+        if (path) navigate(path);
       }
     }
   };

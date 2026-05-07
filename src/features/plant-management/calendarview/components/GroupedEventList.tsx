@@ -63,12 +63,26 @@ interface CategorySectionProps {
   category: EventCategory;
   events: PlantEventResponse[];
   onEdit?: (event: PlantEventResponse) => void;
+  onDelete?: (event: PlantEventResponse) => void;
   onEventHover?: (event: PlantEventResponse | null) => void;
+  onToggleComplete?: (event: PlantEventResponse) => void;
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  onSelectEvent?: (event: PlantEventResponse) => void;
 }
 
-function CategorySection({ category, events, onEdit, onEventHover }: CategorySectionProps) {
+function CategorySection({ category, events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
   const accent = CATEGORY_ACCENT[category];
+
+  // Compute done count: for broad-scope events use progressCompleted === progressTotal,
+  // for plain events use the event-level completed flag.
+  const doneCount = events.filter(e => {
+    if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
+      return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
+    }
+    return e.completed;
+  }).length;
+  const allDone = doneCount === events.length && events.length > 0;
 
   return (
     <div
@@ -84,8 +98,12 @@ function CategorySection({ category, events, onEdit, onEventHover }: CategorySec
         <span className={`flex-1 text-sm font-semibold ${accent.headerText}`}>
           {CATEGORY_LABELS[category]}
         </span>
-        <span className={`rounded-full px-2.5 py-0.5 text-sm font-bold ${accent.countBg} ${accent.countText}`}>
-          {events.length}
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-sm font-bold transition-colors ${
+            allDone ? 'bg-emerald-100 text-emerald-700' : `${accent.countBg} ${accent.countText}`
+          }`}
+        >
+          {doneCount}/{events.length}
         </span>
         {collapsed
           ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
@@ -102,7 +120,11 @@ function CategorySection({ category, events, onEdit, onEventHover }: CategorySec
               accent={accent}
               isLast={i === events.length - 1}
               onEdit={onEdit}
+              onDelete={onDelete}
               onEventHover={onEventHover}
+              onToggleComplete={onToggleComplete}
+              onToggleTask={onToggleTask}
+              onSelectEvent={onSelectEvent}
             />
           ))}
         </div>
@@ -117,11 +139,16 @@ export interface GroupedEventListProps {
   events: PlantEventResponse[];
   selectedDate?: string | null;
   onEdit?: (event: PlantEventResponse) => void;
+  onDelete?: (event: PlantEventResponse) => void;
   onEventHover?: (event: PlantEventResponse | null) => void;
+  onToggleComplete?: (event: PlantEventResponse) => void;
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  onSelectEvent?: (event: PlantEventResponse) => void;
   emptyNode?: React.ReactNode;
+  headerAction?: React.ReactNode;
 }
 
-export function GroupedEventList({ events, onEdit, onEventHover, emptyNode }: GroupedEventListProps) {
+export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction }: GroupedEventListProps) {
   const grouped: Record<EventCategory, PlantEventResponse[]> = {
     ROUTINE_CARE: [],
     HEALTH_MEDICAL: [],
@@ -134,7 +161,18 @@ export function GroupedEventList({ events, onEdit, onEventHover, emptyNode }: Gr
   }
 
   const hasAny = CATEGORY_ORDER.some((cat) => grouped[cat].length > 0);
-  if (!hasAny) return emptyNode ? <>{emptyNode}</> : null;
+  if (!hasAny) return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
+        <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+        <div className="flex items-center gap-2">
+          {headerAction}
+          <span className="text-xs text-slate-400">0 sự kiện</span>
+        </div>
+      </div>
+      {emptyNode ? <>{emptyNode}</> : null}
+    </div>
+  );
 
   const filledCategories = CATEGORY_ORDER.filter(cat => grouped[cat].length > 0);
 
@@ -145,7 +183,10 @@ export function GroupedEventList({ events, onEdit, onEventHover, emptyNode }: Gr
       {/* List header */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
         <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
-        <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+        <div className="flex items-center gap-2">
+          {headerAction}
+          <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+        </div>
       </div>
 
       {filledCategories.map((cat) => (
@@ -154,7 +195,11 @@ export function GroupedEventList({ events, onEdit, onEventHover, emptyNode }: Gr
           category={cat}
           events={grouped[cat]}
           onEdit={onEdit}
+          onDelete={onDelete}
           onEventHover={onEventHover}
+          onToggleComplete={onToggleComplete}
+          onToggleTask={onToggleTask}
+          onSelectEvent={onSelectEvent}
         />
       ))}
     </div>

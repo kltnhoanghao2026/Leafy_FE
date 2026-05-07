@@ -1,62 +1,73 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { CalendarDays, ClipboardList, RefreshCw, Search, Trash2, Sprout, MapPin, BarChart2, Clock } from "lucide-react";
+import { useMemo, useState, useEffect, type ComponentType } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { CalendarDays, Check, CheckCircle2, CircleDashed, ClipboardList, Loader2, Minus, Play, Plus, RefreshCw, Search, Trash2, X, XCircle } from "lucide-react";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
-import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
+import { useFarmPlots } from "../../../farm-management/queries";
 import { useMyProfile } from "../../../settings/queries";
 import { ROUTES } from "../../../../lib/routes";
+import { PagedGrid } from "../../../../components/ui/PagedGrid";
+import { FilterCard } from "../../../../components/ui/FilterCard";
+import { PlanCard } from "../components/PlanCard";
 import {
+  useBulkApplyPlansMutation,
+  useBulkDeletePlansMutation,
+  useBulkUpdatePlanStatusMutation,
   useDeletePlanMutation,
   useMyPlans,
   usePlants,
   useUpdatePlanStatusMutation,
 } from "../..";
-import type { PlanResponse, TreatmentStatus } from "../../shared/types";
-import { formatDate, TREATMENT_STATUS_LABELS } from "../../shared/components/displayUtils";
+import type { PlanApplyRequest, PlanResponse, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
+import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
+
+const STATUS_TABS: Array<{
+  value: TreatmentStatus | "";
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  activeClass: string;
+}> = [
+  { value: "",          label: "Tất cả",          icon: ClipboardList,  activeClass: "bg-slate-800 text-white" },
+  { value: "PENDING",   label: "Chờ áp dụng",    icon: CircleDashed,   activeClass: "bg-amber-500 text-white" },
+  { value: "APPLYING",  label: "Đang xử lý",     icon: CircleDashed,   activeClass: "bg-purple-600 text-white" },
+  { value: "ACTIVE",    label: "Đang thực hiện", icon: Play,           activeClass: "bg-blue-600 text-white" },
+  { value: "COMPLETED", label: "Hoàn thành",      icon: CheckCircle2,  activeClass: "bg-emerald-600 text-white" },
+  { value: "CANCELLED", label: "Đã hủy",          icon: XCircle,       activeClass: "bg-slate-500 text-white" },
+];
 
 const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "", label: "Tất cả trạng thái" },
-  { value: "PENDING", label: "Chờ xử lý" },
+  { value: "PENDING", label: "Chờ áp dụng" },
+  { value: "APPLYING", label: "Đang xử lý" },
   { value: "ACTIVE", label: "Đang thực hiện" },
   { value: "COMPLETED", label: "Hoàn thành" },
   { value: "CANCELLED", label: "Đã hủy" },
 ];
 
-const STATUS_STYLE: Record<string, string> = {
-  PENDING:   "bg-amber-50 text-amber-700 ring-amber-200",
-  ACTIVE:    "bg-blue-50 text-blue-700 ring-blue-200",
-  COMPLETED: "bg-emerald-50 text-[#245A34] ring-emerald-200",
-  CANCELLED: "bg-slate-100 text-slate-500 ring-slate-200",
-};
-
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW: "Nhẹ",
-  MEDIUM: "Trung bình",
-  HIGH: "Nghiêm trọng",
-  CRITICAL: "Rất nghiêm trọng",
-};
-
-const SEVERITY_STYLE: Record<string, string> = {
-  LOW: "text-emerald-600",
-  MEDIUM: "text-amber-600",
-  HIGH: "text-orange-600",
-  CRITICAL: "text-red-600",
-};
-
 export function PlansPage() {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<TreatmentStatus | "">("");
   const [plantId, setPlantId] = useState("");
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [deleteTarget, setDeleteTarget] = useState<PlanResponse | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkApplyOpen, setBulkApplyOpen] = useState(false);
+  const [bulkStatusChip, setBulkStatusChip] = useState<TreatmentStatus | "">("");
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  const plansQuery = useMyPlans({ status });
+  const plansQuery = useMyPlans({ status, plantId: plantId || undefined, search: search || undefined, page, size: pageSize });
   const plantsQuery = usePlants();
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const updateStatus = useUpdatePlanStatusMutation();
   const deletePlan = useDeletePlanMutation();
+  const bulkUpdateStatus = useBulkUpdatePlanStatusMutation();
+  const bulkDeletePlans = useBulkDeletePlansMutation();
+  const bulkApplyPlans = useBulkApplyPlansMutation();
 
   const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
   const plantById = useMemo(
@@ -68,23 +79,51 @@ export function PlansPage() {
     [plotsQuery.data],
   );
 
-  const filteredPlans = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    return (plansQuery.data ?? []).filter((plan: PlanResponse) => {
-      const matchesPlant = !plantId || plan.plantId === plantId;
-      const matchesSearch =
-        !normalizedSearch ||
-        [plan.diseaseName, plan.question, plan.ragPlanId]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(normalizedSearch));
-      return matchesPlant && matchesSearch;
-    });
-  }, [plansQuery.data, plantId, search]);
+  const paginatedPlans = plansQuery.data?.content ?? [];
+  const totalPages = plansQuery.data?.totalPages ?? 0;
+  const totalElements = plansQuery.data?.totalElements ?? 0;
+  const filteredPlans = paginatedPlans; // alias used by selection bar count
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [search, plantId, status, pageSize]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     await deletePlan.mutateAsync(deleteTarget.id);
     setDeleteTarget(null);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const allPageSelected =
+    paginatedPlans.length > 0 && paginatedPlans.every((p) => selectedIds.has(p.id));
+  const somePageSelected =
+    paginatedPlans.some((p) => selectedIds.has(p.id)) && !allPageSelected;
+
+  const handleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paginatedPlans.forEach((p) => next.delete(p.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...paginatedPlans.map((p) => p.id)]));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setBulkStatusChip("");
   };
 
   return (
@@ -101,17 +140,51 @@ export function PlansPage() {
             Quản lý các kế hoạch điều trị thật đã tạo từ AI hoặc plant-management-service.
           </p>
         </div>
-        <Link
-          to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
-          className="inline-flex items-center justify-center rounded-2xl border border-[#245A34] bg-white px-5 py-3 text-sm font-bold text-[#245A34] hover:bg-green-50"
-        >
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Xem lịch chăm sóc
-        </Link>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.DASHBOARD.PLANS_CREATE)}
+            className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white hover:bg-[#1a4226]"
+          >
+            <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
+            Tạo kế hoạch mới
+          </button>
+          <Link
+            to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
+            className="inline-flex items-center justify-center rounded-2xl border border-[#245A34] bg-white px-5 py-3 text-sm font-bold text-[#245A34] hover:bg-green-50"
+          >
+            <CalendarDays className="mr-2 h-4 w-4" />
+            Xem lịch chăm sóc
+          </Link>
+        </div>
       </header>
 
-      <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
+      {/* Status tab bar */}
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Lọc trạng thái kế hoạch">
+        {STATUS_TABS.map(({ value, label, icon: Icon, activeClass }) => {
+          const isActive = status === value;
+          return (
+            <button
+              key={value || "all"}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => { setStatus(value as TreatmentStatus | ""); setPage(0); }}
+              className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
+                isActive
+                  ? `${activeClass} border-transparent shadow-md`
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <FilterCard viewMode={viewMode} onViewModeChange={setViewMode}>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label htmlFor="plan-search" className="block">
             <span className="text-xs font-black uppercase tracking-wide text-slate-500">
               Tìm kiếm
@@ -127,20 +200,6 @@ export function PlansPage() {
               />
             </div>
           </label>
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Trạng thái
-            </span>
-            <Select
-              className="mt-2"
-              value={status}
-              onChange={(v) => setStatus(v as TreatmentStatus | "")}
-              options={STATUS_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
-          </div>
           <div className="block">
             <span className="text-xs font-black uppercase tracking-wide text-slate-500">
               Cây trồng
@@ -160,7 +219,148 @@ export function PlansPage() {
             />
           </div>
         </div>
-      </section>
+      </FilterCard>
+
+      {/* Selection info bar + bulk action toolbar — wrapped together so sticky never breaks their stacking order */}
+      {filteredPlans.length > 0 && !plansQuery.isLoading ? (
+        <div className="sticky top-4 z-10 flex flex-col gap-3">
+          {/* Count / select-all row */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2.5">
+              <span
+                role="checkbox"
+                aria-checked={allPageSelected ? true : somePageSelected || selectedIds.size > 0 ? "mixed" : false}
+                onClick={allPageSelected ? handleSelectAll : handleSelectAll}
+                className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border-2 transition-all
+                  ${allPageSelected || somePageSelected || selectedIds.size > 0
+                    ? "border-[#245A34] bg-[#245A34]"
+                    : "border-slate-300 bg-white hover:border-[#245A34]"
+                  }`}
+              >
+                {allPageSelected
+                  ? <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                  : somePageSelected || selectedIds.size > 0
+                    ? <Minus className="h-3 w-3 text-white" strokeWidth={3} />
+                    : null
+                }
+              </span>
+              <span className="text-sm font-semibold text-slate-600">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} / ${filteredPlans.length} kế hoạch đã chọn`
+                  : `${filteredPlans.length} kế hoạch`
+                }
+              </span>
+              {selectedIds.size > 0 && !allPageSelected && (
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="text-xs font-semibold text-[#245A34] hover:underline"
+                >
+                  Chọn trang này
+                </button>
+              )}
+            </div>
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={clearSelection}
+                className="text-xs font-semibold text-slate-400 hover:text-slate-600"
+              >
+                Bỏ chọn
+              </button>
+            )}
+          </div>
+
+          {/* Bulk action toolbar */}
+          {selectedIds.size > 0 ? (
+            <div className="rounded-2xl bg-[#245A34] px-4 py-3 shadow-xl shadow-[#245A34]/20">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Count */}
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+                  </div>
+                  <span className="text-sm font-bold text-white">{selectedIds.size} kế hoạch đã chọn</span>
+                </div>
+
+                <div className="h-5 w-px bg-white/20" />
+
+                {/* Status chips */}
+                <span className="text-xs font-semibold text-white/60">Đổi trạng thái:</span>
+                <div className="flex items-center gap-1 rounded-xl bg-white/10 p-1">
+                  {STATUS_OPTIONS.filter((o) => o.value).map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setBulkStatusChip(bulkStatusChip === o.value ? "" : o.value as TreatmentStatus)}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-all
+                        ${bulkStatusChip === o.value
+                          ? "bg-white text-[#245A34] shadow-sm"
+                          : "text-white/80 hover:bg-white/20 hover:text-white"
+                        }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  disabled={!bulkStatusChip || bulkUpdateStatus.isPending}
+                  onClick={() =>
+                    void bulkUpdateStatus
+                      .mutateAsync({ planIds: [...selectedIds], status: bulkStatusChip as TreatmentStatus })
+                      .then(() => clearSelection())
+                  }
+                  className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#245A34] hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {bulkUpdateStatus.isPending
+                    ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} />
+                    : <Check className="h-3 w-3" strokeWidth={3} />
+                  }
+                  Áp dụng
+                </button>
+
+                <div className="h-5 w-px bg-white/20" />
+
+                {/* Apply plan */}
+                <button
+                  type="button"
+                  onClick={() => setBulkApplyOpen(true)}
+                  className="flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/25"
+                >
+                  <Play className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  Áp dụng kế hoạch
+                </button>
+
+                <div className="h-5 w-px bg-white/20" />
+
+                {/* Delete */}
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  disabled={bulkDeletePlans.isPending}
+                  className="flex items-center gap-1.5 rounded-xl bg-red-500/25 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500/40 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  Xóa đã chọn
+                </button>
+
+                <div className="flex-1" />
+
+                {/* Dismiss */}
+                <button
+                  type="button"
+                  onClick={clearSelection}
+                  className="rounded-xl p-1.5 text-white/70 transition hover:bg-white/20 hover:text-white"
+                  title="Bỏ chọn tất cả"
+                >
+                  <X className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {plansQuery.isLoading ? (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2" aria-label="Đang tải kế hoạch điều trị">
@@ -192,126 +392,59 @@ export function PlansPage() {
         <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
           <ClipboardList className="mx-auto h-10 w-10 text-slate-300" />
           <h3 className="mt-4 text-xl font-black text-slate-900">
-            Chưa có kế hoạch điều trị
+            {status === "PENDING" ? "Không có kế hoạch đang chờ áp dụng"
+              : status === "APPLYING" ? "Không có kế hoạch đang xử lý"
+              : status === "ACTIVE" ? "Không có kế hoạch đang thực hiện"
+              : status === "COMPLETED" ? "Chưa có kế hoạch hoàn thành"
+              : status === "CANCELLED" ? "Không có kế hoạch đã hủy"
+              : "Chưa có kế hoạch điều trị"}
           </h3>
           <p className="mt-2 text-sm font-semibold text-slate-500">
-            Khi tạo kế hoạch từ AI hoặc plant-management, danh sách sẽ hiển thị tại đây.
+            {status === "PENDING"
+              ? "Kế hoạch mới tạo sẽ xuất hiện ở đây. Nhấn Áp dụng để chuyển sang Đang thực hiện."
+              : status === "APPLYING"
+              ? "Kế hoạch đang được xử lý bởi hệ thống. Vui lòng chờ trong giây lát."
+              : status === "ACTIVE"
+              ? "Kế hoạch sẽ chuyển sang tab này sau khi được áp dụng."
+              : status === "COMPLETED"
+              ? "Kế hoạch tự động hoàn thành khi tất cả sự kiện đã qua ngày kết thúc."
+              : "Khi tạo kế hoạch từ AI hoặc chuyên gia tư vấn, danh sách sẽ hiển thị tại đây."}
           </p>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {filteredPlans.map((plan: PlanResponse) => {
+      <PagedGrid
+        viewMode={viewMode}
+        page={page}
+        totalPages={totalPages}
+        totalElements={filteredPlans.length}
+        itemLabel="kế hoạch"
+        onPageChange={setPage}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 20, 50, 100]}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+      >
+        {paginatedPlans.map((plan: PlanResponse) => {
           const plant = plan.plantId ? plantById.get(plan.plantId) : null;
           const plot = plan.farmPlotId ? plotById.get(plan.farmPlotId) : null;
           return (
-            <article key={plan.id} className="flex flex-col rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-              {/* Card header */}
-              <div className="flex items-start justify-between gap-3 p-5 pb-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-black text-slate-900">
-                    {plan.diseaseName || "Kế hoạch điều trị"}
-                  </h3>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-400">
-                    {plan.question || plan.successIndicators || "Kế hoạch AI chỉ mang tính hỗ trợ"}
-                  </p>
-                </div>
-                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${
-                  STATUS_STYLE[plan.status] ?? "bg-slate-100 text-slate-500 ring-slate-200"
-                }`}>
-                  {(TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status}
-                </span>
-              </div>
-
-              {/* Divider */}
-              <div className="mx-5 border-t border-slate-100" />
-
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-5 text-xs sm:grid-cols-3">
-                <div className="flex items-center gap-2">
-                  <Sprout className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Cây</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plant?.nickName || plant?.plantNumber || "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Vườn</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plot?.name || "—"}
-                    </p>
-                  </div>
-                </div>
-                <ZoneTile farmPlotId={plan.farmPlotId} farmZoneId={plan.farmZoneId} />
-                <div className="flex items-center gap-2">
-                  <BarChart2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Mức độ</p>
-                    <p className={`truncate font-bold ${
-                      SEVERITY_STYLE[plan.severityLevel ?? ""] ?? "text-slate-800"
-                    }`}>
-                      {SEVERITY_LABEL[plan.severityLevel ?? ""] || plan.severityLevel || "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Số lịch</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plan.plantEventIds?.length ?? 0}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Tạo lúc</p>
-                    <p className="truncate font-bold text-slate-800">{formatDate(plan.createdAt)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action bar */}
-              <div className="mt-auto flex items-center gap-2 border-t border-slate-100 bg-slate-50 px-4 py-3">
-                <Link
-                  to={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
-                  className="inline-flex items-center justify-center rounded-xl bg-[#245A34] px-4 py-2 text-xs font-bold text-white hover:bg-[#1b432a]"
-                >
-                  Xem chi tiết
-                </Link>
-                <div className="flex-1">
-                  <Select
-                    value={plan.status}
-                    onChange={(v) =>
-                      void updateStatus.mutateAsync({
-                        planId: plan.id,
-                        status: v as TreatmentStatus,
-                      })
-                    }
-                    options={STATUS_OPTIONS.filter((option) => option.value).map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(plan)}
-                  className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                  aria-label="Xóa kế hoạch"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </article>
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              plantLabel={plant?.nickName || plant?.plantNumber}
+              plotName={plot?.name}
+              selected={selectedIds.has(plan.id)}
+              onToggleSelect={toggleSelect}
+              onDelete={setDeleteTarget}
+              onStatusChange={(planId, newStatus) =>
+                void updateStatus.mutateAsync({ planId, status: newStatus })
+              }
+              detailUrl={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
+              variant={viewMode}
+            />
           );
         })}
-      </div>
+      </PagedGrid>
 
       {deleteTarget ? (
         <ConfirmDeleteDialog
@@ -322,32 +455,40 @@ export function PlansPage() {
           onConfirm={() => void handleDelete()}
         />
       ) : null}
+
+      {showBulkDeleteConfirm ? (
+        <ConfirmDeleteDialog
+          title="Xóa kế hoạch đã chọn"
+          description={`Bạn có chắc muốn xóa ${selectedIds.size} kế hoạch đã chọn?`}
+          isDeleting={bulkDeletePlans.isPending}
+          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={() =>
+            void bulkDeletePlans.mutateAsync([...selectedIds]).then(() => {
+              clearSelection();
+              setShowBulkDeleteConfirm(false);
+            })
+          }
+        />
+      ) : null}
+
+      {bulkApplyOpen ? (
+        <BulkApplyPlanDialog
+          planIds={[...selectedIds]}
+          isSubmitting={bulkApplyPlans.isPending}
+          onClose={() => setBulkApplyOpen(false)}
+          onSubmit={(payload: PlanApplyRequest) =>
+            void bulkApplyPlans
+              .mutateAsync({ planIds: [...selectedIds], payload })
+              .then(() => {
+                setBulkApplyOpen(false);
+                clearSelection();
+              })
+          }
+        />
+      ) : null}
     </div>
   );
 }
 
 export default PlansPage;
 
-function ZoneTile({
-  farmPlotId,
-  farmZoneId,
-}: {
-  farmPlotId?: string | null;
-  farmZoneId?: string | null;
-}) {
-  const zonesQuery = useFarmZones(farmPlotId ?? "", Boolean(farmPlotId));
-  const zoneName = farmZoneId
-    ? (zonesQuery.data ?? []).find((zone) => zone.id === farmZoneId)?.zoneName ||
-      farmZoneId
-    : "Chưa gắn khu";
-
-  return (
-    <div className="flex items-center gap-2">
-      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-      <div className="min-w-0">
-        <p className="font-black uppercase tracking-wide text-slate-400">Khu v\u1ef1c</p>
-        <p className="truncate font-bold text-slate-800">{zoneName}</p>
-      </div>
-    </div>
-  );
-}

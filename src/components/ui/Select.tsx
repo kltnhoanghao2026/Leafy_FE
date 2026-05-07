@@ -13,6 +13,7 @@ export interface SelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  size?: "sm" | "md";
 }
 
 export function Select({
@@ -22,6 +23,7 @@ export function Select({
   placeholder = "Chọn giá trị...",
   disabled = false,
   className = "",
+  size = "md",
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -51,14 +53,18 @@ export function Select({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
-        className="flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400 focus:border-[#245A34] focus:outline-none focus:ring-1 focus:ring-[#245A34]"
+        className={`flex w-full items-center justify-between border border-slate-200 bg-slate-50 font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-400 focus:border-[#245A34] focus:outline-none focus:ring-1 focus:ring-[#245A34] ${
+          size === "sm"
+            ? "h-8 rounded-lg px-2.5 text-xs"
+            : "h-12 rounded-2xl px-4 text-sm"
+        }`}
       >
         <span className={!selectedOption ? "text-slate-400" : ""}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
-          className={`h-4 w-4 text-slate-400 transition-transform ${
-            isOpen ? "rotate-180" : ""
+          className={`text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""} ${
+            size === "sm" ? "h-3 w-3 ml-1" : "h-4 w-4"
           }`}
         />
       </button>
@@ -79,7 +85,9 @@ export function Select({
                     onChange?.(option.value);
                     setIsOpen(false);
                   }}
-                  className={`flex cursor-pointer items-center justify-between px-4 py-3 text-sm font-semibold transition-colors hover:bg-emerald-50 hover:text-[#245A34] ${
+                  className={`flex cursor-pointer items-center justify-between font-semibold transition-colors hover:bg-emerald-50 hover:text-[#245A34] ${
+                    size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-3 text-sm"
+                  } ${
                     isSelected
                       ? "bg-emerald-50/50 text-[#245A34]"
                       : "text-slate-700"
