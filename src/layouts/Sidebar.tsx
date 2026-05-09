@@ -16,6 +16,7 @@ import {
   LogOut,
   MessageSquare,
   UserSquare,
+  type LucideIcon,
 } from "lucide-react";
 import { useMyProfile } from "../features/settings/queries";
 import { useFilePreviewUrl } from "../features/settings/queries";
@@ -27,6 +28,13 @@ import { Avatar } from "../components/ui/Avatar";
 import { useNotificationState } from "../features/notifications/queries/queries";
 import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 import { useTranslation } from "../i18n";
+
+type SidebarNavItem = {
+  name: string;
+  path: string;
+  icon: LucideIcon;
+  activePath?: string;
+};
 
 export function Sidebar() {
   const location = useLocation();
@@ -51,15 +59,15 @@ export function Sidebar() {
     profile?.profilePicture ||
     undefined;
 
-  const coreNavItems = [
+  const coreNavItems: SidebarNavItem[] = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
+    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
   ];
 
-  const agricultureNavItems = [
+  const agricultureNavItems: SidebarNavItem[] = [
     { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
     { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
@@ -68,7 +76,7 @@ export function Sidebar() {
     { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
   ];
 
-  const utilityNavItems = [
+  const utilityNavItems: SidebarNavItem[] = [
     { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
@@ -76,7 +84,7 @@ export function Sidebar() {
   ];
 
   const renderNavItem = (
-    item: (typeof coreNavItems | typeof agricultureNavItems | typeof utilityNavItems)[number],
+    item: SidebarNavItem,
     badge?: number,
   ) => {
     const isHome = item.path === ROUTES.DASHBOARD.ROOT;

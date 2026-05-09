@@ -54,6 +54,16 @@ export default defineConfig({
           });
         },
       },
+      "/ws": {
+        target: apiProxyTarget,
+        ws: true,
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq) => {
+            proxyReq.removeHeader("origin");
+          });
+        },
+      },
     },
   },
   test: {

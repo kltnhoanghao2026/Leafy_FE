@@ -25,11 +25,14 @@ import type {
   AlertSeverity,
   CreateAlertRuleRequest,
 } from "../../../types/iot";
+import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
+import { Select } from "../../../components/ui/Select";
 import {
-  compactId,
-  formatDateTime,
-  formatNumber,
-} from "../../metrics-view/utils/format";
+  alertSeverityClasses,
+  alertSeverityLabel,
+  friendlyMissingScope,
+  readableRuleThreshold,
+} from "../../alerts/utils/alertLabels";
 
 type EnabledFilter = "all" | "true" | "false";
 
@@ -59,13 +62,6 @@ const emptyRuleForm: RuleFormState = {
   notifyWeb: true,
   notifyMobile: false,
   enabled: true,
-};
-
-const severityClasses: Record<AlertSeverity, string> = {
-  LOW: "bg-blue-50 text-blue-600 border-blue-100",
-  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  HIGH: "bg-orange-50 text-orange-700 border-orange-100",
-  CRITICAL: "bg-red-50 text-red-600 border-red-100",
 };
 
 const enabledClasses = {
@@ -121,26 +117,26 @@ const buildPayload = (form: RuleFormState): CreateAlertRuleRequest => ({
 });
 
 const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
-  if (!payload.sensorTypeId) return "Sensor type ID is required.";
+  if (!payload.sensorTypeId) return "Cần chọn loại cảm biến.";
   if (payload.minThreshold == null && payload.maxThreshold == null) {
-    return "At least one threshold is required.";
+    return "Cần đặt ít nhất một ngưỡng cảnh báo.";
   }
   if (
     payload.minThreshold != null &&
     payload.maxThreshold != null &&
     payload.minThreshold >= payload.maxThreshold
   ) {
-    return "Minimum threshold must be lower than maximum threshold.";
+    return "Ngưỡng thấp phải nhỏ hơn ngưỡng cao.";
   }
   if (!payload.deviceId && !payload.zoneId && !payload.farmPlotId) {
-    return "Select at least one scope: farm plot, zone, or device.";
+    return "Cần chọn ít nhất một phạm vi: vườn, khu vực hoặc thiết bị.";
   }
   if (
     payload.cooldownMinutes !== null &&
     payload.cooldownMinutes !== undefined &&
     payload.cooldownMinutes < 0
   ) {
-    return "Cooldown must be greater than or equal to 0.";
+    return "Thời gian chờ phải lớn hơn hoặc bằng 0.";
   }
 
   return null;
@@ -205,11 +201,11 @@ function RuleFormDialog({
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[22px] font-black text-slate-900">
-              {editingRule ? "Edit alert rule" : "Create alert rule"}
+              {editingRule ? "Sửa quy tắc cảnh báo" : "Tạo quy tắc cảnh báo"}
             </h3>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              Pick farm, zone, and device where possible. Sensor type requires
-              a real backend UUID.
+              Chọn vườn, khu vực và thiết bị bằng danh sách có sẵn. Loại cảm
+              biến cần dùng mã thật từ backend nếu chưa suy luận được.
             </p>
           </div>
           <button
@@ -225,18 +221,18 @@ function RuleFormDialog({
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
-              Scope
+              Phạm vi áp dụng
             </h4>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Farm plot
+                  Vườn
                 </span>
-                <select
-                  aria-label="Rule farm plot"
+                <Select
+                  ariaLabel="Rule farm plot"
                   value={form.farmPlotId}
-                  onChange={(event) => {
-                    const farmPlotId = event.target.value;
+                  onChange={(value) => {
+                    const farmPlotId = String(value);
                     onFormChange((current) => ({
                       ...current,
                       farmPlotId,
@@ -244,128 +240,127 @@ function RuleFormDialog({
                       deviceId: "",
                     }));
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: plotsQuery.isLoading ? "Đang tải vườn..." : "Không giới hạn vườn",
+                    },
+                    ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+                  ]}
+                  className="mt-2"
                   disabled={plotsQuery.isLoading}
-                >
-                  <option value="">
-                    {plotsQuery.isLoading ? "Loading farms..." : "No farm scope"}
-                  </option>
-                  {farmPlots.map((plot) => (
-                    <option key={plot.id} value={plot.id}>
-                      {plot.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Zone
+                  Khu vực
                 </span>
-                <select
-                  aria-label="Rule zone"
+                <Select
+                  ariaLabel="Rule zone"
                   value={form.zoneId}
-                  onChange={(event) => {
-                    const zoneId = event.target.value;
+                  onChange={(value) => {
+                    const zoneId = String(value);
                     onFormChange((current) => ({
                       ...current,
                       zoneId,
                       deviceId: "",
                     }));
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: !form.farmPlotId
+                        ? "Chọn vườn trước"
+                        : zonesQuery.isLoading
+                          ? "Đang tải khu vực..."
+                          : "Không giới hạn khu vực",
+                    },
+                    ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+                  ]}
+                  className="mt-2"
                   disabled={!form.farmPlotId || zonesQuery.isLoading}
-                >
-                  <option value="">
-                    {!form.farmPlotId
-                      ? "Select farm first"
-                      : zonesQuery.isLoading
-                        ? "Loading zones..."
-                        : "No zone scope"}
-                  </option>
-                  {zones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.zoneName}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Device
+                  Thiết bị
                 </span>
-                <select
-                  aria-label="Rule device"
+                <Select
+                  ariaLabel="Rule device"
                   value={form.deviceId}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     onFormChange((current) => ({
                       ...current,
-                      deviceId: event.target.value,
+                      deviceId: String(value),
                     }))
                   }
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: devicesQuery.isLoading
+                        ? "Đang tải thiết bị..."
+                        : "Không giới hạn thiết bị",
+                    },
+                    ...devices.map((device) => ({
+                      value: device.id,
+                      label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+                    })),
+                  ]}
+                  className="mt-2"
                   disabled={devicesQuery.isLoading}
-                >
-                  <option value="">
-                    {devicesQuery.isLoading
-                      ? "Loading devices..."
-                      : "No device scope"}
-                  </option>
-                  {devices.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.deviceName || device.deviceCode || compactId(device.id)}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
             </div>
           </section>
 
           <section className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-amber-700">
-              Sensor type
+              Loại cảm biến
             </h4>
             <p className="mt-2 text-sm font-semibold text-amber-700">
-              Alert rules require a real sensorTypeId UUID. The app can infer
-              options only from existing readings. A complete picker requires a
-              backend sensor type list endpoint.
+              Quy tắc cảnh báo cần đúng mã loại cảm biến từ backend. Ứng dụng
+              chỉ suy luận được lựa chọn khi đã có readings; nếu chưa có, hãy
+              dùng trường nâng cao bên dưới.
             </p>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Inferred sensor type
+                  Loại cảm biến suy luận được
                 </span>
-                <select
-                  aria-label="Inferred sensor type"
+                <Select
+                  ariaLabel="Inferred sensor type"
                   value={hasSelectedSensorOption ? form.sensorTypeId : ""}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     onFormChange((current) => ({
                       ...current,
-                      sensorTypeId: event.target.value,
+                      sensorTypeId: String(value),
                     }))
                   }
-                  className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
+                  options={[
+                    {
+                      value: "",
+                      label: sensorOptionsLoading
+                        ? "Đang tải readings..."
+                        : sensorOptions.length === 0
+                          ? "Chưa có loại cảm biến từ readings"
+                          : "Chọn loại cảm biến",
+                    },
+                    ...sensorOptions.map((option) => ({
+                      value: option.id,
+                      label: `${option.name} (${option.code}${
+                        option.unit ? `, ${option.unit}` : ""
+                      })`,
+                    })),
+                  ]}
+                  className="mt-2"
                   disabled={sensorOptionsLoading || sensorOptions.length === 0}
-                >
-                  <option value="">
-                    {sensorOptionsLoading
-                      ? "Loading readings..."
-                      : sensorOptions.length === 0
-                        ? "No inferred sensor types"
-                        : "Select sensor type"}
-                  </option>
-                  {sensorOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name} ({option.code}
-                      {option.unit ? `, ${option.unit}` : ""})
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Advanced sensorTypeId
+                  Mã loại cảm biến (nâng cao)
                 </span>
                 <input
                   aria-label="Advanced sensorTypeId"
@@ -376,7 +371,7 @@ function RuleFormDialog({
                       sensorTypeId: event.target.value,
                     }))
                   }
-                  placeholder="Paste sensorTypeId UUID"
+                  placeholder="Dán sensorTypeId UUID"
                   className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
                 />
               </label>
@@ -386,7 +381,7 @@ function RuleFormDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Min threshold
+                Ngưỡng thấp
               </span>
               <input
                 aria-label="Min threshold"
@@ -403,7 +398,7 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Max threshold
+                Ngưỡng cao
               </span>
               <input
                 aria-label="Max threshold"
@@ -420,31 +415,26 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Severity
+                Mức độ cảnh báo
               </span>
-              <select
-                aria-label="Severity"
+              <Select
+                ariaLabel="Severity"
                 value={form.severity}
-                onChange={(event) =>
+                onChange={(value) =>
                   onFormChange((current) => ({
                     ...current,
-                    severity: event.target.value as AlertSeverity,
+                    severity: value as AlertSeverity,
                   }))
                 }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              >
-                {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
-                  (severity) => (
-                    <option key={severity} value={severity}>
-                      {severity}
-                    </option>
-                  ),
+                options={(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
+                  (severity) => ({ value: severity, label: alertSeverityLabel(severity) }),
                 )}
-              </select>
+                className="mt-2"
+              />
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Cooldown minutes
+                Thời gian chờ (phút)
               </span>
               <input
                 aria-label="Cooldown minutes"
@@ -464,9 +454,9 @@ function RuleFormDialog({
 
           <div className="flex flex-wrap gap-3">
             {[
-              ["notifyWeb", "Notify web"],
-              ["notifyMobile", "Notify mobile"],
-              ["enabled", "Enabled"],
+              ["notifyWeb", "Thông báo trên web"],
+              ["notifyMobile", "Thông báo trên mobile"],
+              ["enabled", "Đang bật"],
             ].map(([key, label]) => (
               <label
                 key={key}
@@ -495,7 +485,7 @@ function RuleFormDialog({
           ) : null}
           {requestFailed ? (
             <p role="alert" className="text-sm font-bold text-red-600">
-              Alert rule request failed. Please check the values and try again.
+              Không lưu được quy tắc. Hãy kiểm tra lại thông tin và thử lại.
             </p>
           ) : null}
 
@@ -505,7 +495,7 @@ function RuleFormDialog({
               onClick={onClose}
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
             >
-              Cancel
+              Hủy
             </button>
             <button
               type="submit"
@@ -513,10 +503,10 @@ function RuleFormDialog({
               className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting
-                ? "Saving..."
+                ? "Đang lưu..."
                 : editingRule
-                  ? "Save rule"
-                  : "Create rule"}
+                  ? "Lưu quy tắc"
+                  : "Tạo quy tắc"}
             </button>
           </div>
         </form>
@@ -675,26 +665,26 @@ export function AlertRulesPage() {
   };
 
   const resolveFarmLabel = (farmPlotId: string | null) => {
-    if (!farmPlotId) return "No farm";
-    return farmPlotMap.get(farmPlotId)?.name || `Farm ${compactId(farmPlotId)}`;
+    if (!farmPlotId) return friendlyMissingScope("farm");
+    return farmPlotMap.get(farmPlotId)?.name || "Vườn không còn trong danh sách";
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return "No zone";
+    if (!zoneId) return friendlyMissingScope("zone");
     return (
       ruleZoneMap.get(zoneId)?.zoneName ||
       zoneMap.get(zoneId)?.zoneName ||
-      `Zone ${compactId(zoneId)}`
+      "Khu vực không còn trong danh sách"
     );
   };
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return "No device";
+    if (!deviceId) return friendlyMissingScope("device");
     const device = deviceMap.get(deviceId);
     return (
       device?.deviceName ||
       device?.deviceCode ||
-      `Device ${compactId(deviceId)}`
+      "Thiết bị không còn trong danh sách"
     );
   };
 
@@ -703,11 +693,11 @@ export function AlertRulesPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Alert rules
+            Quy tắc cảnh báo
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Manage collector alert rules with farm, zone, device, and sensor
-            type context.
+            Quản lý điều kiện cảnh báo theo vườn, khu vực, thiết bị và loại
+            cảm biến.
           </p>
         </div>
         <button
@@ -716,78 +706,72 @@ export function AlertRulesPage() {
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
         >
           <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          New rule
+          Tạo quy tắc
         </button>
       </div>
 
       <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
-          <select
-            aria-label="Filter farm plot"
+          <Select
+            ariaLabel="Filter farm plot"
             value={filterFarmPlotId}
-            onChange={(event) => {
-              setFilterFarmPlotId(event.target.value);
+            onChange={(value) => {
+              setFilterFarmPlotId(String(value));
               setFilterZoneId("");
               setFilterDeviceId("");
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: plotsQuery.isLoading ? "Đang tải vườn..." : "Tất cả vườn",
+              },
+              ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+            ]}
             disabled={plotsQuery.isLoading}
-          >
-            <option value="">
-              {plotsQuery.isLoading ? "Loading farms..." : "All farm plots"}
-            </option>
-            {farmPlots.map((plot) => (
-              <option key={plot.id} value={plot.id}>
-                {plot.name}
-              </option>
-            ))}
-          </select>
+          />
 
-          <select
-            aria-label="Filter zone"
+          <Select
+            ariaLabel="Filter zone"
             value={filterZoneId}
-            onChange={(event) => {
-              setFilterZoneId(event.target.value);
+            onChange={(value) => {
+              setFilterZoneId(String(value));
               setFilterDeviceId("");
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: !filterFarmPlotId
+                  ? "Chọn vườn trước"
+                  : zonesQuery.isLoading
+                    ? "Đang tải khu vực..."
+                    : "Tất cả khu vực",
+              },
+              ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+            ]}
             disabled={!filterFarmPlotId || zonesQuery.isLoading}
-          >
-            <option value="">
-              {!filterFarmPlotId
-                ? "Select farm first"
-                : zonesQuery.isLoading
-                  ? "Loading zones..."
-                  : "All zones"}
-            </option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.zoneName}
-              </option>
-            ))}
-          </select>
+          />
 
-          <select
-            aria-label="Filter device"
+          <Select
+            ariaLabel="Filter device"
             value={effectiveFilterDeviceId}
-            onChange={(event) => {
-              setFilterDeviceId(event.target.value);
+            onChange={(value) => {
+              setFilterDeviceId(String(value));
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: devicesQuery.isLoading ? "Đang tải thiết bị..." : "Tất cả thiết bị",
+              },
+              ...devices.map((device) => ({
+                value: device.id,
+                label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+              })),
+            ]}
             disabled={devicesQuery.isLoading}
-          >
-            <option value="">
-              {devicesQuery.isLoading ? "Loading devices..." : "All devices"}
-            </option>
-            {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.deviceName || device.deviceCode || compactId(device.id)}
-              </option>
-            ))}
-          </select>
+          />
 
           <input
             aria-label="Advanced filter sensorTypeId"
@@ -796,38 +780,35 @@ export function AlertRulesPage() {
               setFilterSensorTypeId(event.target.value);
               resetToFirstPage();
             }}
-            placeholder="Advanced sensorTypeId"
+            placeholder="Mã loại cảm biến nâng cao"
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
           />
 
-          <select
-            aria-label="Filter enabled"
+          <Select
+            ariaLabel="Filter enabled"
             value={enabledFilter}
-            onChange={(event) => {
-              setEnabledFilter(event.target.value as EnabledFilter);
+            onChange={(value) => {
+              setEnabledFilter(value as EnabledFilter);
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          >
-            <option value="all">All states</option>
-            <option value="true">Enabled</option>
-            <option value="false">Disabled</option>
-          </select>
-          <select
-            aria-label="Rule page size"
+            options={[
+              { value: "all", label: "Tất cả trạng thái" },
+              { value: "true", label: "Đang bật" },
+              { value: "false", label: "Đang tắt" },
+            ]}
+          />
+          <Select
+            ariaLabel="Rule page size"
             value={size}
-            onChange={(event) => {
-              setSize(Number(event.target.value));
+            onChange={(value) => {
+              setSize(Number(value));
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          >
-            {[10, 20, 50].map((option) => (
-              <option key={option} value={option}>
-                {option} / page
-              </option>
-            ))}
-          </select>
+            options={[10, 20, 50].map((option) => ({
+              value: option,
+              label: `${option} / page`,
+            }))}
+          />
         </div>
       </section>
 
@@ -850,10 +831,10 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Alert rules could not be loaded
+                Không tải được quy tắc cảnh báo
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                The collector returned an error for the current filters.
+                Không thể lấy quy tắc với bộ lọc hiện tại.
               </p>
             </div>
             <button
@@ -870,7 +851,7 @@ export function AlertRulesPage() {
 
       {deleteRule.isError ? (
         <p role="alert" className="text-sm font-bold text-red-600">
-          Alert rule delete failed. Please try again.
+          Không xóa được quy tắc. Hãy thử lại.
         </p>
       ) : null}
 
@@ -879,10 +860,10 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedRules.totalItems)} alert rules
+                {formatNumber(pagedRules.totalItems)} quy tắc
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Page {formatNumber(pagedRules.page + 1)} of{" "}
+                Trang {formatNumber(pagedRules.page + 1)} /{" "}
                 {formatNumber(Math.max(pagedRules.totalPages, 1))}
               </p>
             </div>
@@ -911,10 +892,10 @@ export function AlertRulesPage() {
           {rules.length === 0 ? (
             <div className="p-10 text-center">
               <h3 className="text-lg font-black text-slate-800">
-                No alert rules
+                Không có quy tắc cảnh báo
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                The backend returned an empty rule page for these filters.
+                Không có quy tắc phù hợp với bộ lọc hiện tại.
               </p>
             </div>
           ) : (
@@ -923,22 +904,22 @@ export function AlertRulesPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Rule
+                      Quy tắc
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Threshold
+                      Điều kiện
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Severity
+                      Mức độ
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      State
+                      Trạng thái
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Updated
+                      Cập nhật
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Actions
+                      Thao tác
                     </th>
                   </tr>
                 </thead>
@@ -947,7 +928,7 @@ export function AlertRulesPage() {
                     <tr key={rule.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-4 align-top">
                         <p className="text-sm font-black text-slate-800">
-                          Sensor {compactId(rule.sensorTypeId)}
+                          Loại cảm biến đã cấu hình
                         </p>
                         <p className="mt-1 text-xs font-semibold text-slate-500">
                           {resolveDeviceLabel(rule.deviceId)} -{" "}
@@ -956,18 +937,18 @@ export function AlertRulesPage() {
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
-                        {rule.minThreshold ?? "-"} to {rule.maxThreshold ?? "-"}
+                        {readableRuleThreshold(rule.minThreshold, rule.maxThreshold)}
                         <p className="mt-1 text-xs font-semibold text-slate-400">
-                          Cooldown {formatNumber(rule.cooldownMinutes)} min
+                          Tạm dừng {formatNumber(rule.cooldownMinutes)} phút sau mỗi lần cảnh báo
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top">
                         <span
                           className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                            severityClasses[rule.severity]
+                            alertSeverityClasses[rule.severity]
                           }`}
                         >
-                          {rule.severity}
+                          {alertSeverityLabel(rule.severity)}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top">
@@ -976,7 +957,7 @@ export function AlertRulesPage() {
                             enabledClasses[String(rule.enabled !== false) as "true" | "false"]
                           }`}
                         >
-                          {rule.enabled === false ? "DISABLED" : "ENABLED"}
+                          {rule.enabled === false ? "Đang tắt" : "Đang bật"}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
@@ -997,7 +978,7 @@ export function AlertRulesPage() {
                             onClick={() => void handleToggleEnabled(rule)}
                             className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50"
                           >
-                            {rule.enabled === false ? "Enable" : "Disable"}
+                            {rule.enabled === false ? "Bật" : "Tắt"}
                           </button>
                           <button
                             type="button"
@@ -1039,12 +1020,11 @@ export function AlertRulesPage() {
         >
           <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
             <h3 className="text-xl font-black text-slate-900">
-              Delete alert rule?
+              Xóa quy tắc cảnh báo?
             </h3>
             <p className="mt-2 text-sm font-semibold text-slate-600">
-              This will delete the rule for sensor{" "}
-              {compactId(deleteTarget.sensorTypeId)}. Existing alert events may
-              remain for history.
+              Quy tắc này sẽ bị xóa khỏi danh sách đang áp dụng. Các cảnh báo
+              đã phát sinh trước đó vẫn được giữ lại để xem lịch sử.
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -1052,7 +1032,7 @@ export function AlertRulesPage() {
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                Hủy
               </button>
               <button
                 type="button"
@@ -1060,7 +1040,7 @@ export function AlertRulesPage() {
                 disabled={deleteRule.isPending}
                 className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deleteRule.isPending ? "Deleting..." : "Confirm delete"}
+                {deleteRule.isPending ? "Đang xóa..." : "Xác nhận xóa"}
               </button>
             </div>
           </div>
