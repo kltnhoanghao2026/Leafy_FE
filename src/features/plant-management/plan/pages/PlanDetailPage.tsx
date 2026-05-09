@@ -38,11 +38,12 @@ import {
   usePlant,
   usePlantEventsByPlan,
   useTreatmentPlanDetail,  useToggleTaskMutation,  useUpdatePlantEventMutation,
-  useUpdatePlanStatusMutation,
+  useUpdateApplyStatusMutation,
   useUpdatePlanVisibilityMutation,
 } from "../..";
+import { useUpdatePlanMutation } from "../queries/plan.queries";
 import { useMyProfile } from "../../../settings/queries";
-import type { PlantEventResponse, TreatmentStatus } from "../../shared/types";
+import type { PlantEventResponse, PlanApplyResponse, TreatmentStatus } from "../../shared/types";
 import {
   EVENT_TYPE_LABELS,
   formatDate,
@@ -50,6 +51,7 @@ import {
 } from "../../shared/components/displayUtils";
 import { Select } from "../../../../components/ui/Select";
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
+import { EditPlanDialog } from "../components/EditPlanDialog";
 
 const STATUS_OPTIONS: TreatmentStatus[] = [
   "PENDING",
@@ -94,6 +96,7 @@ export function PlanDetailPage() {
   const navigate = useNavigate();
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
   const [applyPlanOpen, setApplyPlanOpen] = useState(false);
+  const [editPlanOpen, setEditPlanOpen] = useState(false);
   const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
   const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
 
@@ -103,11 +106,24 @@ export function PlanDetailPage() {
   const eventsQuery = usePlantEventsByPlan(sourcePlanId, Boolean(sourcePlanId));
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
+  // Derive latest apply for status/scope display
+  const latestApply: PlanApplyResponse | null = useMemo(() => {
+    const applies = plan?.applies;
+    if (!applies || applies.length === 0) return null;
+    // Return the most recent apply (last in list, or sort by createdAt)
+    return [...applies].sort((a, b) => {
+      const da = a.createdAt ?? "";
+      const db = b.createdAt ?? "";
+      return db.localeCompare(da);
+    })[0];
+  }, [plan?.applies]);
+
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
-  const zonesQuery = useFarmZones(plan?.farmPlotId ?? "", Boolean(plan?.farmPlotId));
-  const plantQuery = usePlant(plan?.plantId ?? "", Boolean(plan?.plantId));
-  const updateStatus = useUpdatePlanStatusMutation();
+  const zonesQuery = useFarmZones(latestApply?.farmPlotId ?? "", Boolean(latestApply?.farmPlotId));
+  const plantQuery = usePlant(latestApply?.plantId ?? "", Boolean(latestApply?.plantId));
+  const updateApplyStatus = useUpdateApplyStatusMutation();
   const updateVisibility = useUpdatePlanVisibilityMutation();
+  const updatePlan = useUpdatePlanMutation();
   const deletePlan = useDeletePlanMutation();
   const applyPlan = useApplyPlanMutation();
   const updateEvent = useUpdatePlantEventMutation();
@@ -187,15 +203,19 @@ export function PlanDetailPage() {
     );
   }
 
-  const plantName = plantQuery.data?.nickName || plantQuery.data?.plantNumber || plan.plantId;
-  const plotName = plan.farmPlotId ? plotById.get(plan.farmPlotId)?.name || plan.farmPlotId : null;
-  const zoneName = plan.farmZoneId
-    ? (zonesQuery.data ?? []).find((z) => z.id === plan.farmZoneId)?.zoneName || plan.farmZoneId
+  const plantName = plantQuery.data?.nickName || plantQuery.data?.plantNumber || latestApply?.plantId || null;
+  const plotName = latestApply?.farmPlotId ? plotById.get(latestApply.farmPlotId)?.name || latestApply.farmPlotId : null;
+  const zoneName = latestApply?.farmZoneId
+    ? (zonesQuery.data ?? []).find((z) => z.id === latestApply.farmZoneId)?.zoneName || latestApply.farmZoneId
     : null;
-  const statusLabel = (TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status;
-  const statusStyle = STATUS_STYLE[plan.status] ?? "bg-slate-50 text-slate-600 border-slate-200";
+  const applyStatus: TreatmentStatus | null = latestApply?.status ?? null;
+  const statusLabel = applyStatus ? ((TREATMENT_STATUS_LABELS as Record<string, string>)[applyStatus] ?? applyStatus) : "Chưa áp dụng";
+  const statusStyle = applyStatus ? (STATUS_STYLE[applyStatus] ?? "bg-slate-50 text-slate-600 border-slate-200") : "bg-slate-50 text-slate-600 border-slate-200";
   const severityStyle = plan.severityLevel ? (SEVERITY_COLOR[plan.severityLevel.toUpperCase()] ?? "text-slate-600 bg-slate-50") : "";
   const confidencePct = plan.confidenceScore != null ? Math.round(plan.confidenceScore * 100) : null;
+
+  // Only the plan owner or creator may edit/delete
+  const isOwner = !!ownerProfileId && (ownerProfileId === plan.ownerId || ownerProfileId === plan.creatorId);
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
@@ -236,54 +256,74 @@ export function PlanDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Select
-            value={plan.status}
-            onChange={(v) => void updateStatus.mutateAsync({ planId: plan.id, status: v as TreatmentStatus })}
-            options={STATUS_OPTIONS.map((s) => ({
-              value: s,
-              label: (TREATMENT_STATUS_LABELS as Record<string, string>)[s] ?? s,
-            }))}
-          />
-          <button
-            type="button"
-            onClick={() => void updateVisibility.mutateAsync({ planId: plan.id })}
-            className={`inline-flex items-center rounded-2xl border px-4 py-2.5 text-sm font-bold ${
-              plan.isPublic
-                ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-            }`}
-            title={plan.isPublic ? "Công khai — bấm để đặt riêng tư" : "Riêng tư — bấm để công khai"}
-          >
-            {plan.isPublic ? (
-              <><Globe className="mr-2 h-4 w-4" />Công khai</>
-            ) : (
-              <><Lock className="mr-2 h-4 w-4" />Riêng tư</>
-            )}
-          </button>
-          {plan.status === "PENDING" && (
+          {isOwner && (
             <button
               type="button"
-              onClick={() => setApplyPlanOpen(true)}
-              className="inline-flex items-center rounded-2xl border border-[#245A34] bg-green-50 px-4 py-2.5 text-sm font-bold text-[#245A34] hover:bg-green-100"
+              onClick={() => setEditPlanOpen(true)}
+              className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
             >
-              <Play className="mr-2 h-4 w-4" />
-              Áp dụng
+              <Edit2 className="mr-2 h-4 w-4" />
+              Sửa
             </button>
           )}
-          {plan.status === "APPLYING" && (
+          {isOwner && latestApply && (
+            <Select
+              value={latestApply.status}
+              onChange={(v) => void updateApplyStatus.mutateAsync({ applyId: latestApply.id, status: v as TreatmentStatus })}
+              options={STATUS_OPTIONS.map((s) => ({
+                value: s,
+                label: (TREATMENT_STATUS_LABELS as Record<string, string>)[s] ?? s,
+              }))}
+            />
+          )}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => void updateVisibility.mutateAsync({ planId: plan.id })}
+              className={`inline-flex items-center rounded-2xl border px-4 py-2.5 text-sm font-bold ${
+                plan.isPublic
+                  ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+              }`}
+              title={plan.isPublic ? "Công khai — bấm để đặt riêng tư" : "Riêng tư — bấm để công khai"}
+            >
+              {plan.isPublic ? (
+                <><Globe className="mr-2 h-4 w-4" />Công khai</>
+              ) : (
+                <><Lock className="mr-2 h-4 w-4" />Riêng tư</>
+              )}
+            </button>
+          )}
+          {!isOwner && plan.isPublic && (
+            <span className="inline-flex items-center gap-1.5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700">
+              <Globe className="h-4 w-4" />
+              Kế hoạch cộng đồng
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setApplyPlanOpen(true)}
+            className="inline-flex items-center rounded-2xl border border-[#245A34] bg-green-50 px-4 py-2.5 text-sm font-bold text-[#245A34] hover:bg-green-100"
+          >
+            <Play className="mr-2 h-4 w-4" />
+            Áp dụng
+          </button>
+          {latestApply?.status === "APPLYING" && (
             <span className="inline-flex items-center rounded-2xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-bold text-purple-700">
               <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-purple-300 border-t-purple-700" />
               Đang xử lý...
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => setDeletePlanOpen(true)}
-            className="inline-flex items-center rounded-2xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100"
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Xóa
-          </button>
+          {isOwner && (
+            <button
+              type="button"
+              onClick={() => setDeletePlanOpen(true)}
+              className="inline-flex items-center rounded-2xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Xóa
+            </button>
+          )}
         </div>
       </header>
 
@@ -348,7 +388,7 @@ export function PlanDetailPage() {
               )}
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Số sự kiện</p>
-                <p className="mt-1 text-sm font-black text-slate-800">{plan.plantEventIds?.length ?? 0}</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{plan.events?.length ?? 0}</p>
               </div>
             </div>
           </section>
@@ -552,7 +592,7 @@ export function PlanDetailPage() {
             </div>
             <Link
               to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
-              state={{ filters: { plantId: plan.plantId, farmPlotId: plan.farmPlotId, farmZoneId: plan.farmZoneId } }}
+              state={{ filters: { plantId: latestApply?.plantId, farmPlotId: latestApply?.farmPlotId, farmZoneId: latestApply?.farmZoneId } }}
               className="shrink-0 inline-flex items-center rounded-2xl border border-[#245A34] px-4 py-2.5 text-sm font-bold text-[#245A34] hover:bg-green-50"
             >
               <CalendarDays className="mr-2 h-4 w-4" />
@@ -639,22 +679,26 @@ export function PlanDetailPage() {
                       ? <><CheckCircle2 className="mr-1.5 w-3 h-3" strokeWidth={2.5} />Hoàn thành</>
                       : <><Circle className="mr-1.5 w-3 h-3" strokeWidth={2} />Đánh dấu</>}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditEventTarget(event)}
-                    className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
-                  >
-                    <Pencil className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
-                    Sửa
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDeleteEventTarget(event)}
-                    className="inline-flex items-center rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
-                    Xóa
-                  </button>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => setEditEventTarget(event)}
+                      className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                    >
+                      <Pencil className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
+                      Sửa
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteEventTarget(event)}
+                      className="inline-flex items-center rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
+                    >
+                      <Trash2 className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
+                      Xóa
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -781,6 +825,18 @@ export function PlanDetailPage() {
             void updateEvent
               .mutateAsync({ eventId: editEventTarget.id, payload })
               .then(() => setEditEventTarget(null))
+          }
+        />
+      )}
+      {editPlanOpen && (
+        <EditPlanDialog
+          plan={plan}
+          isSubmitting={updatePlan.isPending}
+          onClose={() => setEditPlanOpen(false)}
+          onSubmit={(payload) =>
+            void updatePlan
+              .mutateAsync({ planId: plan.id, payload })
+              .then(() => setEditPlanOpen(false))
           }
         />
       )}

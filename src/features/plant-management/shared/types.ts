@@ -1,5 +1,7 @@
 export type PlantStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 export type TrackingGranularity = "NONE" | "ZONE" | "PLANT";
+/** Scope of a PlantEvent or EmbeddedPlanEvent. */
+export type TargetType = "FARM" | "FARM_ZONE" | "PLANT";
 
 export interface EventProgressResponse {
   id: string;
@@ -131,6 +133,8 @@ export interface PlantEventResponse {
   farmPlotId: string | null;
   farmZoneId: string | null;
   eventType: PlantEventType;
+  /** Scope this event targets: FARM (plot-level), FARM_ZONE (zone-level), or PLANT (individual). */
+  targetType: TargetType | null;
   note: string | null;
   description: string | null;
   daysFromNow: number | null;
@@ -143,6 +147,9 @@ export interface PlantEventResponse {
   mrlNote: string | null;
   estimatedCost: string | null;
   sourcePlanId: string | null;
+  planApplyId: string | null;
+  /** ID of the parent PlantEvent in the hierarchy (FARM → FARM_ZONE → PLANT). */
+  parentPlantEventId: string | null;
   completed: boolean;
   trackingGranularity?: TrackingGranularity | null;
   excludedPlantIds?: string[] | null;
@@ -155,6 +162,8 @@ export interface PlantEventResponse {
   createdBy: string | null;
   lastModifiedBy: string | null;
   active: boolean;
+  /** Child events in the hierarchy (FARM → FARM_ZONE → PLANT). Empty array for leaf nodes. */
+  children: PlantEventResponse[];
 }
 
 export interface PlantEventCreateRequest {
@@ -162,6 +171,11 @@ export interface PlantEventCreateRequest {
   farmPlotId?: string;
   farmZoneId?: string;
   eventType: PlantEventType;
+  /**
+   * Explicit scope override. Omit to let the server derive it automatically
+   * from plantId / farmZoneId / farmPlotId.
+   */
+  targetType?: TargetType;
   note: string;
   description?: string;
   daysFromNow?: number;
@@ -174,6 +188,8 @@ export interface PlantEventCreateRequest {
   mrlNote?: string;
   estimatedCost?: string;
   sourcePlanId?: string;
+  planApplyId?: string;
+  parentPlantEventId?: string;
   tasks?: EventTaskRequest[];
   trackingGranularity?: TrackingGranularity;
   excludedPlantIds?: string[];
@@ -183,6 +199,8 @@ export interface PlantEventCreateRequest {
 export interface PlantEventUpdateRequest {
   farmPlotId?: string;
   farmZoneId?: string;
+  /** Optional scope correction. Null leaves existing targetType unchanged. */
+  targetType?: TargetType;
   eventType?: PlantEventType;
   note?: string;
   description?: string;
@@ -196,6 +214,8 @@ export interface PlantEventUpdateRequest {
   mrlNote?: string;
   estimatedCost?: string;
   sourcePlanId?: string;
+  planApplyId?: string;
+  parentPlantEventId?: string;
   completed?: boolean;
   /** Replace the entire task list. Omit to leave tasks unchanged. */
   tasks?: EventTaskRequest[];
@@ -209,6 +229,7 @@ export interface PlantEventsCalendarParams {
   farmZoneId?: string;
   plantId?: string;
   sourcePlanId?: string;
+  planApplyId?: string;
 }
 
 export interface PlanCreateRequest {
@@ -232,6 +253,34 @@ export interface PlanCreateRequest {
   isPublic?: boolean;
 }
 
+export interface PlanUpdateRequest {
+  planName?: string;
+  diseaseName?: string;
+  confidenceScore?: number;
+  severityLevel?: string;
+  urgency?: string;
+  requiredInputs?: string[];
+  safetyWarnings?: string[];
+  successIndicators?: string;
+  estimatedCost?: string;
+}
+
+/** One item in a bulk-apply-custom request — each plan gets its own schedule config */
+export interface PlanApplyItemRequest {
+  planId: string;
+  startDate: string;
+  plantId?: string;
+  farmPlotId?: string;
+  farmZoneId?: string;
+  trackingGranularity?: TrackingGranularity;
+  excludedPlantIds?: string[];
+  excludedFarmZoneIds?: string[];
+}
+
+export interface BulkApplyCustomRequest {
+  items: PlanApplyItemRequest[];
+}
+
 export interface PlanApplyRequest {
   startDate: string;
   plantId?: string;
@@ -242,13 +291,43 @@ export interface PlanApplyRequest {
   excludedFarmZoneIds?: string[];
 }
 
-export interface PlanListParams {
+export interface PlanApplyResponse {
+  id: string;
+  planId: string;
+  appliedById: string | null;
+  plantId: string | null;
+  farmPlotId: string | null;
+  farmZoneId: string | null;
+  startDate: string | null;
+  trackingGranularity: TrackingGranularity | null;
+  plantEventIds: string[] | null;
+  status: TreatmentStatus;
+  createdAt: string | null;
+  lastModifiedAt: string | null;
+}
+
+export interface MyAppliesParams {
   page?: number;
   size?: number;
   sortBy?: string;
   sortDir?: "ASC" | "DESC";
   status?: TreatmentStatus | "";
+}
+
+export interface PlanListParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
   plantId?: string;
+  search?: string;
+}
+
+export interface PublicPlanListParams {
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: "ASC" | "DESC";
   search?: string;
 }
 
@@ -297,6 +376,21 @@ export interface AuthorInfo {
   isVerified: boolean | null;
 }
 
+export interface EmbeddedPlanEventResponse {
+  eventType: PlantEventType;
+  /** Intended scope when the plan is applied. */
+  targetType: TargetType | null;
+  note: string | null;
+  description: string | null;
+  daysFromNow: number | null;
+  durationDays: number | null;
+  phiDays: number | null;
+  ppeRequired: string | null;
+  mrlNote: string | null;
+  estimatedCost: string | null;
+  tasks: EventTaskResponse[] | null;
+}
+
 export interface PlanResponse {
   id: string;
   creatorId: string | null;
@@ -305,9 +399,6 @@ export interface PlanResponse {
   question: string | null;
   planName: string | null;
   source: string | null;
-  plantId: string | null;
-  farmPlotId: string | null;
-  farmZoneId: string | null;
   diseaseName: string | null;
   confidenceScore: number | null;
   severityLevel: string | null;
@@ -316,9 +407,12 @@ export interface PlanResponse {
   safetyWarnings: string[] | null;
   successIndicators: string | null;
   estimatedCost: string | null;
-  plantEventIds: string[] | null;
-  status: TreatmentStatus;
+  /** Embedded template events (blueprint schedule). */
+  events: EmbeddedPlanEventResponse[] | null;
+  /** Number of times this plan has been applied (PlanApply count). */
   applyCount: number | null;
+  /** Inline list of applies — populated in detail views. */
+  applies?: PlanApplyResponse[] | null;
   /** Whether this plan is publicly visible to all authenticated users. */
   isPublic: boolean;
   /** Whether this plan was created by an expert on behalf of a farmer. */
@@ -331,3 +425,37 @@ export interface PlanResponse {
   lastModifiedBy: string | null;
   active: boolean;
 }
+
+// ── Agriculture Dashboard Stats ──────────────────────────────────────────────
+
+export interface RecentEventSummary {
+  id: string;
+  eventType: PlantEventType;
+  note: string | null;
+  targetType: TargetType | null;
+  completed: boolean;
+  calculatedStartDate: string | null;
+  createdAt: string | null;
+}
+
+export interface AgricultureStatsResponse {
+  totalFarmPlots: number;
+  totalFarmZones: number;
+  totalAreaM2: number;
+  totalPlants: number;
+  activePlants: number;
+  inactivePlants: number;
+  archivedPlants: number;
+  todayEvents: number;
+  todayCompletedEvents: number;
+  upcomingEvents7d: number;
+  overdueEvents: number;
+  totalCompletedEvents: number;
+  totalPendingEvents: number;
+  eventsByType: Record<string, number>;
+  totalPlans: number;
+  activePlanApplies: number;
+  completedPlanApplies: number;
+  recentEvents: RecentEventSummary[];
+}
+

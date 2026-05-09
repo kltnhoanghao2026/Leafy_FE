@@ -211,7 +211,7 @@ export function CreatePlanPage() {
 
         {/* Tab panels */}
         <div className="min-h-0 flex-1 overflow-hidden flex flex-col">
-          <div className={`h-full overflow-y-auto ${activeTab === 'info' ? '' : 'hidden'}`}>
+          <div className={`h-full min-h-0 overflow-y-auto ${activeTab === 'info' ? '' : 'hidden'}`}>
             <PlanInfoSection
               form={form}
               updateForm={updateForm}
@@ -219,7 +219,7 @@ export function CreatePlanPage() {
               errors={planErrors}
             />
           </div>
-          <div className={`h-full ${activeTab === 'events' ? 'flex flex-col' : 'hidden'}`}>
+          <div className={`h-full min-h-0 overflow-y-auto ${activeTab === 'events' ? 'flex flex-col' : 'hidden'}`}>
             <EventScheduleSection
               events={events}
               onAdd={addEvent}
@@ -231,7 +231,7 @@ export function CreatePlanPage() {
               onUpdate={updateEventFull}
             />
           </div>
-          <div className={`h-full overflow-y-auto ${activeTab === 'preview' ? '' : 'hidden'}`}>
+          <div className={`h-full min-h-0 overflow-y-auto ${activeTab === 'preview' ? '' : 'hidden'}`}>
             <PlanPreviewCalendar draftEvents={events} />
           </div>
         </div>

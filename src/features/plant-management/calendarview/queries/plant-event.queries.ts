@@ -57,6 +57,11 @@ export const useUpdatePlantEventMutation = () => {
         queryClient.invalidateQueries({
           queryKey: [...plantManagementKeys.plantEvent(event.id), "progress"],
         }),
+        // Invalidate ALL plantEvent detail queries so the full ancestor chain refreshes
+        // (FARM → FARM_ZONE → PLANT hierarchy — toggling any level needs all ancestors to update)
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "detail"],
+        }),
         event.plantId
           ? queryClient.invalidateQueries({
               queryKey: plantManagementKeys.plantEvents(event.plantId),

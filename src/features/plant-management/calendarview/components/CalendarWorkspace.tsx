@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, CalendarRange, Clock, GripVertical } from 'lucide-react';
 import { CalendarViewPanel } from './CalendarViewPanel';
 import { EventListPanel } from './EventListPanel';
+import { useTranslation } from '../../../../i18n';
 import {
   addLocalDays,
   startOfLocalWeek,
@@ -17,12 +18,6 @@ import type {
   ViewType,
 } from './CalendarViewPanel';
 import type { PlantEventResponse } from '../../shared/types';
-
-const VIEW_TABS: { id: ViewType; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'month',    label: 'Tháng',   Icon: CalendarDays },
-  { id: 'week',     label: 'Tuần',    Icon: CalendarRange },
-  { id: 'timeline', label: 'Dòng TG', Icon: Clock },
-];
 
 function getMonthBounds(d: Date) {
   const y = d.getFullYear();
@@ -88,6 +83,12 @@ export function CalendarWorkspace({
   initialSelectedDate,
   className = '',
 }: CalendarWorkspaceProps): React.ReactElement {
+  const { t } = useTranslation();
+  const VIEW_TABS: { id: ViewType; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'month',    label: t('plantManagement.calendar.viewMonth'),    Icon: CalendarDays },
+    { id: 'week',     label: t('plantManagement.calendar.viewWeek'),     Icon: CalendarRange },
+    { id: 'timeline', label: t('plantManagement.calendar.viewTimeline'), Icon: Clock },
+  ];
   const [activeView, setActiveView] = useState<ViewType>('month');
   const [currentMonth, setCurrentMonth] = useState(
     new Date(todayDate.getFullYear(), todayDate.getMonth(), 1),
@@ -102,6 +103,7 @@ export function CalendarWorkspace({
     initialSelectedDate ?? today,
   );
   const [hoveredEvent, setHoveredEvent] = useState<PlantEventResponse | null>(null);
+
 
   // ── Splitter ────────────────────────────────────────────────────────────────
   const [leftPct, setLeftPct] = useState(50);

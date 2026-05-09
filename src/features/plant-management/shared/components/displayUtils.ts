@@ -1,8 +1,16 @@
 import type {
   PlantEventType,
   PlantStatus,
+  TargetType,
   TreatmentStatus,
 } from '../../shared/types';
+
+import {
+  Droplets, Beaker, Trash2, Scissors, Search, Bug, Syringe,
+  ShieldAlert, HeartPulse, Activity, PackageOpen, Wheat,
+} from 'lucide-react';
+
+import type { ComponentType } from 'react';
 
 // ── Category groupings (mirrors Leafy_APP plant-event.types.ts) ───────────────
 
@@ -67,6 +75,21 @@ export const EVENT_TYPE_LABELS: Record<PlantEventType, string> = {
   HARVEST: "Thu hoạch",
 };
 
+export const EVENT_TYPE_ICONS: Record<PlantEventType, ComponentType<{ className?: string; style?: Record<string, string | number> }>> = {
+  IRRIGATION: Droplets,
+  NUTRITION: Beaker,
+  WEED_CONTROL: Trash2,
+  PRUNING: Scissors,
+  SCOUTING: Search,
+  DISEASE_DETECTED: Bug,
+  TREATMENT_APPLICATION: Syringe,
+  QUARANTINE: ShieldAlert,
+  HEALTH_RECOVERY: HeartPulse,
+  PHENOLOGY: Activity,
+  REPOT: PackageOpen,
+  HARVEST: Wheat,
+};
+
 export const formatDate = (value?: string | null) => {
   if (!value) {
     return "Chưa cập nhật";
@@ -121,3 +144,20 @@ export const optionalNumber = (value: string) => {
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
 };
+
+// ── TargetType display helpers ────────────────────────────────────────────────
+
+export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
+  FARM: 'Toàn nông trại',
+  FARM_ZONE: 'Vùng canh tác',
+  PLANT: 'Cây cá nhân',
+};
+
+export const TARGET_TYPE_ICONS: Record<TargetType, string> = {
+  FARM: '🌾',
+  FARM_ZONE: '📍',
+  PLANT: '🌱',
+};
+
+export const getTargetTypeLabel = (type: TargetType | null | undefined): string =>
+  type ? (TARGET_TYPE_LABELS[type] ?? type) : '—';

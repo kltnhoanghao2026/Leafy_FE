@@ -100,8 +100,9 @@ export function CommunityPlanViewPage() {
     );
   }
 
-  const statusLabel = (TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status;
-  const statusStyle = STATUS_STYLE[plan.status] ?? "bg-slate-50 text-slate-600 border-slate-200";
+  const applyCountNum = plan.applyCount ?? 0;
+  const statusLabel = applyCountNum > 0 ? `${applyCountNum} áp dụng` : "Chưa áp dụng";
+  const statusStyle = applyCountNum > 0 ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-50 text-slate-600 border-slate-200";
   const severityStyle = plan.severityLevel
     ? (SEVERITY_COLOR[plan.severityLevel.toUpperCase()] ?? "text-slate-600 bg-slate-50")
     : "";
@@ -222,7 +223,7 @@ export function CommunityPlanViewPage() {
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Số sự kiện</p>
-                <p className="mt-1 text-sm font-black text-slate-800">{plan.plantEventIds?.length ?? events.length}</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{plan.events?.length ?? events.length}</p>
               </div>
             </div>
           </section>
@@ -280,13 +281,13 @@ export function CommunityPlanViewPage() {
         <div className="flex flex-col gap-6">
           {/* Scope */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4">Phạm vi gốc</h2>
+            <h2 className="text-base font-black text-slate-900 mb-4">Thông tin áp dụng</h2>
             <div className="space-y-3">
               <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
                 <Sprout className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cây trồng</p>
-                  <p className="text-sm font-bold text-slate-800">{plan.plantId || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Đã áp dụng</p>
+                  <p className="text-sm font-bold text-slate-800">{applyCountNum} lần</p>
                 </div>
               </div>
             </div>

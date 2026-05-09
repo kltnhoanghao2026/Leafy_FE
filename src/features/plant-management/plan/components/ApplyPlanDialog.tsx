@@ -35,9 +35,9 @@ export function ApplyPlanDialog({
   const today = new Date().toISOString().slice(0, 10);
 
   const [startDate, setStartDate] = useState<string>("");
-  const [farmPlotId, setFarmPlotId] = useState<string>(plan.farmPlotId ?? "");
-  const [farmZoneId, setFarmZoneId] = useState<string>(plan.farmZoneId ?? "");
-  const [plantId, setPlantId] = useState<string>(plan.plantId ?? "");
+  const [farmPlotId, setFarmPlotId] = useState<string>("");
+  const [farmZoneId, setFarmZoneId] = useState<string>("");
+  const [plantId, setPlantId] = useState<string>("");
   const [excludedPlantIds, setExcludedPlantIds] = useState<string[]>([]);
   const [excludedFarmZoneIds, setExcludedFarmZoneIds] = useState<string[]>([]);
   const [excludeOpen, setExcludeOpen] = useState(false);

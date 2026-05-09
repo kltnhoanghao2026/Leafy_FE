@@ -2,7 +2,9 @@ import { Check, Eye, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { FarmPlotResponse } from '../../../farm-management/types';
 import type { PlantResponse, PlantStatus, SpeciesResponse } from '../../shared/types';
-import { formatDate, PLANT_STATUS_LABELS } from '../../shared/components/displayUtils';
+import { formatDate } from '../../shared/components/displayUtils';
+import { usePlantManagementLabels } from '../../shared/components/useDisplayLabels';
+import { useTranslation } from '../../../../i18n';
 
 const STATUS_BADGE: Record<PlantStatus, string> = {
   ACTIVE: "border-emerald-100 bg-emerald-50 text-emerald-700",
@@ -62,8 +64,10 @@ export function PlantCard({
   selected,
   onToggleSelect,
 }: PlantCardProps) {
-  const displayName = plant.nickName || plant.plantNumber || "Cây trồng";
-  const speciesName = species?.commonName || species?.cultivarName || "Chưa rõ giống cây";
+  const { t } = useTranslation();
+  const { plantStatusLabel } = usePlantManagementLabels();
+  const displayName = plant.nickName || plant.plantNumber || t('plantManagement.plant.unknownPlant');
+  const speciesName = species?.commonName || species?.cultivarName || t('plantManagement.plant.unknownSpecies');
   const badgeClass = STATUS_BADGE[plant.plantStatus] ?? STATUS_BADGE.ACTIVE;
 
   if (variant === 'list') {
@@ -85,7 +89,7 @@ export function PlantCard({
         {/* Name / code */}
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-black uppercase tracking-widest text-[#245A34]">
-            {plant.plantNumber || plant.tagCode || 'Chưa có mã'}
+            {plant.plantNumber || plant.tagCode || t('plantManagement.plant.noCode')}
           </p>
           <p className="truncate text-sm font-black text-slate-900">{displayName}</p>
           <p className="truncate text-xs font-semibold text-slate-500">{speciesName}</p>
@@ -99,7 +103,7 @@ export function PlantCard({
 
         {/* Status badge */}
         <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-black ${badgeClass}`}>
-          {PLANT_STATUS_LABELS[plant.plantStatus]}
+          {plantStatusLabel(plant.plantStatus)}
         </span>
 
         {/* Actions */}
@@ -114,7 +118,7 @@ export function PlantCard({
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Eye className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.5} />
-                    Chi tiết
+                    {t('plantManagement.common.viewDetail')}
                   </Link>
                 ) : onClickDetail ? (
                   <button
@@ -123,7 +127,7 @@ export function PlantCard({
                     className="inline-flex items-center rounded-xl border border-[#245A34] bg-white px-3 py-1.5 text-xs font-bold text-[#245A34] hover:bg-green-50"
                   >
                     <Eye className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.5} />
-                    Chi tiết
+                    {t('plantManagement.common.viewDetail')}
                   </button>
                 ) : null}
                 {onEdit && (
@@ -174,7 +178,7 @@ export function PlantCard({
           )}
           <div className="min-w-0 flex-1">
             <p className="text-xs font-black uppercase tracking-[0.2em] text-[#245A34]">
-              {plant.plantNumber || plant.tagCode || "Chưa có mã"}
+              {plant.plantNumber || plant.tagCode || t('plantManagement.plant.noCode')}
             </p>
             <h3 className="mt-2 text-xl font-black text-slate-900">
               {displayName}
@@ -185,17 +189,17 @@ export function PlantCard({
           </div>
         </div>
         <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-black ${badgeClass}`}>
-          {PLANT_STATUS_LABELS[plant.plantStatus]}
+          {plantStatusLabel(plant.plantStatus)}
         </span>
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Vườn</p>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plant.farm')}</p>
           <p className="mt-2 text-sm font-bold text-slate-800">{farmPlot?.name || plant.farmPlotId}</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
-          <p className="text-xs font-black uppercase tracking-wide text-slate-400">Ngày trồng</p>
+          <p className="text-xs font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plant.plantingDate')}</p>
           <p className="mt-2 text-sm font-bold text-slate-800">{formatDate(plant.plantingDate)}</p>
         </div>
       </div>
@@ -211,7 +215,7 @@ export function PlantCard({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Eye className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                  Xem chi tiết
+                  {t('plantManagement.common.viewDetail')}
                 </Link>
               ) : onClickDetail ? (
                 <button
@@ -220,7 +224,7 @@ export function PlantCard({
                   className="inline-flex items-center rounded-2xl border border-[#245A34] bg-white px-4 py-2.5 text-sm font-bold text-[#245A34] hover:bg-green-50"
                 >
                   <Eye className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                  Xem chi tiết
+                  {t('plantManagement.common.viewDetail')}
                 </button>
               ) : null}
               {onEdit && (
@@ -230,7 +234,7 @@ export function PlantCard({
                   className="inline-flex items-center rounded-2xl bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100"
                 >
                   <Pencil className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                  Chỉnh sửa
+                  {t('plantManagement.common.edit')}
                 </button>
               )}
               {onDelete && (
@@ -240,7 +244,7 @@ export function PlantCard({
                   className="inline-flex items-center rounded-2xl bg-red-50 px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-100"
                 >
                   <Trash2 className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                  Xóa
+                  {t('plantManagement.common.delete')}
                 </button>
               )}
             </>

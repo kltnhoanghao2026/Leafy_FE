@@ -303,11 +303,15 @@ export const API_ENDPOINTS = {
     LIST: "/plans",
     CREATE: "/plans",
     ITEM: (planId: string) => `/plans/${planId}`,
-    UPDATE_STATUS: (planId: string) => `/plans/${planId}/status`,
     APPLY: (planId: string) => `/plans/${planId}/apply`,
-    BULK_STATUS: "/plans/bulk/status",
+    APPLIES: (planId: string) => `/plans/${planId}/applies`,
+    APPLY_STATUS: (applyId: string) => `/plans/applies/${applyId}/status`,
+    BULK_APPLY_STATUS: "/plans/applies/bulk/status",
     BULK_DELETE: "/plans/bulk",
+    BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",
     MY: "/plans/me",
+    MY_APPLIES: "/plans/applies/me",
+    PUBLIC: "/plans/public",
     BY_PLANT: (plantId: string) => `/plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
       `/plans/farm-plot/${farmPlotId}`,
@@ -315,9 +319,14 @@ export const API_ENDPOINTS = {
       `/plans/farm-zone/${farmZoneId}`,
   },
 
+  STATS: {
+    AGRICULTURE: "/stats/agriculture",
+  },
+
   SEARCH: {
     POSTS: "/search/posts/search",
     PROFILES: "/search/profiles/search",
+    PLANS: "/search/plans/search",
     UNIFIED: "/search/search",
   },
 
@@ -427,6 +436,9 @@ export const API_ENDPOINTS = {
       // Post sync — search-service /sync/posts/* (via /api/search/sync/**)
       POSTS_REINDEX: "/search/sync/posts",
       POSTS_RESET: "/search/sync/posts/reset",
+      // Plan sync — search-service /sync/plans/* (via /api/search/sync/**)
+      PLANS_REINDEX: "/search/sync/plans",
+      PLANS_RESET: "/search/sync/plans/reset",
       // Failed events DLQ — search-service /failed-events/* (via /api/search/failed-events/**)
       FAILED_EVENTS_LIST: "/search/failed-events",
       FAILED_EVENTS_COUNT: "/search/failed-events/count",

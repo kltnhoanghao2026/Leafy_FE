@@ -26,7 +26,7 @@ import {
   Leaf,
 } from 'lucide-react';
 import type { PlantEventResponse, PlantEventType } from '../../shared/types';
-import { EVENT_TYPE_LABELS } from '../../shared/components/displayUtils';
+import { EVENT_TYPE_LABELS, TARGET_TYPE_LABELS, TARGET_TYPE_ICONS } from '../../shared/components/displayUtils';
 import { addLocalDays } from '../../shared/utils/dateOnly';
 
 // ── Accent style type (shared with GroupedEventList/CategorySection) ──────────
@@ -193,14 +193,25 @@ export function EventRow({ event, accent, isLast, onEdit, onDelete, onEventHover
               </div>
             );
           })()}
-          {/* Broad-scope progress inline (ZONE / PLANT tracking) */}
-          {event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
-           event.progressTotal != null && event.progressTotal > 0 && (() => {
-            const total = event.progressTotal!;
-            const done  = event.progressCompleted ?? 0;
+          {/* Broad-scope progress inline (children or ZONE/PLANT tracking) */}
+          {(() => {
+            const directChildren = event.children ?? [];
+            const hasChildren = directChildren.length > 0;
+            const hasLegacyProgress = event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
+              event.progressTotal != null && event.progressTotal > 0;
+
+            if (!hasChildren && !hasLegacyProgress) return null;
+
+            const total = hasChildren ? directChildren.length : event.progressTotal!;
+            const done = hasChildren
+              ? directChildren.filter(c => c.completed).length
+              : (event.progressCompleted ?? 0);
             const allDone = done === total;
             const pct = Math.round((done / total) * 100);
-            const isZone = event.trackingGranularity === 'ZONE';
+
+            const isZone = hasChildren
+              ? event.targetType === 'FARM'
+              : event.trackingGranularity === 'ZONE';
             const TrackIcon = isZone ? MapPin : Leaf;
             const trackLabel = isZone ? 'vùng' : 'cây';
             return (
@@ -320,41 +331,25 @@ export function EventRow({ event, accent, isLast, onEdit, onDelete, onEventHover
                     </div>
                   </div>
                 )}
-                {event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
-                 event.progressTotal != null && event.progressTotal > 0 && (() => {
-                  const total = event.progressTotal!;
-                  const done  = event.progressCompleted ?? 0;
-                  const allDone = done === total;
-                  const isZone = event.trackingGranularity === 'ZONE';
-                  const TrackIcon = isZone ? MapPin : Leaf;
-                  return (
-                    <div className="col-span-2 flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
-                      <TrackIcon className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${allDone ? 'text-emerald-500' : 'text-slate-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-slate-400">
-                          {isZone ? 'Tiến độ theo vùng' : 'Tiến độ theo cây'}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                              className="h-1.5 rounded-full transition-all duration-500"
-                              style={{
-                                width: `${Math.round((done / total) * 100)}%`,
-                                backgroundColor: allDone ? '#10B981' : accent.dotColor,
-                              }}
-                            />
-                          </div>
-                          <span
-                            className="shrink-0 text-xs font-bold tabular-nums"
-                            style={{ color: allDone ? '#10B981' : accent.dotColor }}
-                          >
-                            {done}/{total}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                 })()}
+              </div>
+            )}
+
+            {/* Scope badge — shown whenever targetType is set */}
+            {event.targetType && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm" aria-hidden>
+                  {TARGET_TYPE_ICONS[event.targetType]}
+                </span>
+                <span
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide"
+                  style={{
+                    borderColor: `${accent.dotColor}40`,
+                    color: accent.dotColor,
+                    backgroundColor: `${accent.dotColor}10`,
+                  }}
+                >
+                  {TARGET_TYPE_LABELS[event.targetType] ?? event.targetType}
+                </span>
               </div>
             )}
 
@@ -430,7 +425,7 @@ export function EventRow({ event, accent, isLast, onEdit, onDelete, onEventHover
                     Xóa
                   </button>
                 )}
-                {onSelectEvent && (event.farmPlotId || event.farmZoneId) && (
+                {onSelectEvent && (event.targetType === 'FARM' || event.targetType === 'FARM_ZONE' || event.farmPlotId || event.farmZoneId) && (
                   <button
                     type="button"
                     onClick={() => onSelectEvent(event)}

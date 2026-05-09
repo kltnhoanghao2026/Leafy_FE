@@ -3,6 +3,7 @@ import { MonthCalendarView } from './MonthCalendarView';
 import { WeekStripView } from './WeekStripView';
 import { TimelineView } from './TimelineView';
 import type { PlantEventResponse } from '../../shared/types';
+import { useTranslation } from '../../../../i18n';
 
 export type ViewType = 'month' | 'week' | 'timeline';
 
@@ -43,10 +44,11 @@ export function CalendarViewPanel({
   tlMonth, onPrevTlMonth, onNextTlMonth,
   selectedDate, onSelectDate, hoveredDateRange,
 }: CalendarViewPanelProps): React.ReactElement {
+  const { t } = useTranslation();
   if (calendarQuery.isLoading) {
     return (
       <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500">
-        Đang tải lịch chăm sóc...
+        {t('plantManagement.calendar.loadingCalendar')}
       </div>
     );
   }
@@ -54,13 +56,13 @@ export function CalendarViewPanel({
   if (calendarQuery.isError) {
     return (
       <div className="rounded-2xl border border-red-100 bg-red-50 p-5">
-        <p className="text-sm font-bold text-red-700">Không tải được lịch chăm sóc.</p>
+        <p className="text-sm font-bold text-red-700">{t('plantManagement.calendar.loadErrorShort')}.</p>
         <button
           type="button"
           onClick={() => void calendarQuery.refetch()}
           className="mt-3 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white"
         >
-          <RefreshCw className="h-4 w-4" /> Tải lại
+          <RefreshCw className="h-4 w-4" /> {t('plantManagement.common.retry')}
         </button>
       </div>
     );

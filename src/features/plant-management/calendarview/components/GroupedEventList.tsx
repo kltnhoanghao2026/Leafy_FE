@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useTranslation } from '../../../../i18n';
 import type { PlantEventResponse } from '../../shared/types';
 import {
   type EventCategory,
@@ -57,6 +58,38 @@ const CATEGORY_ACCENT: Record<EventCategory, EventAccentStyle> = {
 
 const CATEGORY_ORDER: EventCategory[] = ['ROUTINE_CARE', 'HEALTH_MEDICAL', 'GROWTH_LIFECYCLE'];
 
+/** Recursively count all events (including nested children). */
+function countAllEvents(events: PlantEventResponse[]): number {
+  let count = 0;
+  for (const e of events) {
+    count += 1;
+    if (e.children && e.children.length > 0) {
+      count += countAllEvents(e.children);
+    }
+  }
+  return count;
+}
+
+/** Check if a single event is considered done. */
+function isEventDone(e: PlantEventResponse): boolean {
+  if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
+    return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
+  }
+  return e.completed;
+}
+
+/** Recursively count done events (including nested children). */
+function countDoneEvents(events: PlantEventResponse[]): number {
+  let count = 0;
+  for (const e of events) {
+    if (isEventDone(e)) count += 1;
+    if (e.children && e.children.length > 0) {
+      count += countDoneEvents(e.children);
+    }
+  }
+  return count;
+}
+
 
 // ── CategorySection ───────────────────────────────────────────────────────────
 interface CategorySectionProps {
@@ -74,15 +107,10 @@ function CategorySection({ category, events, onEdit, onDelete, onEventHover, onT
   const [collapsed, setCollapsed] = useState(false);
   const accent = CATEGORY_ACCENT[category];
 
-  // Compute done count: for broad-scope events use progressCompleted === progressTotal,
-  // for plain events use the event-level completed flag.
-  const doneCount = events.filter(e => {
-    if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
-      return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
-    }
-    return e.completed;
-  }).length;
-  const allDone = doneCount === events.length && events.length > 0;
+  // Compute done count recursively (including nested children).
+  const totalCount = countAllEvents(events);
+  const doneCount = countDoneEvents(events);
+  const allDone = doneCount === totalCount && totalCount > 0;
 
   return (
     <div
@@ -103,7 +131,7 @@ function CategorySection({ category, events, onEdit, onDelete, onEventHover, onT
             allDone ? 'bg-emerald-100 text-emerald-700' : `${accent.countBg} ${accent.countText}`
           }`}
         >
-          {doneCount}/{events.length}
+          {doneCount}/{totalCount}
         </span>
         {collapsed
           ? <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
@@ -146,9 +174,10 @@ export interface GroupedEventListProps {
   onSelectEvent?: (event: PlantEventResponse) => void;
   emptyNode?: React.ReactNode;
   headerAction?: React.ReactNode;
+  hideHeader?: boolean;
 }
 
-export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction }: GroupedEventListProps) {
+export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction, hideHeader }: GroupedEventListProps) {
   const grouped: Record<EventCategory, PlantEventResponse[]> = {
     ROUTINE_CARE: [],
     HEALTH_MEDICAL: [],
@@ -163,31 +192,35 @@ export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onTog
   const hasAny = CATEGORY_ORDER.some((cat) => grouped[cat].length > 0);
   if (!hasAny) return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-        <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
-        <div className="flex items-center gap-2">
-          {headerAction}
-          <span className="text-xs text-slate-400">0 sự kiện</span>
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
+          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <div className="flex items-center gap-2">
+            {headerAction}
+            <span className="text-xs text-slate-400">0 sự kiện</span>
+          </div>
         </div>
-      </div>
+      )}
       {emptyNode ? <>{emptyNode}</> : null}
     </div>
   );
 
   const filledCategories = CATEGORY_ORDER.filter(cat => grouped[cat].length > 0);
 
-  const totalCount = filledCategories.reduce((sum, cat) => sum + grouped[cat].length, 0);
+  const totalCount = filledCategories.reduce((sum, cat) => sum + countAllEvents(grouped[cat]), 0);
 
   return (
     <div className="flex flex-col gap-3">
       {/* List header */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-        <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
-        <div className="flex items-center gap-2">
-          {headerAction}
-          <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
+          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <div className="flex items-center gap-2">
+            {headerAction}
+            <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {filledCategories.map((cat) => (
         <CategorySection

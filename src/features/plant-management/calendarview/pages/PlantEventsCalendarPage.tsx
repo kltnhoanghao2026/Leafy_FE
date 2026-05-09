@@ -8,13 +8,13 @@ import {
   useToggleTaskMutation,
   useUpdatePlantEventMutation,
 } from '../..';
-import { useMyPlans } from '../../plan/queries/plan.queries';
+import { useMyApplies } from '../../plan/queries/plan.queries';
 import { PlantEventEditDialog } from '../../calendarview/components/PlantEventEditDialog';
 import { CalendarWorkspace, type CalendarDateRange } from '../../calendarview/components/CalendarWorkspace';
 import { PlantEventProgressModal } from '../../overview/components/PlantEventProgressModal';
 import { Select } from '../../../../components/ui/Select';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
-import type { PlantEventResponse } from '../../shared/types';
+import type { PlantEventResponse, PlanApplyResponse } from '../../shared/types';
 
 const todayDate = new Date();
 
@@ -27,16 +27,39 @@ function getInitialMonthBounds() {
   };
 }
 
+/** Build a human-readable label for a PlanApply */
+function applyLabel(apply: PlanApplyResponse): string {
+  const shortId = apply.planId.slice(-6);
+  const scope = apply.plantId
+    ? 'Cây'
+    : apply.farmZoneId
+    ? 'Khu vực'
+    : apply.farmPlotId
+    ? 'Vườn'
+    : 'Toàn bộ';
+  const statusMap: Record<string, string> = {
+    PENDING: 'Chờ xử lý',
+    APPLYING: 'Đang xử lý',
+    ACTIVE: 'Đang áp dụng',
+    COMPLETED: 'Hoàn thành',
+    CANCELLED: 'Đã hủy',
+  };
+  const startLabel = apply.startDate ? ` · ${apply.startDate}` : '';
+  return `Kế hoạch ...${shortId} · ${scope}${startLabel} · ${statusMap[apply.status] ?? apply.status}`;
+}
+
 // ── PlantEventsCalendarPage ───────────────────────────────────────────────────
 
 export function PlantEventsCalendarPage() {
   const location = useLocation();
-  const routeFilters = (location.state as { filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string } } | null)?.filters;
+  const routeFilters = (location.state as {
+    filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string };
+  } | null)?.filters;
 
-  const [farmPlotId,   setFarmPlotId]   = useState(routeFilters?.farmPlotId ?? '');
-  const [farmZoneId,   setFarmZoneId]   = useState(routeFilters?.farmZoneId ?? '');
-  const [plantId,      setPlantId]      = useState(routeFilters?.plantId    ?? '');
-  const [sourcePlanId, setSourcePlanId] = useState('');
+  const [farmPlotId,      setFarmPlotId]      = useState(routeFilters?.farmPlotId ?? '');
+  const [farmZoneId,      setFarmZoneId]      = useState(routeFilters?.farmZoneId ?? '');
+  const [plantId,         setPlantId]         = useState(routeFilters?.plantId    ?? '');
+  const [selectedApplyId, setSelectedApplyId] = useState('');
 
   const initialBounds = useMemo(getInitialMonthBounds, []);
   const [dateRange, setDateRange] = useState<CalendarDateRange>({
@@ -50,20 +73,50 @@ export function PlantEventsCalendarPage() {
   const plotsQuery     = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const zonesQuery     = useFarmZones(farmPlotId, !!farmPlotId);
   const plantsQuery    = usePlants();
-  const plansQuery     = useMyPlans({ status: 'ACTIVE' });
-  const updateEvent    = useUpdatePlantEventMutation();
-  const toggleTask     = useToggleTaskMutation();
+
+  // Fetch ALL applies (active + completed etc.) so users can view historical schedules too
+  const appliesQuery = useMyApplies({ size: 100 });
+  const applies      = useMemo(() => appliesQuery.data?.content ?? [], [appliesQuery.data]);
+
+  const updateEvent = useUpdatePlantEventMutation();
+  const toggleTask  = useToggleTaskMutation();
 
   const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
   const [selectedEvent,   setSelectedEvent]   = useState<PlantEventResponse | null>(null);
 
+  /**
+   * When the user selects a PlanApply from the dropdown:
+   * - store the apply id directly as planApplyId for the calendar query
+   * - auto-fill scope filters (farmPlot, farmZone, plant) from the apply's own scope
+   */
+  const handleApplyChange = (applyId: string) => {
+    setSelectedApplyId(applyId);
+    if (!applyId) return;
+    const apply = applies.find(a => a.id === applyId);
+    if (!apply) return;
+
+    // Auto-fill the narrowest scope the apply has
+    if (apply.plantId) {
+      setPlantId(apply.plantId);
+    }
+    if (apply.farmZoneId) {
+      setFarmZoneId(apply.farmZoneId);
+    }
+    if (apply.farmPlotId) {
+      setFarmPlotId(apply.farmPlotId);
+    }
+  };
+
+  /** Clear the apply-driven filters when the user manually changes a scope filter */
+  const clearApply = () => setSelectedApplyId('');
+
   const calendarQuery = usePlantEventsCalendar({
     startDate:    dateRange.startDate,
     endDate:      dateRange.endDate,
-    farmPlotId:   farmPlotId    || undefined,
-    farmZoneId:   farmZoneId    || undefined,
-    plantId:      plantId       || undefined,
-    sourcePlanId: sourcePlanId  || undefined,
+    farmPlotId:   farmPlotId        || undefined,
+    farmZoneId:   farmZoneId        || undefined,
+    plantId:      plantId           || undefined,
+    planApplyId:  selectedApplyId   || undefined,
   });
 
   const events = useMemo(() => calendarQuery.data ?? [], [calendarQuery.data]);
@@ -78,12 +131,13 @@ export function PlantEventsCalendarPage() {
 
       {/* Filter bar */}
       <div className="shrink-0 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Vườn */}
         <div>
           <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Vườn</span>
           <Select
             className="mt-1"
             value={farmPlotId}
-            onChange={v => { setFarmPlotId(String(v)); setFarmZoneId(''); }}
+            onChange={v => { setFarmPlotId(String(v)); setFarmZoneId(''); clearApply(); }}
             placeholder="Tất cả vườn"
             options={[
               { value: '', label: 'Tất cả vườn' },
@@ -91,12 +145,14 @@ export function PlantEventsCalendarPage() {
             ]}
           />
         </div>
+
+        {/* Khu vực */}
         <div>
           <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Khu vực</span>
           <Select
             className="mt-1"
             value={farmZoneId}
-            onChange={v => setFarmZoneId(String(v))}
+            onChange={v => { setFarmZoneId(String(v)); clearApply(); }}
             disabled={!farmPlotId}
             placeholder={farmPlotId ? 'Tất cả khu vực' : 'Chọn vườn trước'}
             options={[
@@ -105,12 +161,14 @@ export function PlantEventsCalendarPage() {
             ]}
           />
         </div>
+
+        {/* Cây */}
         <div>
           <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cây</span>
           <Select
             className="mt-1"
             value={plantId}
-            onChange={v => setPlantId(String(v))}
+            onChange={v => { setPlantId(String(v)); clearApply(); }}
             placeholder="Tất cả cây"
             options={[
               { value: '', label: 'Tất cả cây' },
@@ -121,18 +179,22 @@ export function PlantEventsCalendarPage() {
             ]}
           />
         </div>
+
+        {/* Áp dụng kế hoạch (PlanApply) */}
         <div>
-          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Kế hoạch</span>
+          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+            Áp dụng kế hoạch
+          </span>
           <Select
             className="mt-1"
-            value={sourcePlanId}
-            onChange={v => setSourcePlanId(String(v))}
-            placeholder="Tất cả kế hoạch"
+            value={selectedApplyId}
+            onChange={v => handleApplyChange(String(v))}
+            placeholder={appliesQuery.isLoading ? 'Đang tải...' : 'Tất cả áp dụng'}
             options={[
-              { value: '', label: 'Tất cả kế hoạch' },
-              ...(plansQuery.data?.content ?? []).map(p => ({
-                value: p.id,
-                label: p.planName || p.diseaseName || p.id,
+              { value: '', label: 'Tất cả áp dụng' },
+              ...applies.map(a => ({
+                value: a.id,
+                label: applyLabel(a),
               })),
             ]}
           />

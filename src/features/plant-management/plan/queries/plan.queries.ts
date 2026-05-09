@@ -1,9 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { treatmentPlanApi } from "../api/plan.api";
 import type {
+  MyAppliesParams,
   PlanApplyRequest,
   PlanCreateRequest,
+  PlanUpdateRequest,
+  BulkApplyCustomRequest,
   PlanListParams,
+  PublicPlanListParams,
   BulkPlanStatusUpdateRequest,
   BulkPlanDeleteRequest,
   TreatmentStatus,
@@ -14,6 +18,18 @@ export const useMyPlans = (params: PlanListParams = {}) =>
   useQuery({
     queryKey: plantManagementKeys.myPlans(params),
     queryFn: () => treatmentPlanApi.getMyTreatmentPlans(params),
+  });
+
+export const usePublicPlans = (params: PublicPlanListParams = {}) =>
+  useQuery({
+    queryKey: plantManagementKeys.publicPlans(params),
+    queryFn: () => treatmentPlanApi.getPublicPlans(params),
+  });
+
+export const useMyApplies = (params: MyAppliesParams = {}) =>
+  useQuery({
+    queryKey: plantManagementKeys.myApplies(params),
+    queryFn: () => treatmentPlanApi.getMyApplies(params),
   });
 
 export const usePlan = (planId: string, enabled = true) =>
@@ -52,9 +68,20 @@ export const useTreatmentPlansByFarmZone = (
     enabled: enabled && !!farmZoneId,
   });
 
+// ── PlanApply queries ────────────────────────────────────────────────────
+
+export const usePlanApplies = (planId: string, enabled = true) =>
+  useQuery({
+    queryKey: plantManagementKeys.planApplies(planId),
+    queryFn: () => treatmentPlanApi.getAppliesByPlan(planId),
+    enabled: enabled && !!planId,
+  });
+
+// ── Cache invalidation ────────────────────────────────────────────────────
+
 const invalidatePlanCaches = async (
   queryClient: ReturnType<typeof useQueryClient>,
-  plan?: { id?: string; plantId?: string | null; farmPlotId?: string | null; farmZoneId?: string | null },
+  plan?: { id?: string },
 ) => {
   await Promise.all([
     queryClient.invalidateQueries({
@@ -66,31 +93,6 @@ const invalidatePlanCaches = async (
     plan?.id
       ? queryClient.invalidateQueries({
           queryKey: plantManagementKeys.plan(plan.id),
-        })
-      : Promise.resolve(),
-    plan?.plantId
-      ? queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plans(plan.plantId),
-        })
-      : Promise.resolve(),
-    plan?.farmPlotId
-      ? queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plansByFarmPlot(plan.farmPlotId),
-        })
-      : Promise.resolve(),
-    plan?.farmZoneId
-      ? queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plansByFarmZone(plan.farmZoneId),
-        })
-      : Promise.resolve(),
-    plan?.plantId
-      ? queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plantEvents(plan.plantId),
-        })
-      : Promise.resolve(),
-    plan?.plantId
-      ? queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plannedPlantEvents(plan.plantId),
         })
       : Promise.resolve(),
     plan?.id
@@ -116,22 +118,17 @@ export const useCreatePlan = () => {
   });
 };
 
-export const useUpdatePlanStatusMutation = () => {
+export const useUpdatePlanMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      planId,
-      status,
-    }: {
-      planId: string;
-      status: TreatmentStatus;
-    }) => treatmentPlanApi.updateTreatmentPlanStatus(planId, status),
+    mutationFn: ({ planId, payload }: { planId: string; payload: PlanUpdateRequest }) =>
+      treatmentPlanApi.updatePlan(planId, payload),
     onSuccess: async (plan: any) => {
       await invalidatePlanCaches(queryClient, plan);
     },
     meta: {
-      successMessage: "Đã cập nhật trạng thái kế hoạch.",
+      successMessage: "Đã cập nhật kế hoạch điều trị.",
     },
   });
 };
@@ -150,7 +147,6 @@ export const useUpdatePlanVisibilityMutation = () => {
     },
   });
 };
-
 
 export const useDeletePlanMutation = () => {
   const queryClient = useQueryClient();
@@ -192,19 +188,33 @@ export const useApplyPlanMutation = () => {
         queryClient.invalidateQueries({
           queryKey: plantManagementKeys.plan(planId),
         }),
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.planApplies(planId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.plansRoot(), "my-applies"],
+        }),
       ]);
     },
     meta: {
-      successMessage: "Đã gửi yêu cầu áp dụng. Hệ thống đang xử lý...",
+      // successMessage removed per user request
     },
   });
 };
 
-export const useBulkUpdatePlanStatusMutation = () => {
+// ── Apply status mutation ────────────────────────────────────────────────
+
+export const useUpdateApplyStatusMutation = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: (payload: BulkPlanStatusUpdateRequest) =>
-      treatmentPlanApi.bulkUpdatePlanStatus(payload),
+    mutationFn: ({
+      applyId,
+      status,
+    }: {
+      applyId: string;
+      status: TreatmentStatus;
+    }) => treatmentPlanApi.updateApplyStatus(applyId, status),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -215,7 +225,28 @@ export const useBulkUpdatePlanStatusMutation = () => {
         }),
       ]);
     },
-    meta: { successMessage: "Đã cập nhật trạng thái các kế hoạch." },
+    meta: {
+      successMessage: "Đã cập nhật trạng thái áp dụng.",
+    },
+  });
+};
+
+export const useBulkUpdateApplyStatusMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkPlanStatusUpdateRequest) =>
+      treatmentPlanApi.bulkUpdateApplyStatus(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plansRoot(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
+    },
+    meta: { successMessage: "Đã cập nhật trạng thái các áp dụng." },
   });
 };
 
@@ -258,6 +289,29 @@ export const useBulkApplyPlansMutation = () => {
         }),
       ]);
     },
-    meta: { successMessage: "Đã gửi yêu cầu áp dụng. Hệ thống đang xử lý..." },
+    meta: { 
+      // successMessage removed per user request 
+    },
+  });
+};
+
+export const useBulkApplyCustomMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkApplyCustomRequest) =>
+      treatmentPlanApi.bulkApplyCustom(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plansRoot(),
+        }),
+      ]);
+    },
+    meta: { 
+      // successMessage removed per user request
+    },
   });
 };

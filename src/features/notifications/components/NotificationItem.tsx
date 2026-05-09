@@ -2,34 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { profilesApi } from '../../profiles/api/profilesApi';
 import { Avatar } from '../../../components/ui/Avatar';
 import type { UserNotificationResponse } from '../types';
+import { useTranslation } from '../../../i18n';
 import { 
   MessageCircle, 
   ThumbsUp, 
   UserPlus, 
   MessageSquare, 
   Bell,
+  ClipboardCheck,
   ClipboardList
 } from 'lucide-react';
-
-function formatDistanceToNowNative(date: Date): string {
-  const diffInSeconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  if (diffInSeconds < 60) return "Vừa xong";
-  
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-  
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours} giờ trước`;
-  
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) return `${diffInDays} ngày trước`;
-  
-  const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12) return `${diffInMonths} tháng trước`;
-  
-  const diffInYears = Math.floor(diffInDays / 365);
-  return `${diffInYears} năm trước`;
-}
 
 interface NotificationItemProps {
   notification: UserNotificationResponse;
@@ -38,6 +20,8 @@ interface NotificationItemProps {
 }
 
 export function NotificationItem({ notification, onClick, isCompact = false }: NotificationItemProps) {
+  const { t } = useTranslation();
+
   // Fetch actor profile individually using their profileId
   const { data: actorProfile } = useQuery({
     queryKey: ['profiles', 'public', notification.actorId],
@@ -46,15 +30,14 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
     enabled: !!notification.actorId,
   });
 
-  const displayName = actorProfile?.fullName || notification.actorName || 'Người dùng';
+  const displayName = actorProfile?.fullName || notification.actorName || t('notifications.defaultUser');
   const avatarUrl = actorProfile?.profilePicture || actorProfile?.avatar || notification.actorAvatar || undefined;
 
-  const timeAgo = formatDistanceToNowNative(new Date(notification.occurredAt));
+  const timeAgo = formatDistanceToNow(new Date(notification.occurredAt), t);
 
   /**
    * The backend pre-renders `body` with the actor name + "và N người khác"
-   * baked in for batched notifications (e.g.
-   * "Alice và 3 người khác đã thích bài viết của bạn"). We treat any row with
+   * baked in for batched notifications. We treat any row with
    * `actorCount > 1` as already-rendered and show the body verbatim.
    * Single-actor rows keep the legacy "{displayName} {body}" prefix layout.
    */
@@ -75,6 +58,8 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
         return { Icon: MessageSquare, colorClass: 'text-orange-500 bg-orange-50 border-orange-100' };
       case 'PLAN_CONSULTING_CREATED':
         return { Icon: ClipboardList, colorClass: 'text-emerald-500 bg-emerald-50 border-emerald-100' };
+      case 'PLAN_APPLIED':
+        return { Icon: ClipboardCheck, colorClass: 'text-green-600 bg-green-50 border-green-100' };
       case 'SYSTEM':
       default:
         return { Icon: Bell, colorClass: 'text-slate-500 bg-slate-50 border-slate-200' };
@@ -120,13 +105,13 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
         </p>
         <p className="text-[13px] text-slate-600 mt-1.5 line-clamp-2 leading-snug">
           {isAggregated ? (
-            // Aggregated body already contains the actor name + "và N người khác"
-            // baked in by the backend renderer — render verbatim to avoid duplication.
+            // Aggregated body already contains the actor name baked in by the
+            // backend renderer — render verbatim to avoid duplication.
             <span className="text-slate-700">{notification.body}</span>
           ) : (
             <>
               <span className="font-bold text-slate-800 mr-1">{displayName}</span>
-              {notification.body || 'đã tương tác với bạn'}
+              {notification.body || t('notifications.defaultInteraction')}
             </>
           )}
         </p>
@@ -140,4 +125,28 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
       )}
     </button>
   );
+}
+
+// ── Locale-aware relative time ────────────────────────────────────────────────
+
+type TFunc = ReturnType<typeof useTranslation>['t'];
+
+function formatDistanceToNow(date: Date, t: TFunc): string {
+  const diffInSeconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (diffInSeconds < 60) return t('notifications.timeJustNow');
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return t('notifications.timeMinutesAgo')(diffInMinutes);
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return t('notifications.timeHoursAgo')(diffInHours);
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) return t('notifications.timeDaysAgo')(diffInDays);
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) return t('notifications.timeMonthsAgo')(diffInMonths);
+
+  const diffInYears = Math.floor(diffInDays / 365);
+  return t('notifications.timeYearsAgo')(diffInYears);
 }

@@ -9,6 +9,7 @@ import { useNotificationWebSocket } from '../hooks/useNotificationWebSocket';
 import { notificationKeys } from '../queries/keys';
 import { ROUTES } from '../../../lib/routes';
 import type { UserNotificationResponse } from '../types';
+import { useTranslation } from '../../../i18n';
 
 // ─── Routing map — keep in sync with NotificationsPage ────────────────────────
 
@@ -20,6 +21,7 @@ const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null
   USER_FOLLOW:     (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   CONSULT_REQUEST: (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   PLAN_CONSULTING_CREATED: (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
+  PLAN_APPLIED:            (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
   SYSTEM:          () => null,
 };
 
@@ -41,6 +43,7 @@ function NotificationSkeleton() {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function NotificationPopover() {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -171,7 +174,7 @@ export function NotificationPopover() {
         id="notification-bell"
         onClick={handleToggleClick}
         className="relative p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"
-        aria-label="Thông báo"
+        aria-label={t('notifications.bellAriaLabel')}
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -193,16 +196,16 @@ export function NotificationPopover() {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0 bg-white">
-            <h3 className="font-bold text-slate-800 text-[15px]">Thông báo</h3>
+            <h3 className="font-bold text-slate-800 text-[15px]">{t('notifications.title')}</h3>
             {hasUnread && (
               <button
                 onClick={handleMarkAllRead}
                 disabled={markAllReadMutation.isPending}
                 className="flex items-center gap-1 text-[12px] font-semibold text-[#245A34] hover:text-[#1a4228] disabled:opacity-50 transition-colors"
-                aria-label="Đánh dấu tất cả đã đọc"
+                aria-label={t('notifications.markAllReadAriaLabel')}
               >
                 <CheckCheck className="w-3.5 h-3.5" />
-                Đánh dấu đã đọc
+                {t('notifications.markAllRead')}
               </button>
             )}
           </div>
@@ -221,12 +224,12 @@ export function NotificationPopover() {
             {/* Error state */}
             {isError && !isLoading && (
               <div className="p-8 text-center">
-                <p className="text-sm text-red-500 font-medium">Không thể tải thông báo.</p>
+                <p className="text-sm text-red-500 font-medium">{t('notifications.loadError')}</p>
                 <button
                   onClick={() => queryClient.invalidateQueries({ queryKey: notificationKeys.history() })}
                   className="mt-2 text-xs text-[#245A34] font-semibold hover:underline"
                 >
-                  Thử lại
+                  {t('notifications.retry')}
                 </button>
               </div>
             )}
@@ -237,7 +240,7 @@ export function NotificationPopover() {
                 <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
                   <Bell className="w-6 h-6 text-slate-400" strokeWidth={1.5} />
                 </div>
-                <p className="text-sm text-slate-500 font-medium">Chưa có thông báo nào.</p>
+                <p className="text-sm text-slate-500 font-medium">{t('notifications.empty')}</p>
               </div>
             )}
 
@@ -262,7 +265,7 @@ export function NotificationPopover() {
                 )}
                 {!hasNextPage && notifications.length >= 20 && (
                   <p className="text-center text-[11px] text-slate-400 py-3 font-medium">
-                    Đã hiển thị tất cả thông báo
+                    {t('notifications.allShown')}
                   </p>
                 )}
               </div>
@@ -275,7 +278,7 @@ export function NotificationPopover() {
               onClick={() => { setIsOpen(false); navigate(ROUTES.DASHBOARD.NOTIFICATIONS); }}
               className="w-full flex items-center justify-center gap-1.5 py-3 text-[13px] font-bold text-[#245A34] hover:bg-[#F1F9F3] transition-colors"
             >
-              Xem tất cả thông báo
+              {t('notifications.seeAll')}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

@@ -1,6 +1,7 @@
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
 import { GroupedEventList } from './GroupedEventList';
 import type { PlantEventResponse } from '../../shared/types';
+import { useTranslation } from '../../../../i18n';
 
 export interface EventListPanelProps {
   selectedDate: string | null;
@@ -21,11 +22,13 @@ export function EventListPanel({
   onToggleTask,
   onSelectEvent,
 }: EventListPanelProps): React.ReactElement {
+  const { t } = useTranslation();
   if (!selectedDate) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 py-12">
         <CalendarDays className="h-10 w-10 text-slate-200" />
-        <p className="text-sm font-medium text-slate-400">Chọn một ngày từ lịch</p>
+        {/* select day prompt */}
+        <p className="text-sm font-medium text-slate-400">{t('plantManagement.calendar.selectDayPrompt')}</p>
       </div>
     );
   }
@@ -34,20 +37,35 @@ export function EventListPanel({
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 py-12">
         <CalendarDays className="h-10 w-10 text-slate-200" />
-        <p className="text-sm font-medium text-slate-500">Không có sự kiện trong ngày này</p>
+        {/* no events */}
+        <p className="text-sm font-medium text-slate-500">{t('plantManagement.calendar.noEventsOnDay')}</p>
       </div>
     );
   }
 
-  const total = selectedDateEvents.length;
-  // For broad-scope events (ZONE/PLANT tracking) consider done when all targets complete;
-  // for plain events use the event-level completed flag.
-  const done = selectedDateEvents.filter(e => {
-    if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
-      return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
+  // Recursively count all events including nested children
+  const countAll = (events: PlantEventResponse[]): number => {
+    let c = 0;
+    for (const e of events) {
+      c += 1;
+      if (e.children?.length) c += countAll(e.children);
     }
-    return e.completed;
-  }).length;
+    return c;
+  };
+  const countDone = (events: PlantEventResponse[]): number => {
+    let c = 0;
+    for (const e of events) {
+      const isDone = e.trackingGranularity && e.trackingGranularity !== 'NONE'
+        ? (e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal)
+        : e.completed;
+      if (isDone) c += 1;
+      if (e.children?.length) c += countDone(e.children);
+    }
+    return c;
+  };
+
+  const total = countAll(selectedDateEvents);
+  const done = countDone(selectedDateEvents);
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const allDone = done === total && total > 0;
 
@@ -58,7 +76,7 @@ export function EventListPanel({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 ${allDone ? 'text-emerald-500' : 'text-slate-300'}`} />
-            <span className="text-xs font-bold text-slate-600">Tiến độ</span>
+            <span className="text-xs font-bold text-slate-600">{t('plantManagement.calendar.progressLabel')}</span>
           </div>
           <span className={`text-xs font-black tabular-nums ${allDone ? 'text-emerald-600' : 'text-slate-500'}`}>
             {done}/{total} &nbsp;·&nbsp; {pct}%

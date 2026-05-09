@@ -222,10 +222,10 @@ export function CreatePlanFromRagDialog({
               <CheckCircle2 className="mt-0.5 h-6 w-6 text-emerald-700" />
               <div>
                 <h4 className="text-lg font-black text-emerald-900">
-                  KÃ¡ÂºÂ¿ hoÃ¡ÂºÂ¡ch ÃâiÃ¡Â»Âu trÃ¡Â»â¹ ÃâÃÂ£ ÃâÃÂ°Ã¡Â»Â£c tÃ¡ÂºÂ¡o thÃÂ nh cÃÂ´ng.
+                  KÃ¡ÂºÂ¿ hoÃ¡ÂºÂ¡ch Ã„â€˜iÃ¡Â»Â u trÃ¡Â»â€¹ Ã„â€˜ÃƒÂ£ Ã„â€˜Ã†Â°Ã¡Â»Â£c tÃ¡ÂºÂ¡o thÃƒÂ nh cÃƒÂ´ng.
                 </h4>
                 <p className="mt-1 text-sm font-semibold text-emerald-800">
-                  Plant-management-service ÃâÃÂ£ nhÃ¡ÂºÂ­n kÃ¡ÂºÂ¿ hoÃ¡ÂºÂ¡ch vÃÂ  tÃ¡Â»Â± tÃ¡ÂºÂ¡o {createdPlan.plantEventIds?.length ?? 0} lÃ¡Â»â¹ch chÃÆm sÃÂ³c liÃÂªn quan.
+                  Plant-management-service đã nhận kế hoạch và tự tạo {createdPlan.events?.length ?? 0} lịch chăm sóc liên quan.
                 </p>
                 <div className="mt-5 flex flex-wrap gap-3">
                   {createdPlan.id ? (
@@ -233,15 +233,7 @@ export function CreatePlanFromRagDialog({
                       to={ROUTES.DASHBOARD.PLAN_DETAIL(createdPlan.id)}
                       className="rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
                     >
-                      Xem kÃ¡ÂºÂ¿ hoÃ¡ÂºÂ¡ch ÃâiÃ¡Â»Âu trÃ¡Â»â¹
-                    </Link>
-                  ) : null}
-                  {createdPlan.plantId ? (
-                    <Link
-                      to={ROUTES.DASHBOARD.PLANT_DETAIL(createdPlan.plantId)}
-                      className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800 hover:bg-emerald-50"
-                    >
-                      Xem cÃÂ¢y trÃ¡Â»âng
+                      Xem kÃ¡ÂºÂ¿ hoÃ¡ÂºÂ¡ch Ã„â€˜iÃ¡Â»Â u trÃ¡Â»â€¹
                     </Link>
                   ) : null}
                   <button

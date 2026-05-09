@@ -12,6 +12,7 @@ import { NotificationItem } from '../components/NotificationItem';
 import { notificationKeys } from '../queries/keys';
 import { ROUTES } from '../../../lib/routes';
 import type { UserNotificationResponse } from '../types';
+import { useTranslation } from '../../../i18n';
 
 // ─── Routing map — all NotificationType values ────────────────────────────────
 
@@ -23,6 +24,7 @@ const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null
   USER_FOLLOW:     (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   CONSULT_REQUEST: (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   PLAN_CONSULTING_CREATED: (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
+  PLAN_APPLIED:            (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
   SYSTEM:          () => null,
 };
 
@@ -48,6 +50,7 @@ type Tab = 'all' | 'unread';
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function NotificationsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('all');
@@ -148,7 +151,7 @@ export function NotificationsPage() {
             <div className="p-2.5 bg-[#245A34]/10 rounded-2xl">
               <BellRing className="w-7 h-7 text-[#245A34]" strokeWidth={2.5} />
             </div>
-            Thông báo
+            {t('notifications.pageTitle')}
             {unreadCount > 0 && (
               <span className="inline-flex items-center justify-center min-w-[26px] h-[26px] px-2 bg-red-500 text-white text-[13px] font-bold rounded-full shadow-sm">
                 {unreadCount > 99 ? '99+' : unreadCount}
@@ -156,7 +159,7 @@ export function NotificationsPage() {
             )}
           </h1>
           <p className="text-[15px] font-medium text-slate-500 mt-2">
-            Cập nhật những hoạt động và tương tác mới nhất của bạn
+            {t('notifications.pageSubtitle')}
           </p>
         </div>
 
@@ -169,7 +172,7 @@ export function NotificationsPage() {
               className="w-full sm:w-auto flex justify-center items-center gap-2 px-4 py-3 text-[14px] font-bold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl shadow-sm transition-all disabled:opacity-50"
             >
               <CheckCheck className="w-4 h-4 text-[#245A34]" />
-              Đánh dấu đã đọc
+              {t('notifications.pageMarkAllRead')}
             </button>
           )}
 
@@ -186,7 +189,7 @@ export function NotificationsPage() {
                       : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                   }`}
                 >
-                  {tab === 'all' ? 'Tất cả' : 'Chưa đọc'}
+                  {tab === 'all' ? t('notifications.tabAll') : t('notifications.tabUnread')}
                   {tab === 'unread' && unreadCount > 0 && (
                     <span className={`ml-2 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[11px] font-bold rounded-full leading-none transition-colors ${
                       isActive ? 'bg-red-100 text-red-600' : 'bg-red-500 text-white'
@@ -217,14 +220,14 @@ export function NotificationsPage() {
               <BellRing className="w-8 h-8 text-red-400" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-base text-red-600 font-bold">Không thể tải thông báo</p>
-              <p className="text-sm text-slate-500 mt-1">Đã có lỗi xảy ra trong quá trình kết nối.</p>
+              <p className="text-base text-red-600 font-bold">{t('notifications.pageLoadError')}</p>
+              <p className="text-sm text-slate-500 mt-1">{t('notifications.pageLoadErrorDetail')}</p>
             </div>
             <button
               onClick={() => queryClient.invalidateQueries({ queryKey: notificationKeys.history() })}
               className="mt-2 px-6 py-2.5 bg-red-100 text-red-700 text-[14px] font-bold rounded-xl hover:bg-red-200 transition-colors"
             >
-              Thử lại
+              {t('notifications.pageTryAgain')}
             </button>
           </div>
         )}
@@ -237,12 +240,14 @@ export function NotificationsPage() {
             </div>
             <div>
               <p className="text-[17px] font-black text-gray-900">
-                {activeTab === 'unread' ? 'Bạn đã đọc tất cả thông báo' : 'Chưa có thông báo nào'}
+                {activeTab === 'unread'
+                  ? t('notifications.emptyUnreadTitle')
+                  : t('notifications.emptyAllTitle')}
               </p>
               <p className="text-[15px] font-medium text-slate-500 mt-2 max-w-sm mx-auto">
                 {activeTab === 'unread'
-                  ? 'Tuyệt vời! Bạn không bỏ lỡ bất kỳ thông tin quan trọng nào.'
-                  : 'Các thông báo mới về hoạt động cộng đồng và hệ thống sẽ xuất hiện ở đây.'}
+                  ? t('notifications.emptyUnreadSubtitle')
+                  : t('notifications.emptyAllSubtitle')}
               </p>
             </div>
             {activeTab === 'all' && (
@@ -250,7 +255,7 @@ export function NotificationsPage() {
                 onClick={() => navigate(ROUTES.DASHBOARD.COMMUNITY)}
                 className="mt-4 px-6 py-3 bg-[#245A34] text-white text-[14px] font-bold rounded-xl hover:bg-[#1A4226] shadow-sm transition-colors"
               >
-                Khám phá cộng đồng
+                {t('notifications.exploreCommunity')}
               </button>
             )}
           </div>
@@ -285,7 +290,7 @@ export function NotificationsPage() {
               <div className="py-8 mt-4 text-center">
                 <div className="inline-flex items-center justify-center px-4 py-2 bg-slate-50 rounded-full border border-slate-100">
                   <span className="text-[13px] text-slate-500 font-bold">
-                    Đã hiển thị tất cả {totalLoaded} thông báo
+                    {t('notifications.allShownCount')(totalLoaded)}
                   </span>
                 </div>
               </div>

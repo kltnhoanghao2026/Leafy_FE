@@ -82,9 +82,9 @@ export function PlanningTab({ farmerProfileId }: { farmerProfileId: string }) {
                   )}
                 </div>
                 <span
-                  className={`shrink-0 self-start rounded-full px-3 py-1 text-xs font-black ${STATUS_STYLE[plan.status] ?? 'bg-slate-100 text-slate-500'}`}
+                  className={`shrink-0 self-start rounded-full px-3 py-1 text-xs font-black ${(plan.applyCount ?? 0) > 0 ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' : 'bg-slate-100 text-slate-500'}`}
                 >
-                  {TREATMENT_STATUS_LABELS[plan.status] ?? plan.status}
+                  {(plan.applyCount ?? 0) > 0 ? `${plan.applyCount} áp dụng` : "Chưa áp dụng"}
                 </span>
               </div>
 

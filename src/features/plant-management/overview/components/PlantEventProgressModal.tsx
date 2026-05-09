@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   X,
   CheckCircle2,
@@ -12,11 +12,14 @@ import {
   Leaf,
   Clock,
   LayoutGrid,
+  ChevronDown,
+  GitBranch,
 } from "lucide-react";
 import {
   usePlantEvent,
   useEventProgress,
   useToggleTaskMutation,
+  useUpdatePlantEventMutation,
   useUpdateEventProgressMutation,
   useGenerateEventProgressMutation,
 } from "../..";
@@ -25,8 +28,11 @@ import { useFarmZones } from "../../../farm-management/queries";
 import type { PlantEventResponse, EventProgressResponse, PageResponse } from "../../shared/types";
 import {
   EVENT_TYPE_LABELS,
+  EVENT_TYPE_ICONS,
   EVENT_CATEGORY_MAP,
   CATEGORY_DOT_COLORS,
+  TARGET_TYPE_LABELS,
+  TARGET_TYPE_ICONS,
 } from "../../shared/components/displayUtils";
 
 interface PlantEventProgressModalProps {
@@ -180,6 +186,226 @@ function ProgressRow({
   );
 }
 
+// ── ChildEventTree ────────────────────────────────────────────────────────────
+
+function ChildEventNode({
+  event,
+  dotColor,
+  dotColorRgb,
+  depth,
+  onToggleComplete,
+}: {
+  event: PlantEventResponse;
+  dotColor: string;
+  dotColorRgb: string;
+  depth: number;
+  onToggleComplete: (eventId: string, completed: boolean) => void;
+}) {
+  const [expanded, setExpanded] = useState(depth === 0);
+  const [hovered, setHovered] = useState(false);
+  const hasChildren = event.children && event.children.length > 0;
+  const targetIcon = event.targetType ? TARGET_TYPE_ICONS[event.targetType] : null;
+  const targetLabel = event.targetType ? TARGET_TYPE_LABELS[event.targetType] : null;
+  const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Sprout;
+
+  // Task progress
+  const tasks = event.tasks ?? [];
+  const taskDone = tasks.filter(t => t.completed).length;
+  const taskPct = tasks.length > 0 ? Math.round((taskDone / tasks.length) * 100) : 0;
+
+  // Children completion summary
+  const childrenDone = hasChildren ? event.children.filter(c => c.completed).length : 0;
+
+  // Date formatting
+  const fmtDate = (d: string | null | undefined) => {
+    if (!d) return null;
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}`;
+  };
+  const startStr = fmtDate(event.calculatedStartDate);
+  const endStr = fmtDate(event.calculatedEndDate);
+  const dateLabel = startStr && endStr && startStr !== endStr ? `${startStr} → ${endStr}` : startStr;
+
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="transition-colors duration-150 rounded-xl"
+      style={hovered ? { backgroundColor: `rgba(${dotColorRgb},0.05)` } : undefined}
+    >
+      <div className="flex w-full items-start gap-3 px-2 py-2.5">
+        {/* Completion toggle */}
+        <button
+          type="button"
+          onClick={() => onToggleComplete(event.id, !event.completed)}
+          className="mt-2 shrink-0 transition-all hover:scale-110"
+          title={event.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
+        >
+          {event.completed ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          ) : (
+            <Circle className="h-5 w-5 text-slate-300 hover:text-slate-400" />
+          )}
+        </button>
+
+        {/* Icon badge */}
+        <span
+          className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+          style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+
+        {/* Content */}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`text-sm font-semibold truncate leading-tight ${
+              event.completed ? 'text-slate-400 line-through' : 'text-slate-800'
+            }`}>
+              {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
+            </span>
+            {targetLabel && (
+              <span
+                className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
+                style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
+              >
+                {targetIcon && <span className="text-[10px]">{targetIcon}</span>}
+                {targetLabel}
+              </span>
+            )}
+          </div>
+          {(event.note || event.description) && (
+            <p className="mt-0.5 text-xs text-slate-400 truncate">
+              {event.note || event.description}
+            </p>
+          )}
+
+          {/* Date row */}
+          {dateLabel && (
+            <div className="mt-0.5 flex items-center gap-1">
+              <CalendarDays className="h-3 w-3 text-slate-400" />
+              <span className="text-[10px] text-slate-400">{dateLabel}</span>
+              {event.durationDays != null && event.durationDays > 1 && (
+                <span
+                  className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                  style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
+                >
+                  {event.durationDays}d
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Task progress bar (if tasks exist) */}
+          {tasks.length > 0 && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <ListChecks className="h-3 w-3 shrink-0" style={{ color: taskDone === tasks.length ? '#10B981' : dotColor }} />
+              <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-1 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${taskPct}%`,
+                    backgroundColor: taskDone === tasks.length ? '#10B981' : dotColor,
+                  }}
+                />
+              </div>
+              <span
+                className="text-[10px] font-bold tabular-nums"
+                style={{ color: taskDone === tasks.length ? '#10B981' : dotColor }}
+              >
+                {taskDone}/{tasks.length}
+              </span>
+            </div>
+          )}
+
+          {/* Children completion summary (inline) */}
+          {hasChildren && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <GitBranch className="h-3 w-3 shrink-0" style={{ color: childrenDone === event.children.length ? '#10B981' : dotColor }} />
+              <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-1 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.round((childrenDone / event.children.length) * 100)}%`,
+                    backgroundColor: childrenDone === event.children.length ? '#10B981' : dotColor,
+                  }}
+                />
+              </div>
+              <span
+                className="text-[10px] font-bold tabular-nums"
+                style={{ color: childrenDone === event.children.length ? '#10B981' : dotColor }}
+              >
+                {childrenDone}/{event.children.length}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Child count + expand icon */}
+        {hasChildren && (
+          <button
+            type="button"
+            onClick={() => setExpanded(v => !v)}
+            className="mt-1 shrink-0 flex items-center gap-1 rounded-lg px-1.5 py-1 hover:bg-slate-200 transition-colors"
+          >
+            <span className="text-[10px] font-bold text-slate-400 tabular-nums">
+              {event.children.length}
+            </span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`}
+            />
+          </button>
+        )}
+      </div>
+
+      {/* Nested children */}
+      {hasChildren && expanded && (
+        <div
+          className="ml-[46px] pb-2 pl-3 border-l-2 border-dashed"
+          style={{ borderColor: `rgba(${dotColorRgb},0.2)` }}
+        >
+          <ChildEventTree
+            children={event.children}
+            dotColor={dotColor}
+            dotColorRgb={dotColorRgb}
+            depth={depth + 1}
+            onToggleComplete={onToggleComplete}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChildEventTree({
+  children,
+  dotColor,
+  dotColorRgb,
+  depth,
+  onToggleComplete,
+}: {
+  children: PlantEventResponse[];
+  dotColor: string;
+  dotColorRgb: string;
+  depth: number;
+  onToggleComplete: (eventId: string, completed: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {children.map(child => (
+        <ChildEventNode
+          key={child.id}
+          event={child}
+          dotColor={dotColor}
+          dotColorRgb={dotColorRgb}
+          depth={depth}
+          onToggleComplete={onToggleComplete}
+        />
+      ))}
+    </div>
+  );
+}
+
 // ── PlantEventProgressModal ───────────────────────────────────────────────────
 
 export function PlantEventProgressModal({
@@ -251,6 +477,7 @@ export function PlantEventProgressModal({
 
   // Mutations
   const toggleTask = useToggleTaskMutation();
+  const updateChildEvent = useUpdatePlantEventMutation();
   const updateProgress = useUpdateEventProgressMutation();
   const generateProgress = useGenerateEventProgressMutation();
 
@@ -258,8 +485,17 @@ export function PlantEventProgressModal({
   const taskDone = tasks.filter((t) => t.completed).length;
   const taskPct = tasks.length > 0 ? Math.round((taskDone / tasks.length) * 100) : 0;
 
-  const progressTotal = event.progressTotal ?? progressEntries.length;
-  const progressCompleted = event.progressCompleted ?? progressEntries.filter((e) => e.completed).length;
+  // Progress tracking: prefer children completion count when children exist
+  const directChildren = event.children ?? [];
+  const hasChildHierarchy = directChildren.length > 0;
+  const childrenDone = directChildren.filter((c) => c.completed).length;
+
+  const progressTotal = hasChildHierarchy
+    ? directChildren.length
+    : (event.progressTotal ?? progressEntries.length);
+  const progressCompleted = hasChildHierarchy
+    ? childrenDone
+    : (event.progressCompleted ?? progressEntries.filter((e) => e.completed).length);
   const progressPct =
     progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
 
@@ -271,7 +507,14 @@ export function PlantEventProgressModal({
     });
   };
 
-  const showSummaryCards = tasks.length > 0 || (hasFarmScope && progressTotal > 0);
+  const handleToggleChildComplete = (childEventId: string, completed: boolean) => {
+    void updateChildEvent.mutateAsync({
+      eventId: childEventId,
+      payload: { completed },
+    });
+  };
+
+  const showSummaryCards = tasks.length > 0 || (hasFarmScope && progressTotal > 0) || hasChildHierarchy;
 
   return (
     <div
@@ -362,10 +605,10 @@ export function PlantEventProgressModal({
                     />
                   </div>
                 )}
-                {tasks.length > 0 && hasFarmScope && progressTotal > 0 && (
+                {tasks.length > 0 && progressTotal > 0 && (
                   <div className="w-px bg-slate-200 shrink-0 rounded-full" />
                 )}
-                {hasFarmScope && progressTotal > 0 && (
+                {progressTotal > 0 && (
                   <div className="flex-1 flex flex-col items-center gap-1">
                     <CircleProgress
                       pct={progressPct}
@@ -474,12 +717,12 @@ export function PlantEventProgressModal({
             )}
 
             {/* ── Divider ── */}
-            {tasks.length > 0 && hasFarmScope && (
+            {tasks.length > 0 && hasFarmScope && !hasChildHierarchy && (
               <div className="border-t border-dashed border-slate-100" />
             )}
 
-            {/* ── Progress tracking section ── */}
-            {hasFarmScope && (
+            {/* ── Progress tracking section (legacy — hidden when children hierarchy exists) ── */}
+            {hasFarmScope && !hasChildHierarchy && (
               <section>
                 <div className="mb-3 flex items-center gap-2">
                   <div
@@ -565,6 +808,41 @@ export function PlantEventProgressModal({
                     ))}
                   </div>
                 )}
+              </section>
+            )}
+
+            {/* ── Child event hierarchy tree ── */}
+            {event.children && event.children.length > 0 && (
+              <section>
+                <div className="mb-3 flex items-center gap-2">
+                  <div
+                    className="flex items-center justify-center h-6 w-6 rounded-lg"
+                    style={{ backgroundColor: `rgba(${dotColorRgb},0.12)` }}
+                  >
+                    <GitBranch className="h-3.5 w-3.5" style={{ color: dotColor }} />
+                  </div>
+                  <p className="text-sm font-black text-slate-700">
+                    Theo dõi thực hiện
+                  </p>
+                  <span className="ml-auto text-xs font-semibold text-slate-400 tabular-nums">
+                    {progressCompleted}/{progressTotal}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                {progressTotal > 0 && (
+                  <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      className="h-1 rounded-full transition-all duration-700"
+                      style={{
+                        width: `${progressPct}%`,
+                        backgroundColor: progressCompleted === progressTotal ? '#10B981' : dotColor,
+                      }}
+                    />
+                  </div>
+                )}
+
+                <ChildEventTree children={event.children} dotColor={dotColor} dotColorRgb={dotColorRgb} depth={0} onToggleComplete={handleToggleChildComplete} />
               </section>
             )}
 

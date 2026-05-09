@@ -1,9 +1,11 @@
-import { AlertTriangle, Banknote, BarChart2, Check, Clock, MapPin, Sprout, Trash2, UserCheck } from "lucide-react";
+import { AlertTriangle, Banknote, BarChart2, Check, Clock, Globe, MapPin, Play, Sprout, Trash2, UserCheck } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useFarmZones } from "../../../farm-management/queries";
 import type { PlanResponse, TreatmentStatus } from "../../shared/types";
-import { formatDate, TREATMENT_STATUS_LABELS } from "../../shared/components/displayUtils";
+import { formatDate } from "../../shared/components/displayUtils";
+import { usePlantManagementLabels } from "../../shared/components/useDisplayLabels";
+import { useTranslation } from "../../../../i18n";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -15,25 +17,11 @@ const STATUS_STYLE: Record<string, string> = {
   CANCELLED: "bg-slate-100 text-slate-500 ring-slate-200",
 };
 
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW: "Nhẹ",
-  MEDIUM: "Trung bình",
-  HIGH: "Nghiêm trọng",
-  CRITICAL: "Rất nghiêm trọng",
-};
-
 const SEVERITY_STYLE: Record<string, string> = {
   LOW:      "text-emerald-600",
   MEDIUM:   "text-amber-600",
   HIGH:     "text-orange-600",
   CRITICAL: "text-red-600",
-};
-
-const URGENCY_LABEL: Record<string, string> = {
-  LOW:      "Thấp",
-  MEDIUM:   "Trung bình",
-  HIGH:     "Cao",
-  CRITICAL: "Rất khẩn",
 };
 
 const URGENCY_STYLE: Record<string, string> = {
@@ -43,18 +31,23 @@ const URGENCY_STYLE: Record<string, string> = {
   CRITICAL: "text-red-600",
 };
 
+
 // ── Props ────────────────────────────────────────────────────────────────────
 
 export interface PlanCardProps {
   plan: PlanResponse;
   plantLabel?: string | null;
   plotName?: string | null;
-  selected: boolean;
-  onToggleSelect: (id: string) => void;
-  onDelete: (plan: PlanResponse) => void;
-  onStatusChange: (planId: string, status: TreatmentStatus) => void;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+  onDelete?: (plan: PlanResponse) => void;
+  onStatusChange?: (planId: string, status: TreatmentStatus) => void;
+  /** Called when the user clicks "Áp dụng" on a public plan card */
+  onApply?: () => void;
   detailUrl: string;
   variant?: "grid" | "list";
+  /** When true, renders owner info and hides delete/select controls */
+  isPublicView?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -89,16 +82,17 @@ function ZoneTile({
   farmPlotId?: string | null;
   farmZoneId?: string | null;
 }) {
+  const { t } = useTranslation();
   const zonesQuery = useFarmZones(farmPlotId ?? "", Boolean(farmPlotId));
   const zoneName = farmZoneId
     ? (zonesQuery.data ?? []).find((z) => z.id === farmZoneId)?.zoneName ?? farmZoneId
-    : "Chưa gắn khu";
+    : t('plantManagement.plan.noZone');
 
   return (
     <div className="flex items-center gap-2">
       <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
       <div className="min-w-0">
-        <p className="font-black uppercase tracking-wide text-slate-400">Khu vực</p>
+        <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.zoneLabel')}</p>
         <p className="truncate font-bold text-slate-800">{zoneName}</p>
       </div>
     </div>
@@ -111,12 +105,16 @@ function PlanCardGrid({
   plan,
   plantLabel,
   plotName,
-  selected,
+  selected = false,
   onToggleSelect,
   onDelete,
   onStatusChange,
+  onApply,
   detailUrl,
+  isPublicView = false,
 }: PlanCardProps) {
+  const { t } = useTranslation();
+  const { treatmentStatusLabel, severityLabel, urgencyLabel } = usePlantManagementLabels();
   return (
     <article
       className={`flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
@@ -127,10 +125,12 @@ function PlanCardGrid({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 p-5 pb-3">
-        <SelectCheckbox checked={selected} onClick={() => onToggleSelect(plan.id)} />
+        {!isPublicView && onToggleSelect && (
+          <SelectCheckbox checked={selected} onClick={() => onToggleSelect(plan.id)} />
+        )}
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-base font-black text-slate-900">
-            {plan.planName || plan.diseaseName || "Kế hoạch điều trị"}
+            {plan.planName || plan.diseaseName || t('plantManagement.plan.unknownPlan')}
           </h3>
           {plan.planName && plan.diseaseName && (
             <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">
@@ -138,21 +138,25 @@ function PlanCardGrid({
             </p>
           )}
           <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-400">
-            {plan.successIndicators || plan.question || "Kế hoạch AI chỉ mang tính hỗ trợ"}
+            {plan.successIndicators || plan.question || t('plantManagement.plan.aiDisclaimer')}
           </p>
           {plan.isConsulted && plan.creatorInfo && (
             <p className="mt-1 flex items-center gap-1 truncate text-xs font-semibold text-emerald-700">
               <UserCheck className="h-3.5 w-3.5 shrink-0" />
-              {plan.creatorInfo.fullName ?? "Chuyên gia"}
+              {plan.creatorInfo.fullName ?? t('plantManagement.plan.expert')}
+            </p>
+          )}
+          {isPublicView && plan.ownerInfo && (
+            <p className="mt-1 flex items-center gap-1 truncate text-xs font-semibold text-blue-600">
+              <Globe className="h-3.5 w-3.5 shrink-0" />
+              {plan.ownerInfo.fullName ?? "Nông dân"}
             </p>
           )}
         </div>
         <span
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${
-            STATUS_STYLE[plan.status] ?? "bg-slate-100 text-slate-500 ring-slate-200"
-          }`}
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${(plan.applyCount ?? 0) > 0 ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}
         >
-          {(TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status}
+          {(plan.applyCount ?? 0) > 0 ? `${plan.applyCount} áp dụng` : "Chưa áp dụng"}
         </span>
       </div>
 
@@ -160,40 +164,44 @@ function PlanCardGrid({
 
       {/* Meta grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-5 text-xs sm:grid-cols-3">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          <div className="min-w-0">
-            <p className="font-black uppercase tracking-wide text-slate-400">Vườn</p>
-            <p className="truncate font-bold text-slate-800">{plotName || "—"}</p>
-          </div>
-        </div>
-        <ZoneTile farmPlotId={plan.farmPlotId} farmZoneId={plan.farmZoneId} />
+        {!isPublicView && (
+          <>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+              <div className="min-w-0">
+                <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.farmLabel')}</p>
+                <p className="truncate font-bold text-slate-800">{plotName || "—"}</p>
+              </div>
+            </div>
+            <ZoneTile farmPlotId={null} farmZoneId={null} />
+          </>
+        )}
         <div className="flex items-center gap-2">
           <BarChart2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <div className="min-w-0">
-            <p className="font-black uppercase tracking-wide text-slate-400">Mức độ</p>
+            <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.severityLabel')}</p>
             <p className={`truncate font-bold ${
               SEVERITY_STYLE[plan.severityLevel ?? ""] ?? "text-slate-800"
             }`}>
-              {SEVERITY_LABEL[plan.severityLevel ?? ""] || plan.severityLevel || "—"}
+              {severityLabel(plan.severityLevel)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <div className="min-w-0">
-            <p className="font-black uppercase tracking-wide text-slate-400">Độ khẩn</p>
+            <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.urgencyLabel')}</p>
             <p className={`truncate font-bold ${
               URGENCY_STYLE[plan.urgency ?? ""] ?? "text-slate-800"
             }`}>
-              {URGENCY_LABEL[plan.urgency ?? ""] || plan.urgency || "—"}
+              {urgencyLabel(plan.urgency)}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Banknote className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <div className="min-w-0">
-            <p className="font-black uppercase tracking-wide text-slate-400">Chi phí</p>
+            <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.costLabel')}</p>
             <p className="truncate font-bold text-slate-800">{plan.estimatedCost || "—"}</p>
           </div>
         </div>
@@ -205,20 +213,32 @@ function PlanCardGrid({
           to={detailUrl}
           className="inline-flex items-center justify-center rounded-xl bg-[#245A34] px-4 py-2 text-xs font-bold text-white hover:bg-[#1b432a]"
         >
-          Xem chi tiết
+          {t('plantManagement.common.viewDetail')}
         </Link>
+        {isPublicView && onApply && (
+          <button
+            type="button"
+            onClick={onApply}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#245A34] px-4 py-2 text-xs font-bold text-[#245A34] hover:bg-emerald-50"
+          >
+            <Play className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Áp dụng
+          </button>
+        )}
         <span className="ml-2 flex items-center gap-1 text-xs text-slate-400">
           <Clock className="h-3 w-3" />
           {formatDate(plan.lastModifiedAt || plan.createdAt)}
         </span>
-        <button
-          type="button"
-          onClick={() => onDelete(plan)}
-          className="ml-auto inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 hover:bg-red-100"
-          aria-label="Xóa kế hoạch"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        {!isPublicView && onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(plan)}
+            className="ml-auto inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 hover:bg-red-100"
+            aria-label={t('plantManagement.common.delete')}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </article>
   );
@@ -230,12 +250,16 @@ function PlanCardList({
   plan,
   plantLabel,
   plotName,
-  selected,
+  selected = false,
   onToggleSelect,
   onDelete,
   onStatusChange,
+  onApply,
   detailUrl,
+  isPublicView = false,
 }: PlanCardProps) {
+  const { t } = useTranslation();
+  const { treatmentStatusLabel, severityLabel } = usePlantManagementLabels();
   const severity = plan.severityLevel ?? "";
 
   return (
@@ -246,21 +270,21 @@ function PlanCardList({
           : "border-slate-100"
       }`}
     >
-      <SelectCheckbox checked={selected} onClick={() => onToggleSelect(plan.id)} />
+      {!isPublicView && onToggleSelect && (
+        <SelectCheckbox checked={selected} onClick={() => onToggleSelect(plan.id)} />
+      )}
 
       {/* Status badge */}
       <span
-        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-black ring-1 hidden sm:inline-flex ${
-          STATUS_STYLE[plan.status] ?? "bg-slate-100 text-slate-500 ring-slate-200"
-        }`}
+        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-black ring-1 hidden sm:inline-flex ${(plan.applyCount ?? 0) > 0 ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-slate-100 text-slate-500 ring-slate-200"}`}
       >
-        {(TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status}
+        {(plan.applyCount ?? 0) > 0 ? `${plan.applyCount} áp dụng` : "Chưa áp dụng"}
       </span>
 
       {/* Name / question */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-black text-slate-900">
-          {plan.diseaseName || "Kế hoạch điều trị"}
+          {plan.diseaseName || t('plantManagement.plan.unknownPlan')}
         </p>
         <p className="truncate text-xs font-semibold text-slate-400">
           {plan.question || plan.successIndicators || "—"}
@@ -268,26 +292,36 @@ function PlanCardList({
         {plan.isConsulted && plan.creatorInfo && (
           <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-emerald-700">
             <UserCheck className="h-3 w-3 shrink-0" />
-            {plan.creatorInfo.fullName ?? "Chuyên gia"}
+            {plan.creatorInfo.fullName ?? t('plantManagement.plan.expert')}
+          </p>
+        )}
+        {isPublicView && plan.ownerInfo && (
+          <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-blue-600">
+            <Globe className="h-3 w-3 shrink-0" />
+            {plan.ownerInfo.fullName ?? "Nông dân"}
           </p>
         )}
       </div>
 
       {/* Plant */}
-      <div className="hidden min-w-0 items-center gap-1 lg:flex">
-        <Sprout className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <span className="truncate text-xs font-semibold text-slate-600">
-          {plantLabel || "—"}
-        </span>
-      </div>
+      {!isPublicView && (
+        <div className="hidden min-w-0 items-center gap-1 lg:flex">
+          <Sprout className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span className="truncate text-xs font-semibold text-slate-600">
+            {plantLabel || "—"}
+          </span>
+        </div>
+      )}
 
       {/* Plot */}
-      <div className="hidden min-w-0 items-center gap-1 xl:flex">
-        <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <span className="truncate text-xs font-semibold text-slate-600">
-          {plotName || "—"}
-        </span>
-      </div>
+      {!isPublicView && (
+        <div className="hidden min-w-0 items-center gap-1 xl:flex">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span className="truncate text-xs font-semibold text-slate-600">
+            {plotName || "—"}
+          </span>
+        </div>
+      )}
 
       {/* Severity */}
       <span
@@ -295,7 +329,7 @@ function PlanCardList({
           SEVERITY_STYLE[severity] ?? "text-slate-500"
         }`}
       >
-        {SEVERITY_LABEL[severity] || severity || "—"}
+        {severityLabel(severity || null)}
       </span>
 
       {/* Date */}
@@ -309,16 +343,28 @@ function PlanCardList({
           to={detailUrl}
           className="inline-flex items-center justify-center rounded-xl bg-[#245A34] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1b432a]"
         >
-          Xem
+          {t('plantManagement.common.viewShort')}
         </Link>
-        <button
-          type="button"
-          onClick={() => onDelete(plan)}
-          className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-          aria-label="Xóa"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {isPublicView && onApply && (
+          <button
+            type="button"
+            onClick={onApply}
+            className="inline-flex items-center gap-1 rounded-xl border border-[#245A34] px-3 py-1.5 text-xs font-bold text-[#245A34] hover:bg-emerald-50"
+          >
+            <Play className="h-3 w-3" strokeWidth={2.5} />
+            Áp dụng
+          </button>
+        )}
+        {!isPublicView && onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(plan)}
+            className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+            aria-label={t('plantManagement.common.delete')}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     </article>
   );

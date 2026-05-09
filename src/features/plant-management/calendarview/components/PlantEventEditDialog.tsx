@@ -126,6 +126,8 @@ export function PlantEventEditDialog({
       sourcePlanId: event.sourcePlanId ?? undefined,
       farmPlotId: event.farmPlotId ?? undefined,
       farmZoneId: event.farmZoneId ?? undefined,
+      // Preserve the existing targetType so the server doesn't derive a different one
+      targetType: event.targetType ?? undefined,
       tasks: tasks.map((t, i) => ({ ...t, order: i })),
     });
   };

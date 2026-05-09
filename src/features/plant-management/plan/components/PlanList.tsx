@@ -70,7 +70,7 @@ export function PlanList({
                 </p>
               </div>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">
-                {TREATMENT_STATUS_LABELS[plan.status] ?? plan.status}
+                {(plan.applyCount ?? 0) > 0 ? `${plan.applyCount} áp dụng` : "Chưa áp dụng"}
               </span>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-4">
@@ -103,7 +103,7 @@ export function PlanList({
                   Số bước
                 </p>
                 <p className="mt-1 font-bold text-slate-800">
-                  {plan.plantEventIds?.length ?? 0}
+                  {plan.events?.length ?? 0}
                 </p>
               </div>
             </div>

@@ -3,6 +3,8 @@
  * Add keys here first; the English locale is type-checked against this shape.
  */
 import { settingsVi } from "../../features/settings/locales/vi";
+import { plantManagementVi } from "../../features/plant-management/locales/vi";
+import { notificationsVi } from "../../features/notifications/locales/vi";
 
 export const vi = {
   common: {
@@ -70,6 +72,10 @@ export const vi = {
   },
 
   settings: settingsVi,
+
+  plantManagement: plantManagementVi,
+
+  notifications: notificationsVi,
 
   chat: {
     emptyStateTitle: "Leafy Chat",
