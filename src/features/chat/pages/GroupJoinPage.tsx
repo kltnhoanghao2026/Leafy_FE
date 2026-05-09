@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api/chatApi';
 import { ROUTES } from '../../../lib/routes';
-import { Avatar } from '../../../components/ui/Avatar';
 
 function AvatarStack({ previews }: { previews: { name: string; avatar: string | null }[] }) {
   const shown = previews.slice(0, 5);
@@ -31,7 +30,7 @@ export function GroupJoinPage() {
 
   const { data: preview, isLoading, isError } = useQuery({
     queryKey: ['join-preview', token],
-    queryFn: () => chatApi.getJoinPreview(token!),
+    queryFn: () => chatApi.getJoinLinkPreview(token!),
     enabled: !!token,
     retry: false,
   });

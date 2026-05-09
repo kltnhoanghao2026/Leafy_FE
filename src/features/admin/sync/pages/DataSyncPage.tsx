@@ -141,9 +141,6 @@ function ProfileSyncCard() {
   const reindexProfiles = useReindexProfiles();
   const resetProfileIndex = useResetProfileIndex();
 
-  const syncCommunityProfiles = useSyncCommunityProfiles();
-  const syncCommunityResult = syncCommunityProfiles.data?.data?.data;
-
   const isActive =
     syncStatus?.status === "STARTING" || syncStatus?.status === "RUNNING";
 

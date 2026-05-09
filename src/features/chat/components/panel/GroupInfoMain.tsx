@@ -3,11 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../../api/chatApi';
 import type { ConversationResponse } from '../../api/chatApi';
 import { fileApi } from '../../../../lib/api/fileApi';
-import { NavRow, Spinner, IconLink, IconCheck, IconUsers, IconClock, IconShield, IconPin, IconImage, IconSettings, IconBan, CollapsibleSection } from './PanelShared';
+import { NavRow, Spinner, IconLink, IconCheck, IconUsers, IconClock, IconPin, CollapsibleSection } from './PanelShared';
 import { PinnedMessagesView, BlockedMembersView, SharedMediaView, SharedFilesView } from './ContentViews';
 import { SettingsView } from './SettingsView';
 
-export function GroupInfoMain({ conversation, currentUserId, currentRole, onNavigate }: {
+export function GroupInfoMain({ conversation, currentRole, onNavigate }: {
   conversation: ConversationResponse;
   currentUserId: string;
   currentRole: string;

@@ -127,8 +127,6 @@ export function ConversationList({ conversations, activeId, onSelect, onNewChat,
             {displayConversations.map((conv) => {
               const isSelected = activeId === conv.id;
               const isDisbanded = conv.isDisbanded;
-              const memberCount = conv.members?.length ?? 0;
-
               // Last message preview text
               let lastText = 'Bắt đầu trò chuyện...';
               if (isDisbanded) lastText = 'Nhóm đã giải tán';

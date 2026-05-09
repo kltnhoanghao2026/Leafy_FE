@@ -1,4 +1,4 @@
-import { ShieldCheck, UserPlus, MessageCircle, Check } from 'lucide-react'
+import { ShieldCheck, MessageCircle, Check } from 'lucide-react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { profilesApi } from '../api/profilesApi'
 import { useState } from 'react'

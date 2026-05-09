@@ -33,10 +33,6 @@ export function TimelineView({
   const dates = Object.keys(grouped).sort();
 
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
-  const now = new Date();
-  const isCurrentMonth =
-    month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
-
   return (
     <div className="flex flex-col gap-4">
       {/* Month nav */}

@@ -31,7 +31,7 @@ export function NotificationPopover() {
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -53,7 +53,7 @@ export function NotificationPopover() {
     isError,
   } = useNotificationHistory(false, true);
 
-  const markCheckedMutation = useMarkCheckedMutation();
+  useMarkCheckedMutation();
   const markReadMutation = useMarkNotificationReadMutation();
   const markAllReadMutation = useMarkAllReadMutation();
 

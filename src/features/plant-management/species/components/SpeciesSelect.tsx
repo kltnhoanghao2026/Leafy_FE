@@ -12,7 +12,6 @@ interface SpeciesSelectProps {
 export function SpeciesSelect({
   value,
   onChange,
-  required = false,
 }: SpeciesSelectProps) {
   const speciesQuery = useSpecies();
   const species = useMemo(() => speciesQuery.data ?? [], [speciesQuery.data]);

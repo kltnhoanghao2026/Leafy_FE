@@ -3,8 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../../../lib/routes';
 import { chatApi } from '../../api/chatApi';
-import type { GroupMemberListItem, AdminMember } from '../../api/chatApi';
-import type { ConversationMember } from '../../api/chatApi';
+import type { GroupMemberListItem } from '../../api/chatApi';
 import { Avatar } from '../../../../components/ui/Avatar';
 import {
   IconCrown, IconShield, RoleBadge, SectionHeader, Spinner,
@@ -96,7 +95,7 @@ function MemberRowMenu({ member, currentRole, conversationId, isOwner }: {
 }
 
 // ── GroupMembersView ──────────────────────────────────────────────────────────
-export function GroupMembersView({ conversationId, currentUserId, currentRole, onAddMember }: {
+export function GroupMembersView({ conversationId, currentRole, onAddMember }: {
   conversationId: string;
   currentUserId: string;
   currentRole: string;

@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useWebSocketClient } from '../../../providers/WebSocketProvider';
-import type { InAppNotificationPayload } from '../types';
 import { notificationKeys } from '../queries/keys';
 
 export const useNotificationWebSocket = () => {
@@ -13,8 +12,7 @@ export const useNotificationWebSocket = () => {
 
     const subscription = client.subscribe('/user/queue/notifications', (payload) => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _notification = JSON.parse(payload.body) as InAppNotificationPayload;
+        JSON.parse(payload.body);
 
         // Invalidate queries so the bell count and history update in real-time
         queryClient.invalidateQueries({ queryKey: notificationKeys.state() });

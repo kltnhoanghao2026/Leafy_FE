@@ -43,7 +43,6 @@ export const ROUTES = {
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
-    RAG_PANEL: "/dashboard/rag-panel",
     RAG_PLAN: (planId: string) =>
       `/dashboard/rag-panel/plans/${planId}`,
     COMMUNITY: "/dashboard/community",
