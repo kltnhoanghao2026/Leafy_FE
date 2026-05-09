@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, ExternalLink } from 'lucide-react';
 import { Avatar } from '../../../components/ui/Avatar';
 import type { LinkPreviewResponse } from '../api/chatApi';

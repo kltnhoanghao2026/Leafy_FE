@@ -1,6 +1,9 @@
-import { settingsVi } from "./vi";
+import type { WidenStrings } from "../../../i18n/types";
+import type { settingsVi } from "./vi";
 
-export const settingsEn: typeof settingsVi = {
+type SettingsTranslationDict = WidenStrings<typeof settingsVi>;
+
+export const settingsEn: SettingsTranslationDict = {
   title: "System Settings",
   subtitle: "Manage your account and customize your experience.",
   copyright: "© 2024 Coffee Monitor Vietnam. All rights reserved.",

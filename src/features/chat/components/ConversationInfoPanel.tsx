@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import type { ConversationResponse } from '../api/chatApi';
 import { IconClose, IconChevronLeft } from './panel/PanelShared';
 import { AddMemberView } from './panel/AddMemberView';

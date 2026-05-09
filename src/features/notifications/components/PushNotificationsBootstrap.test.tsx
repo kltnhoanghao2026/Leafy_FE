@@ -79,6 +79,7 @@ describe("PushNotificationsBootstrap", () => {
     useAuthStore.setState({
       user: {
         id: "user-1",
+        profileId: "profile-1",
         name: "Backend Farmer",
         email: "farmer@example.com",
       },

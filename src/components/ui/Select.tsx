@@ -7,6 +7,8 @@ export interface SelectOption {
 }
 
 export interface SelectProps {
+  id?: string;
+  ariaLabel?: string;
   value?: string | number;
   onChange?: (value: string | number) => void;
   options: SelectOption[];
@@ -16,6 +18,8 @@ export interface SelectProps {
 }
 
 export function Select({
+  id,
+  ariaLabel,
   value,
   onChange,
   options,
@@ -48,6 +52,8 @@ export function Select({
   return (
     <div className={`relative w-full ${className}`} ref={containerRef}>
       <button
+        id={id}
+        aria-label={ariaLabel}
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}

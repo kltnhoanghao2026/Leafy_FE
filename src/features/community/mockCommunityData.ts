@@ -17,6 +17,7 @@ export const MOCK_POSTS: Post[] = [
     upvotes: 24,
     downvotes: 0,
     currentUserVoteType: null,
+    postType: 'FEED',
     comments: 2, // 2 comments shown below
     shares: 0,
     commentsList: [
@@ -61,6 +62,7 @@ export const MOCK_POSTS: Post[] = [
     upvotes: 156,
     downvotes: 0,
     currentUserVoteType: null,
+    postType: 'FEED',
     comments: 0,
     shares: 5,
     commentsList: []

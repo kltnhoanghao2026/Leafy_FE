@@ -10,6 +10,7 @@ import { getOrCreateDeviceId } from "../../../lib/clientDevice";
 
 export function AuthSessionBootstrap() {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const refreshToken = useAuthStore((state) => state.refreshToken);
   const isInitializing = useAuthStore((state) => state.isInitializing);
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -19,38 +20,64 @@ export function AuthSessionBootstrap() {
 
   const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-  // On mount: attempt a silent token refresh using the HttpOnly cookie.
-  // This restores the session after a page reload without exposing the refresh token to JS.
   useEffect(() => {
     if (accessToken) {
       setIsInitializing(false);
       return;
     }
 
-    axios
-      .post<ApiEnvelope<{ accessToken: string }>>(
-        `${baseURL}${API_ENDPOINTS.AUTH.REFRESH}`,
-        {},
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-Device-ID": getOrCreateDeviceId(),
+    const refreshSession = async () => {
+      try {
+        const res = await axios.post<ApiEnvelope<{ accessToken: string }>>(
+          `${baseURL}${API_ENDPOINTS.AUTH.REFRESH}`,
+          {},
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "X-Device-ID": getOrCreateDeviceId(),
+            },
+            withCredentials: true,
           },
-          withCredentials: true,
-        },
-      )
-      .then((res) => {
+        );
+
         const token = res.data?.data?.accessToken;
         if (token) {
           setTokens(token);
+          return;
         }
-      })
-      .catch(() => {
-        // No valid session â€“ user must log in
-      })
-      .finally(() => {
-        setIsInitializing(false);
-      });
+      } catch {
+        // Fall back below when no valid refresh cookie exists.
+      }
+
+      if (!refreshToken) return;
+
+      try {
+        const res = await axios.post<
+          ApiEnvelope<{ accessToken: string; refreshToken?: string }>
+        >(
+          `${baseURL}${API_ENDPOINTS.AUTH.REFRESH}/mobile`,
+          { refreshToken },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "X-Device-ID": getOrCreateDeviceId(),
+            },
+            withCredentials: true,
+          },
+        );
+
+        const data = res.data?.data;
+        if (data?.accessToken) {
+          setTokens(data.accessToken, data.refreshToken ?? refreshToken);
+        }
+      } catch {
+        // No valid session: user must log in.
+      }
+    };
+
+    refreshSession().finally(() => {
+      setIsInitializing(false);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -61,7 +88,7 @@ export function AuthSessionBootstrap() {
   useEffect(() => {
     if (!accessToken) {
       console.log(
-        "[AuthSessionBootstrap] no accessToken â†’ clearing user & accountRole",
+        "[AuthSessionBootstrap] no accessToken -> clearing user & accountRole",
       );
       if (user !== null) {
         setUser(null);
@@ -108,12 +135,10 @@ export function AuthSessionBootstrap() {
 
   useEffect(() => {
     console.log(
-      `[AuthSessionBootstrap] account effect â€” role=${account?.role ?? "(no account yet)"}`,
+      `[AuthSessionBootstrap] account effect - role=${account?.role ?? "(no account yet)"}`,
     );
     if (account?.role) {
-      console.log(
-        `[AuthSessionBootstrap] setting accountRole â†’ ${account.role}`,
-      );
+      console.log(`[AuthSessionBootstrap] setting accountRole -> ${account.role}`);
       setAccountRole(account.role);
     }
   }, [account, setAccountRole]);

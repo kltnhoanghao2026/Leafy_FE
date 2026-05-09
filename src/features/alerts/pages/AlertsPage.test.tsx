@@ -114,6 +114,12 @@ const mockPickerApis = () => {
   );
 };
 
+const chooseSelectOption = async (label: string, optionName: string | RegExp) => {
+  await userEvent.click(screen.getByLabelText(label));
+  const options = await screen.findAllByText(optionName);
+  await userEvent.click(options[0]);
+};
+
 describe("AlertsPage", () => {
   it("renders a paged backend alert list", async () => {
     mockPickerApis();
@@ -128,9 +134,10 @@ describe("AlertsPage", () => {
     expect(
       await screen.findByText("AIR_TEMP exceeded max threshold"),
     ).toBeInTheDocument();
-    expect(screen.getByText("THRESHOLD_HIGH - value 44")).toBeInTheDocument();
+    expect(screen.getByText("Vượt ngưỡng cao")).toBeInTheDocument();
+    expect(screen.getByText(/giá trị đo 44/)).toBeInTheDocument();
     expect(screen.getAllByText("North sensor").length).toBeGreaterThan(0);
-    expect(screen.getByText("1 alert events")).toBeInTheDocument();
+    expect(screen.getByText("1 cảnh báo")).toBeInTheDocument();
   });
 
   it("sends severity and status filters in the alert events request", async () => {
@@ -151,8 +158,8 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
-    await userEvent.selectOptions(screen.getByLabelText("Severity"), "HIGH");
-    await userEvent.selectOptions(screen.getByLabelText("Status"), "OPEN");
+    await chooseSelectOption("Severity", "Quan trọng");
+    await chooseSelectOption("Status", "Cần xử lý");
 
     await waitFor(() => {
       expect(seenRequests).toContainEqual({
@@ -189,11 +196,10 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
-    await screen.findByRole("option", { name: "North Farm" });
-    await userEvent.selectOptions(screen.getByLabelText("Farm plot"), farmPlot.id);
-    await userEvent.selectOptions(await screen.findByLabelText("Zone"), zone.id ?? "");
-    await userEvent.selectOptions(screen.getByLabelText("Device"), device.id ?? "");
-    await userEvent.selectOptions(screen.getByLabelText("Time range"), "24h");
+    await chooseSelectOption("Farm plot", "North Farm");
+    await chooseSelectOption("Zone", "Coffee Zone A");
+    await chooseSelectOption("Device", "North sensor");
+    await chooseSelectOption("Time range", "Last 24h");
 
     await waitFor(() => {
       expect(seenRequests).toEqual(
@@ -220,7 +226,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    expect(await screen.findByText("No alert events")).toBeInTheDocument();
+    expect(await screen.findByText("Không có cảnh báo")).toBeInTheDocument();
   });
 
   it("acknowledges an open alert and refreshes the list", async () => {
@@ -261,7 +267,7 @@ describe("AlertsPage", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText("ACKNOWLEDGED").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("Đã xác nhận").length).toBeGreaterThan(0);
     });
     expect(
       screen.getByRole("button", { name: /acknowledge alert/i }),
@@ -303,7 +309,7 @@ describe("AlertsPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /resolve alert/i }));
 
     await waitFor(() => {
-      expect(screen.getAllByText("RESOLVED").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("Đã xử lý").length).toBeGreaterThan(0);
     });
     expect(screen.getByRole("button", { name: /resolve alert/i })).toBeDisabled();
   });
@@ -356,7 +362,7 @@ describe("AlertsPage", () => {
     );
 
     expect(
-      await screen.findByText("Alert lifecycle action failed"),
+      await screen.findByText("Không cập nhật được cảnh báo"),
     ).toBeInTheDocument();
   });
 
@@ -383,10 +389,10 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    expect(await screen.findByText(/Page 1 of 2/)).toBeInTheDocument();
+    expect(await screen.findByText(/Trang 1 \/ 2/)).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText("Next page"));
 
-    expect(await screen.findByText(/Page 2 of 2/)).toBeInTheDocument();
+    expect(await screen.findByText(/Trang 2 \/ 2/)).toBeInTheDocument();
     expect(requestedPages).toContain("1");
   });
 
@@ -401,7 +407,7 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     expect(
-      await screen.findByText("Alert events could not be loaded"),
+      await screen.findByText("Không tải được cảnh báo"),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });

@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Award, MapPin, MessageCircle, ShieldCheck, Loader2, FileText,
-  ThumbsUp, Share2, Briefcase, CalendarDays, UserPlus, Check,
+  Award, MapPin, MessageCircle, Loader2, CalendarDays, UserPlus, Check,
   ArrowLeft, X
 } from 'lucide-react'
 import toast from 'react-hot-toast'

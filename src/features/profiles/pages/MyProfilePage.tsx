@@ -2,9 +2,8 @@ import { useState, useRef, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Award, MapPin, Settings, Camera, ThumbsUp, MessageCircle,
-  Share2, ShieldCheck, Loader2, FileText, Edit3, Check, X,
-  Briefcase, Users, CalendarDays
+  Award, MapPin, Settings, Camera, ShieldCheck, Loader2, Edit3, Check, X,
+  Users, CalendarDays
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Avatar } from '../../../components/ui/Avatar'
@@ -353,7 +352,7 @@ export function MyProfilePage() {
 
       {activeTab === 'followers' && (
         <div className="max-w-5xl mx-auto px-4 md:px-8">
-          <FollowersList userId={profile.userId} />
+          <FollowersList profileId={profile.id} />
         </div>
       )}
     </div>

@@ -31,8 +31,8 @@ export function useLogin() {
 
       const envelope = response.data;
       if (envelope.data) {
-        setTokens(envelope.data.accessToken);
         setRememberMe(rememberMe);
+        setTokens(envelope.data.accessToken, envelope.data.refreshToken ?? null);
         navigate(ROUTES.DASHBOARD.ROOT);
         return { success: true };
       }

@@ -3,17 +3,16 @@ import { Link } from "react-router-dom";
 import { useAlertEvents } from "../../alerts/queries";
 import { ROUTES } from "../../../lib/routes";
 import { formatDateTime } from "../utils/format";
+import {
+  alertSeverityClasses,
+  alertSeverityLabel,
+  alertStatusLabel,
+  alertTypeLabel,
+} from "../../alerts/utils/alertLabels";
 
 interface RecentAlertsProps {
   zoneId?: string;
 }
-
-const severityClasses: Record<string, string> = {
-  LOW: "bg-blue-50 text-blue-600 border-blue-100",
-  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  HIGH: "bg-orange-50 text-orange-700 border-orange-100",
-  CRITICAL: "bg-red-50 text-red-600 border-red-100",
-};
 
 export function RecentAlerts({ zoneId }: RecentAlertsProps) {
   const { data, isLoading, isError, refetch } = useAlertEvents(
@@ -84,7 +83,7 @@ export function RecentAlerts({ zoneId }: RecentAlertsProps) {
             <div
               key={alert.id}
               className={`flex items-center gap-4 p-4 rounded-3xl border ${
-                severityClasses[alert.severity] ?? severityClasses.LOW
+                alertSeverityClasses[alert.severity] ?? alertSeverityClasses.LOW
               }`}
             >
               <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white shadow-sm shrink-0">
@@ -92,10 +91,13 @@ export function RecentAlerts({ zoneId }: RecentAlertsProps) {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-[15px] font-bold truncate leading-tight">
-                  {alert.message}
+                  {alertTypeLabel(alert.alertType)}
                 </h4>
                 <p className="text-[12px] font-semibold mt-0.5">
-                  {alert.status} - {alert.severity}
+                  {alertStatusLabel(alert.status)} - {alertSeverityLabel(alert.severity)}
+                </p>
+                <p className="text-[11px] font-semibold mt-0.5 opacity-80 line-clamp-2">
+                  {alert.message}
                 </p>
                 <p className="text-[10px] font-black tracking-wider uppercase mt-1 opacity-75">
                   {formatDateTime(alert.openedAt)}

@@ -29,8 +29,6 @@ import { DataSeedingPage } from "./features/admin/seeding";
 import { DataSyncPage } from "./features/admin/sync";
 import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
 import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
-import { UserManagementPage } from "./features/admin/users";
-import { AdminOverviewPage } from "./features/admin/overview";
 import { AdminLayout } from "./layouts/AdminLayout";
 
 import { DiseasePredictionPage } from "./features/disease-detection";

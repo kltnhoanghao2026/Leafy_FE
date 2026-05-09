@@ -21,6 +21,15 @@ import {
   formatDateTime,
   formatNumber,
 } from "../../metrics-view/utils/format";
+import { Select } from "../../../components/ui/Select";
+import {
+  alertSeverityClasses,
+  alertSeverityLabel,
+  alertStatusClasses,
+  alertStatusLabel,
+  alertTypeLabel,
+  readableAlertValue,
+} from "../utils/alertLabels";
 
 type TimeRange = "all" | "24h" | "7d" | "30d";
 
@@ -38,20 +47,6 @@ const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
   { value: "30d", label: "Last 30 days" },
   { value: "all", label: "All time" },
 ];
-
-const severityClasses: Record<AlertSeverity, string> = {
-  LOW: "bg-blue-50 text-blue-600 border-blue-100",
-  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  HIGH: "bg-orange-50 text-orange-700 border-orange-100",
-  CRITICAL: "bg-red-50 text-red-600 border-red-100",
-};
-
-const statusClasses: Record<AlertStatus, string> = {
-  OPEN: "bg-red-50 text-red-600 border-red-100",
-  ACKNOWLEDGED: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  RESOLVED: "bg-green-50 text-green-700 border-green-100",
-  CLOSED: "bg-slate-50 text-slate-600 border-slate-100",
-};
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
   if (range === "all") {
@@ -150,16 +145,16 @@ export function AlertsPage() {
     resolveAlert.isPending && resolveAlert.variables === alertId;
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return "No device";
+    if (!deviceId) return "Không giới hạn thiết bị";
     const device = deviceMap.get(deviceId);
-    if (!device) return `Device ${compactId(deviceId)}`;
-    return device.deviceName || device.deviceCode || compactId(deviceId);
+    if (!device) return "Thiết bị không còn trong danh sách";
+    return device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên";
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return "No zone";
+    if (!zoneId) return "Không giới hạn khu vực";
     const zone = zoneMap.get(zoneId);
-    return zone?.zoneName || `Zone ${compactId(zoneId)}`;
+    return zone?.zoneName || "Khu vực không còn trong danh sách";
   };
 
   return (
@@ -167,11 +162,11 @@ export function AlertsPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Alert center
+            Trung tâm cảnh báo
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Filter collector alert events by farm context, zone, device,
-            severity, status, and time window.
+            Theo dõi các cảnh báo IoT theo vườn, khu vực, thiết bị, mức độ,
+            trạng thái xử lý và khoảng thời gian.
           </p>
         </div>
 
@@ -189,174 +184,163 @@ export function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Farm plot
+              Vườn
             </span>
-            <select
-              aria-label="Farm plot"
+            <Select
+              ariaLabel="Farm plot"
               value={selectedFarmPlotId}
-              onChange={(event) => {
-                setSelectedFarmPlotId(event.target.value);
+              onChange={(value) => {
+                setSelectedFarmPlotId(String(value));
                 setSelectedZoneId("");
                 setSelectedDeviceId("");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: plotsQuery.isLoading ? "Đang tải vườn..." : "Tất cả vườn",
+                },
+                ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+              ]}
+              className="mt-2"
               disabled={profileQuery.isLoading || plotsQuery.isLoading}
-            >
-              <option value="">
-                {plotsQuery.isLoading ? "Loading farms..." : "All farm plots"}
-              </option>
-              {farmPlots.map((plot) => (
-                <option key={plot.id} value={plot.id}>
-                  {plot.name}
-                </option>
-              ))}
-            </select>
+            />
             <p className="mt-2 text-xs font-semibold text-slate-500">
-              Farm plot narrows zone/device options only. Alert API does not
-              support farmPlotId filtering directly.
+              Chọn vườn để thu hẹp danh sách khu vực và thiết bị.
             </p>
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Zone
+              Khu vực
             </span>
-            <select
-              aria-label="Zone"
+            <Select
+              ariaLabel="Zone"
               value={selectedZoneId}
-              onChange={(event) => {
-                setSelectedZoneId(event.target.value);
+              onChange={(value) => {
+                setSelectedZoneId(String(value));
                 setSelectedDeviceId("");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: !selectedFarmPlotId
+                    ? "Chọn vườn trước"
+                    : zonesQuery.isLoading
+                      ? "Đang tải khu vực..."
+                      : "Tất cả khu vực",
+                },
+                ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+              ]}
+              className="mt-2"
               disabled={!selectedFarmPlotId || zonesQuery.isLoading}
-            >
-              <option value="">
-                {!selectedFarmPlotId
-                  ? "Select farm first"
-                  : zonesQuery.isLoading
-                    ? "Loading zones..."
-                    : "All zones"}
-              </option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.zoneName}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Device
+              Thiết bị
             </span>
-            <select
-              aria-label="Device"
+            <Select
+              ariaLabel="Device"
               value={effectiveSelectedDeviceId}
-              onChange={(event) => {
-                setSelectedDeviceId(event.target.value);
+              onChange={(value) => {
+                setSelectedDeviceId(String(value));
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: devicesQuery.isLoading ? "Đang tải thiết bị..." : "Tất cả thiết bị",
+                },
+                ...devices.map((device) => ({
+                  value: device.id,
+                  label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+                })),
+              ]}
+              className="mt-2"
               disabled={devicesQuery.isLoading}
-            >
-              <option value="">
-                {devicesQuery.isLoading ? "Loading devices..." : "All devices"}
-              </option>
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.deviceName || device.deviceCode || compactId(device.id)}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Time range
+              Thời gian
             </span>
-            <select
-              aria-label="Time range"
+            <Select
+              ariaLabel="Time range"
               value={selectedTimeRange}
-              onChange={(event) => {
-                setSelectedTimeRange(event.target.value as TimeRange);
+              onChange={(value) => {
+                setSelectedTimeRange(value as TimeRange);
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              {timeRangeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={timeRangeOptions}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Severity
+              Mức độ
             </span>
-            <select
-              aria-label="Severity"
+            <Select
+              ariaLabel="Severity"
               value={severity}
-              onChange={(event) => {
-                setSeverity(event.target.value as AlertSeverity | "");
+              onChange={(value) => {
+                setSeverity(value as AlertSeverity | "");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              <option value="">All severities</option>
-              {severityOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Tất cả mức độ" },
+                ...severityOptions.map((option) => ({
+                  value: option,
+                  label: alertSeverityLabel(option),
+                })),
+              ]}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Status
+              Trạng thái
             </span>
-            <select
-              aria-label="Status"
+            <Select
+              ariaLabel="Status"
               value={status}
-              onChange={(event) => {
-                setStatus(event.target.value as AlertStatus | "");
+              onChange={(value) => {
+                setStatus(value as AlertStatus | "");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              <option value="">All statuses</option>
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "Tất cả trạng thái" },
+                ...statusOptions.map((option) => ({
+                  value: option,
+                  label: alertStatusLabel(option),
+                })),
+              ]}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
               Page size
             </span>
-            <select
-              aria-label="Page size"
+            <Select
+              ariaLabel="Page size"
               value={size}
-              onChange={(event) => {
-                setSize(Number(event.target.value));
+              onChange={(value) => {
+                setSize(Number(value));
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              {[10, 20, 50].map((option) => (
-                <option key={option} value={option}>
-                  {option} / page
-                </option>
-              ))}
-            </select>
+              options={[10, 20, 50].map((option) => ({
+                value: option,
+                label: `${option} / page`,
+              }))}
+              className="mt-2"
+            />
           </label>
         </div>
       </section>
@@ -380,10 +364,10 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Alert events could not be loaded
+                Không tải được cảnh báo
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                The collector returned an error for the current filters.
+                Không thể lấy dữ liệu cảnh báo với bộ lọc hiện tại.
               </p>
             </div>
             <button
@@ -404,11 +388,10 @@ export function AlertsPage() {
           className="rounded-[2rem] border border-red-100 bg-red-50 p-5 shadow-sm"
         >
           <h3 className="text-base font-black text-red-700">
-            Alert lifecycle action failed
+            Không cập nhật được cảnh báo
           </h3>
           <p className="mt-1 text-sm font-semibold text-red-600">
-            The collector could not update this alert. Check the alert status
-            and try again.
+            Trạng thái cảnh báo có thể đã thay đổi. Hãy tải lại và thử lại.
           </p>
         </div>
       ) : null}
@@ -418,10 +401,10 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedAlerts.totalItems)} alert events
+                {formatNumber(pagedAlerts.totalItems)} cảnh báo
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Page {formatNumber(pagedAlerts.page + 1)} of{" "}
+                Trang {formatNumber(pagedAlerts.page + 1)} /{" "}
                 {formatNumber(Math.max(pagedAlerts.totalPages, 1))}
               </p>
             </div>
@@ -451,10 +434,10 @@ export function AlertsPage() {
             <div className="p-10 text-center">
               <AlertTriangle className="mx-auto h-8 w-8 text-slate-400" />
               <h3 className="mt-4 text-lg font-black text-slate-800">
-                No alert events
+                Không có cảnh báo
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                The backend returned an empty page for these filters.
+                Không có cảnh báo phù hợp với bộ lọc hiện tại.
               </p>
             </div>
           ) : (
@@ -463,22 +446,22 @@ export function AlertsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Alert
+                      Cảnh báo
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Severity
+                      Mức độ
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Status
+                      Trạng thái
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Scope
+                      Phạm vi
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Opened
+                      Thời điểm
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Actions
+                      Thao tác
                     </th>
                   </tr>
                 </thead>
@@ -496,29 +479,31 @@ export function AlertsPage() {
                       <tr key={alert.id} className="hover:bg-slate-50/60">
                         <td className="px-5 py-4 align-top">
                           <p className="text-sm font-black text-slate-800">
-                            {alert.message}
+                            {alertTypeLabel(alert.alertType)}
                           </p>
                           <p className="mt-1 text-xs font-semibold text-slate-500">
-                            {alert.alertType || "Alert"} - value{" "}
-                            {formatNumber(alert.triggerValue)}
+                            {alert.message}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-slate-400">
+                            {readableAlertValue(alert)}
                           </p>
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                              severityClasses[alert.severity]
+                              alertSeverityClasses[alert.severity]
                             }`}
                           >
-                            {alert.severity}
+                            {alertSeverityLabel(alert.severity)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                              statusClasses[alert.status]
+                              alertStatusClasses[alert.status]
                             }`}
                           >
-                            {alert.status}
+                            {alertStatusLabel(alert.status)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -544,8 +529,8 @@ export function AlertsPage() {
                               )}`}
                             >
                               {acknowledgePending
-                                ? "Acknowledging..."
-                                : "Acknowledge"}
+                                ? "Đang xác nhận..."
+                                : "Đã xem"}
                             </button>
                             <button
                               type="button"
@@ -554,7 +539,7 @@ export function AlertsPage() {
                               className="rounded-full bg-[#245A34] px-3 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label={`Resolve alert ${compactId(alert.id)}`}
                             >
-                              {resolvePending ? "Resolving..." : "Resolve"}
+                              {resolvePending ? "Đang xử lý..." : "Đánh dấu đã xử lý"}
                             </button>
                           </div>
                         </td>

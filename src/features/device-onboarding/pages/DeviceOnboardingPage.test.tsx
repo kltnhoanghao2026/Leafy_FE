@@ -132,7 +132,7 @@ const pagedDevices = (
 
 const bootstrapAuth = () => {
   useAuthStore.setState({
-    user: { id: "user-1", name: "Tester" },
+    user: { id: "user-1", profileId: "profile-1", name: "Tester" },
     accessToken: "token",
     isLoading: false,
     rememberMe: true,

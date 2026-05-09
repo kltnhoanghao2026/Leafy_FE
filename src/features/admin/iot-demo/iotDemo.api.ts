@@ -10,7 +10,7 @@ export const isIotDemoToolsEnabled = () =>
   import.meta.env.VITE_ENABLE_IOT_DEMO_TOOLS === "true";
 
 export const getIotDemoBaseUrl = () =>
-  import.meta.env.VITE_IOT_TEST_DATA_BASE_URL || "http://localhost:8099";
+  import.meta.env.VITE_IOT_TEST_DATA_BASE_URL || "/iot-test-data";
 
 const iotDemoClient = axios.create({
   baseURL: getIotDemoBaseUrl(),

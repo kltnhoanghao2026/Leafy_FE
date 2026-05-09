@@ -821,23 +821,4 @@ export const chatApi = {
    * Fetch the group preview info before joining via invite link.
    * Backend: GET /conversations/join/{token}/preview
    */
-  getJoinPreview: async (token: string): Promise<JoinGroupPreview> => {
-    const response = await apiClient.get<ApiEnvelope<JoinGroupPreview>>(
-      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}/preview`
-    );
-    return response.data.data!;
-  },
-
-  /**
-   * Join a group via invite link token.
-   * If membership approval is enabled, this creates a pending join request.
-   * Backend: POST /conversations/join/{token}
-   */
-  joinByLink: async (token: string, joinAnswer?: string): Promise<ConversationResponse> => {
-    const response = await apiClient.post<ApiEnvelope<ConversationResponse>>(
-      `${API_ENDPOINTS.MESSAGES.CONVERSATIONS}/join/${token}`,
-      joinAnswer ? { joinAnswer } : {}
-    );
-    return response.data.data!;
-  },
 };
