@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { ChartStatisticsPanel } from "./ChartStatisticsPanel";
 import {
+  CHART_TYPE_LABEL_KEYS,
   CHART_TYPES,
   IoTMetricCard,
   type MetricData,
@@ -15,6 +16,8 @@ import {
 } from "../utils/chartAnalytics";
 import type { SensorThresholds } from "../utils/chartThresholds";
 import type { DisplayChartRange } from "../utils/chartRanges";
+import { useTranslation } from "../../../i18n";
+import { formatChartRangeLabel } from "../../iot/utils/iotTranslation";
 
 interface RangeOption {
   value: DisplayChartRange;
@@ -66,6 +69,7 @@ export function SensorChartModal({
   eventMarkers = [],
   exportFilename,
 }: SensorChartModalProps) {
+  const { t } = useTranslation();
   const [windowStart, setWindowStart] = useState(0);
   const [windowEnd, setWindowEnd] = useState(1);
 
@@ -147,13 +151,13 @@ export function SensorChartModal({
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label={`${title} expanded chart`}
+      aria-label={`${title} ${t("iot.metrics.expandedChart")}`}
     >
       <div className="mx-auto my-6 w-full max-w-5xl rounded-[2rem] bg-slate-50 p-4 shadow-2xl sm:p-6">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-[#245A34]">
-              Expanded chart
+              {t("iot.metrics.expandedChart")}
             </p>
             <h3 className="text-2xl font-black text-slate-900">{title}</h3>
           </div>
@@ -171,13 +175,13 @@ export function SensorChartModal({
                       : "text-slate-500 hover:bg-slate-50 hover:text-[#245A34]"
                   }`}
                 >
-                  {option.label}
+                  {formatChartRangeLabel(t, option.value)}
                 </button>
               ))}
             </div>
             <button
               type="button"
-              aria-label="Close expanded chart"
+              aria-label={t("iot.metrics.closeExpandedChart")}
               onClick={onClose}
               className="rounded-full bg-white p-3 text-slate-500 shadow-sm hover:text-red-500"
             >
@@ -200,7 +204,7 @@ export function SensorChartModal({
                     : "text-slate-500 hover:bg-slate-50 hover:text-[#245A34]"
                 }`}
               >
-                {type.label}
+                {t(CHART_TYPE_LABEL_KEYS[type.value])}
               </button>
             ))}
           </div>
@@ -215,7 +219,7 @@ export function SensorChartModal({
                   : "bg-white text-slate-600 hover:text-[#245A34]"
               }`}
             >
-              Analytics
+              {t("iot.metrics.analytics")}
             </button>
           ) : null}
           <button
@@ -223,31 +227,31 @@ export function SensorChartModal({
             onClick={zoomIn}
             className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-sm hover:text-[#245A34]"
           >
-            Zoom in
+            {t("iot.metrics.zoomIn")}
           </button>
           <button
             type="button"
             onClick={zoomOut}
             className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-sm hover:text-[#245A34]"
           >
-            Zoom out
+            {t("iot.metrics.zoomOut")}
           </button>
           <button
             type="button"
             onClick={() => pan(-1)}
             className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-sm hover:text-[#245A34]"
           >
-            Pan left
+            {t("iot.metrics.panLeft")}
           </button>
           <button
             type="button"
             onClick={() => pan(1)}
             className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-600 shadow-sm hover:text-[#245A34]"
           >
-            Pan right
+            {t("iot.metrics.panRight")}
           </button>
           <span className="text-xs font-bold text-slate-400">
-            Window {Math.round(windowStart * 100)}%-{Math.round(windowEnd * 100)}%
+            {t("iot.metrics.window")(Math.round(windowStart * 100), Math.round(windowEnd * 100))}
           </span>
         </div>
 

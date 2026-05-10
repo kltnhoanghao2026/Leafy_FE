@@ -9,6 +9,7 @@ import {
   Wind,
 } from "lucide-react";
 import {
+  CHART_TYPE_LABEL_KEYS,
   CHART_TYPES,
   IoTMetricCard,
   type MetricData,
@@ -40,6 +41,11 @@ import {
   thresholdsFromAlertEvents,
   type EventMarkerData,
 } from "../utils/chartAnalytics";
+import { useTranslation } from "../../../i18n";
+import {
+  formatChartRangeLabel,
+  formatSensorLabel,
+} from "../../iot/utils/iotTranslation";
 
 const SENSOR_CONFIG = [
   {
@@ -211,6 +217,7 @@ function ZoneSensorCard({
   eventMarkers,
   exportFilename,
 }: ZoneSensorCardProps) {
+  const { t } = useTranslation();
   const chartQuery = useZoneChart(zoneId, sensor.code, apiRange);
   const chart = chartQuery.data;
   const alertsKey = useMemo(() => alertEventsKey(alerts), [alerts]);
@@ -223,14 +230,14 @@ function ZoneSensorCard({
     () => thresholdsFromAlertEvents(stableAlerts),
     [stableAlerts],
   );
-  const title = reading?.sensorName || sensor.title;
+  const title = formatSensorLabel(t, sensor.code, reading?.sensorName || sensor.title);
   const unit = normalizeUnit(reading?.unit || chart?.unit);
   const metricData: MetricData = {
     value: readingValue(reading),
     unit,
     badge:
       reading?.qualityStatus ||
-      (chart ? `${formatNumber(chart.points.length)} samples` : undefined),
+      (chart ? t("iot.metrics.samples")(formatNumber(chart.points.length)) : undefined),
     latestUpdatedAt: reading?.readingTime ?? null,
     trend,
   };
@@ -283,6 +290,7 @@ function ZoneSensorCard({
 }
 
 export function ZoneDetailMetricsPage() {
+  const { t } = useTranslation();
   const { zoneId } = useParams();
   const [range, setRange] = useState<DisplayChartRange>("D1");
   const [chartType, setChartType] = useState<SensorChartType>("area");
@@ -367,17 +375,17 @@ export function ZoneDetailMetricsPage() {
       <div>
         <div>
           <h2 className="text-[32px] font-bold text-[#111827] tracking-tight mb-1">
-            Zone metrics
+            {t("iot.metrics.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium">
-            Backend latest readings and aggregate charts for zone {zoneId}.
+            {t("iot.metrics.description")(zoneId)}
           </p>
         </div>
       </div>
 
       {zoneOverviewQuery.isLoading ? (
         <div
-          aria-label="Loading zone overview"
+          aria-label={t("iot.metrics.loadingOverview")}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {[0, 1, 2].map((item) => (
@@ -394,10 +402,10 @@ export function ZoneDetailMetricsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Zone overview could not be loaded
+                {t("iot.metrics.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                Check the route zoneId or collector service availability.
+                {t("iot.metrics.errorDescription")}
               </p>
             </div>
             <button
@@ -406,7 +414,7 @@ export function ZoneDetailMetricsPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.metrics.retry")}
             </button>
           </div>
         </div>
@@ -416,23 +424,23 @@ export function ZoneDetailMetricsPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <ZoneSummaryCard
-              label="Open alerts"
+              label={t("iot.metrics.openAlerts")}
               value={formatNumber(zoneOverview.openAlerts)}
-              detail={`Updated ${formatDateTime(zoneOverview.lastUpdatedAt)}`}
+              detail={t("iot.metrics.updated")(formatDateTime(zoneOverview.lastUpdatedAt))}
               tone="orange"
             />
             <ZoneSummaryCard
-              label="High severity"
+              label={t("iot.metrics.highSeverity")}
               value={formatNumber(
                 zoneOverview.alertSummary?.highSeverityAlerts ?? 0,
               )}
-              detail="HIGH alerts"
+              detail={t("iot.metrics.highAlerts")}
               tone="red"
             />
             <ZoneSummaryCard
-              label="Critical"
+              label={t("iot.metrics.critical")}
               value={formatNumber(zoneOverview.alertSummary?.criticalAlerts ?? 0)}
-              detail="CRITICAL alerts"
+              detail={t("iot.metrics.criticalAlerts")}
               tone="red"
             />
           </div>
@@ -440,11 +448,10 @@ export function ZoneDetailMetricsPage() {
           {readings.length === 0 ? (
             <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-center shadow-sm">
               <h3 className="text-lg font-black text-slate-800">
-                No latest sensor readings
+                {t("iot.metrics.noReadings")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                The collector returned an empty latestReadings array for this
-                zone.
+                {t("iot.metrics.noReadingsDescription")}
               </p>
             </div>
           ) : null}
@@ -467,7 +474,7 @@ export function ZoneDetailMetricsPage() {
                     />
                   </svg>
                   <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
-                    IoT sensor metrics
+                    {t("iot.metrics.sensorMetrics")}
                   </h3>
                 </div>
 
@@ -481,7 +488,7 @@ export function ZoneDetailMetricsPage() {
                         className="h-4 w-4 accent-[#245A34]"
                         aria-checked={compareEnabled}
                       />
-                      Compare mode
+                      {t("iot.metrics.compareMode")}
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {SENSOR_CONFIG.map((sensor) => {
@@ -504,7 +511,7 @@ export function ZoneDetailMetricsPage() {
                               className="h-3.5 w-3.5 accent-[#245A34]"
                               aria-checked={checked}
                             />
-                            {sensor.title}
+                            {formatSensorLabel(t, sensor.code, sensor.title)}
                           </label>
                         );
                       })}
@@ -529,10 +536,10 @@ export function ZoneDetailMetricsPage() {
                 <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-                      Chart display
+                      {t("iot.metrics.chartDisplay")}
                     </p>
                     <p className="text-sm font-semibold text-slate-500">
-                      Applies to all sensor cards in this section.
+                      {t("iot.metrics.chartDisplayDescription")}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -549,7 +556,7 @@ export function ZoneDetailMetricsPage() {
                               : "text-slate-500 hover:bg-white hover:text-[#245A34]"
                           }`}
                         >
-                          {option.label}
+                          {formatChartRangeLabel(t, option.value)}
                         </button>
                       ))}
                     </div>
@@ -566,7 +573,7 @@ export function ZoneDetailMetricsPage() {
                               : "text-slate-500 hover:bg-white hover:text-[#245A34]"
                           }`}
                         >
-                          {type.label}
+                          {t(CHART_TYPE_LABEL_KEYS[type.value])}
                         </button>
                       ))}
                     </div>
@@ -580,7 +587,7 @@ export function ZoneDetailMetricsPage() {
                           : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                       }`}
                     >
-                      Analytics
+                      {t("iot.metrics.analytics")}
                     </button>
                   </div>
                 </div>

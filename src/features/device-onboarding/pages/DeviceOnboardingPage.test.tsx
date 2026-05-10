@@ -313,7 +313,7 @@ describe("DeviceOnboardingPage", () => {
       await screen.findByText("Kết nối thiết bị thành công"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Thiết bị đã liên kết nhưng vẫn offline"),
+      screen.getByText("Thiết bị đã liên kết nhưng chưa online"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Đi tới chi tiết thiết bị" }),

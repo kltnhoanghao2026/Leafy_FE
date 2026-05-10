@@ -13,7 +13,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { collectorApi } from "../../../lib/api/collectorApi";
 import { ROUTES } from "../../../lib/routes";
 import { useAuthStore } from "../../../store/authStore";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
 import { compactId } from "../../metrics-view/utils/format";
+import { formatDeviceStatusLabel } from "../../iot/utils/iotTranslation";
 import { onboardingDeviceKeys } from "../queries";
 import type {
   DeviceOnboardingDraft,
@@ -31,42 +34,39 @@ import { mapDeviceOnboardingError } from "../utils/onboardingErrors";
 import { parseDeviceQrPayload } from "../utils/qrPayload";
 
 const CONNECTION_STEPS = [
-  { key: "provision", label: "Đang đăng ký thiết bị..." },
-  { key: "claim-code", label: "Đang xác thực thiết bị..." },
-  { key: "claim", label: "Đang gán thiết bị vào khu vực..." },
-  { key: "refresh", label: "Đang cập nhật danh sách..." },
+  { key: "provision", labelKey: "iot.devices.onboarding.stageProvision" },
+  { key: "claim-code", labelKey: "iot.devices.onboarding.stageClaimCode" },
+  { key: "claim", labelKey: "iot.devices.onboarding.stageClaim" },
+  { key: "refresh", labelKey: "iot.devices.onboarding.stageRefresh" },
 ] as const;
 
-const stepTitles: Record<
+const stepTitleKeys: Record<
   DeviceOnboardingStep,
-  { title: string; description: string }
+  { title: Parameters<TFunction>[0]; description: Parameters<TFunction>[0] }
 > = {
   choose: {
-    title: "Thêm thiết bị IoT",
-    description: "Chọn cách thêm thiết bị phù hợp nhất để giảm số trường phải nhập.",
+    title: "iot.devices.onboarding.title",
+    description: "iot.devices.onboarding.description",
   },
   scan: {
-    title: "Quét mã QR",
-    description:
-      "Bật camera để đọc QR trực tiếp hoặc dán JSON để kiểm thử nhanh.",
+    title: "iot.devices.onboarding.scanTitle",
+    description: "iot.devices.onboarding.scanDescription",
   },
   manual: {
-    title: "Nhập thủ công",
-    description:
-      "Nhập tối thiểu thông tin kỹ thuật, sau đó chỉ chọn vị trí và tên hiển thị.",
+    title: "iot.devices.onboarding.manualTitle",
+    description: "iot.devices.onboarding.manualDescription",
   },
   location: {
-    title: "Chọn vị trí",
-    description:
-      "Xác nhận thông tin thiết bị rồi chọn vườn và khu vực để gán vào.",
+    title: "iot.devices.onboarding.locationTitle",
+    description: "iot.devices.onboarding.locationDescription",
   },
   connecting: {
-    title: "Đang kết nối",
-    description: "FE đang chạy tuần tự provision, claim code, claim và refresh.",
+    title: "iot.devices.onboarding.connectingTitle",
+    description: "iot.devices.onboarding.connectingDescription",
   },
   success: {
-    title: "Kết nối thiết bị thành công",
-    description: "Thiết bị đã sẵn sàng để theo dõi trong trang chi tiết.",
+    title: "iot.devices.onboarding.successTitle",
+    description: "iot.devices.onboarding.successDescription",
   },
 };
 
@@ -94,9 +94,11 @@ const trimDraft = (draft: DeviceOnboardingDraft): DeviceOnboardingDraft => ({
   zoneName: draft.zoneName?.trim() || "",
 });
 
-const buildSuggestedDeviceName = (zoneLabel?: string) => {
+const buildSuggestedDeviceName = (t: TFunction, zoneLabel?: string) => {
   const trimmed = zoneLabel?.trim();
-  return trimmed ? `Cảm biến - ${trimmed}` : "Cảm biến - thiết bị mới";
+  return trimmed
+    ? t("iot.devices.onboarding.suggestedDeviceName")(trimmed)
+    : t("iot.devices.onboarding.suggestedNewDeviceName");
 };
 
 interface WizardProgressProps {
@@ -104,6 +106,7 @@ interface WizardProgressProps {
 }
 
 function WizardProgress({ step }: WizardProgressProps) {
+  const { t } = useTranslation();
   const activeIndex = {
     choose: 0,
     scan: 1,
@@ -114,11 +117,11 @@ function WizardProgress({ step }: WizardProgressProps) {
   }[step];
 
   const items = [
-    "Chọn cách thêm",
-    "Nhận dạng thiết bị",
-    "Chọn vị trí",
-    "Kết nối",
-    "Hoàn tất",
+    t("iot.devices.onboarding.progressChoose"),
+    t("iot.devices.onboarding.progressIdentify"),
+    t("iot.devices.onboarding.progressLocation"),
+    t("iot.devices.onboarding.progressConnect"),
+    t("iot.devices.onboarding.progressDone"),
   ];
 
   return (
@@ -235,6 +238,7 @@ interface ConnectionProgressProps {
 }
 
 function ConnectionProgress({ stage }: ConnectionProgressProps) {
+  const { t } = useTranslation();
   const activeIndex = CONNECTION_STEPS.findIndex((item) => item.key === stage);
 
   return (
@@ -265,7 +269,7 @@ function ConnectionProgress({ stage }: ConnectionProgressProps) {
               >
                 {index + 1}
               </span>
-              <p className="text-sm font-bold text-slate-700">{item.label}</p>
+              <p className="text-sm font-bold text-slate-700">{t(item.labelKey)}</p>
             </div>
             {isActive ? (
               <Loader2 className="h-4 w-4 animate-spin text-[#245A34]" />
@@ -284,6 +288,7 @@ interface OfflineGuideProps {
 }
 
 function OfflineGuide({ visible }: OfflineGuideProps) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -293,19 +298,18 @@ function OfflineGuide({ visible }: OfflineGuideProps) {
         <div className="space-y-3">
           <div>
             <h4 className="text-sm font-black text-amber-800">
-              Thiết bị đã liên kết nhưng vẫn offline
+              {t("iot.devices.detail.offlineTitle")}
             </h4>
             <p className="mt-1 text-sm font-semibold text-amber-700">
-              Hãy hoàn tất cấu hình Wi-Fi trực tiếp trên thiết bị. Không cần
-              nhập Wi-Fi trong form claim này.
+              {t("iot.devices.detail.offlineDescription")}
             </p>
           </div>
           <ol className="space-y-2 text-sm font-semibold text-amber-800">
-            <li>1. Bật nguồn thiết bị.</li>
-            <li>2. Kết nối Wi-Fi "Leafy-Setup-xxxx".</li>
-            <li>3. Mở http://192.168.4.1.</li>
-            <li>4. Nhập Wi-Fi của vườn hoặc nhà.</li>
-            <li>5. Chờ thiết bị online.</li>
+            <li>{t("iot.devices.detail.offlineStepPower")}</li>
+            <li>{t("iot.devices.detail.offlineStepWifi")}</li>
+            <li>{t("iot.devices.detail.offlineStepPortal")}</li>
+            <li>{t("iot.devices.detail.offlineStepCredential")}</li>
+            <li>{t("iot.devices.detail.offlineStepWait")}</li>
           </ol>
         </div>
       </div>
@@ -319,22 +323,23 @@ interface SuccessSummaryProps {
 }
 
 function SuccessSummary({ result, onReset }: SuccessSummaryProps) {
+  const { t } = useTranslation();
   const offline = result.status === "OFFLINE";
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <StatCard label="Tên thiết bị" value={result.deviceName} />
+        <StatCard label={t("iot.devices.onboarding.deviceName")} value={result.deviceName} />
         <StatCard
-          label="Trạng thái"
+          label={t("iot.common.status")}
           value={
             result.status
-              ? `${result.status}${result.provisioningStatus ? ` / ${result.provisioningStatus}` : ""}`
-              : "Chưa có trạng thái"
+              ? `${formatDeviceStatusLabel(t, result.status)}${result.provisioningStatus ? ` / ${formatDeviceStatusLabel(t, result.provisioningStatus)}` : ""}`
+              : t("iot.devices.onboarding.statusUnavailable")
           }
         />
-        <StatCard label="Farm plot" value={result.farmPlotName || compactId(result.farmPlotId)} />
-        <StatCard label="Zone" value={result.zoneName || compactId(result.zoneId)} />
+        <StatCard label={t("iot.common.farm")} value={result.farmPlotName || compactId(result.farmPlotId)} />
+        <StatCard label={t("iot.common.zone")} value={result.zoneName || compactId(result.zoneId)} />
       </div>
 
       <OfflineGuide visible={offline} />
@@ -345,7 +350,7 @@ function SuccessSummary({ result, onReset }: SuccessSummaryProps) {
             to={ROUTES.DASHBOARD.DEVICE_DETAIL(result.deviceId)}
             className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
           >
-            Đi tới chi tiết thiết bị
+            {t("iot.devices.onboarding.goToDetail")}
             <ArrowRight className="ml-2 h-4 w-4" strokeWidth={2.5} />
           </Link>
         ) : null}
@@ -354,7 +359,7 @@ function SuccessSummary({ result, onReset }: SuccessSummaryProps) {
           onClick={onReset}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
-          Thêm thiết bị khác
+          {t("iot.devices.onboarding.addAnother")}
         </button>
       </div>
     </div>
@@ -362,6 +367,7 @@ function SuccessSummary({ result, onReset }: SuccessSummaryProps) {
 }
 
 export function DeviceOnboardingPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [step, setStep] = useState<DeviceOnboardingStep>("choose");
@@ -377,7 +383,7 @@ export function DeviceOnboardingPage() {
   >(null);
   const [success, setSuccess] = useState<DeviceOnboardingResult | null>(null);
 
-  const currentTitle = stepTitles[step];
+  const currentTitle = stepTitleKeys[step];
   const isBusy = step === "connecting";
 
   const draftPreview = useMemo(() => trimDraft(draft), [draft]);
@@ -402,7 +408,7 @@ export function DeviceOnboardingPage() {
   };
 
   const applyQrPayload = (payload: string) => {
-    const parsed = parseDeviceQrPayload(payload);
+    const parsed = parseDeviceQrPayload(payload, t);
     if (!parsed.success) {
       setQrError(parsed.error);
       setQrInput(payload);
@@ -420,7 +426,7 @@ export function DeviceOnboardingPage() {
       deviceType: qrData.deviceType,
       model: qrData.model || "",
       deviceName:
-        current.deviceName.trim() || buildSuggestedDeviceName(current.zoneName || current.zoneId),
+        current.deviceName.trim() || buildSuggestedDeviceName(t, current.zoneName || current.zoneId),
     }));
     setMode("qr");
     setStep("location");
@@ -447,14 +453,14 @@ export function DeviceOnboardingPage() {
   const handleManualContinue = () => {
     const payload = trimDraft(draft);
     if (!payload.deviceUid || !payload.deviceCode || !payload.deviceType) {
-      setFormError("Thiếu deviceUid, deviceCode hoặc deviceType.");
+      setFormError(t("iot.devices.onboarding.missingDeviceInfo"));
       return;
     }
 
     setDraft((current) => ({
       ...current,
       ...payload,
-      deviceName: payload.deviceName || buildSuggestedDeviceName(payload.zoneName || payload.zoneId),
+      deviceName: payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
     }));
     setFormError(null);
     setStep("location");
@@ -472,7 +478,7 @@ export function DeviceOnboardingPage() {
       zoneName: "",
       deviceName: deviceNameTouched
         ? current.deviceName
-        : buildSuggestedDeviceName(),
+        : buildSuggestedDeviceName(t),
     }));
   };
 
@@ -486,7 +492,7 @@ export function DeviceOnboardingPage() {
       zoneName: zone?.zoneName || "",
       deviceName: deviceNameTouched
         ? current.deviceName
-        : buildSuggestedDeviceName(zone?.zoneName || compactId(zoneId)),
+        : buildSuggestedDeviceName(t, zone?.zoneName || compactId(zoneId)),
     }));
   };
 
@@ -502,17 +508,17 @@ export function DeviceOnboardingPage() {
     const payload = trimDraft(draft);
     if (!currentUserId) {
       setFormError(
-        "Bạn chưa đăng nhập hoặc thiếu X-User-Id. Hãy đăng nhập lại rồi thử kết nối thiết bị.",
+        t("iot.devices.onboarding.missingLogin"),
       );
       return;
     }
     if (!payload.deviceUid || !payload.deviceCode || !payload.deviceType) {
-      setFormError("Thiếu deviceUid, deviceCode hoặc deviceType.");
+      setFormError(t("iot.devices.onboarding.missingDeviceInfo"));
       setStep(mode === "manual" ? "manual" : "scan");
       return;
     }
     if (!payload.farmPlotId || !payload.zoneId) {
-      setFormError("Hãy chọn đầy đủ vườn và khu vực trước khi kết nối.");
+      setFormError(t("iot.devices.onboarding.missingLocation"));
       setStep("location");
       return;
     }
@@ -525,7 +531,7 @@ export function DeviceOnboardingPage() {
       const provisionedResponse = await collectorApi.provisionDevice({
         deviceUid: payload.deviceUid,
         deviceCode: payload.deviceCode,
-        deviceName: payload.deviceName || buildSuggestedDeviceName(payload.zoneName || payload.zoneId),
+        deviceName: payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
         deviceType: payload.deviceType,
       });
       const provisioned = provisionedResponse.data;
@@ -561,7 +567,7 @@ export function DeviceOnboardingPage() {
         deviceUid: claimed.deviceUid || provisioned.deviceUid,
         deviceCode: claimed.deviceCode || provisioned.deviceCode,
         deviceName:
-          claimed.deviceName || provisioned.deviceName || payload.deviceName || buildSuggestedDeviceName(payload.zoneName || payload.zoneId),
+          claimed.deviceName || provisioned.deviceName || payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
         deviceType: claimed.deviceType || provisioned.deviceType,
         farmPlotId: claimed.farmPlotId || payload.farmPlotId,
         zoneId: claimed.zoneId || payload.zoneId,
@@ -577,7 +583,7 @@ export function DeviceOnboardingPage() {
       setStep("success");
     } catch (error) {
       setConnectionStage(null);
-      setFormError(mapDeviceOnboardingError(error));
+      setFormError(mapDeviceOnboardingError(error, t));
       setStep("location");
     }
   };
@@ -595,9 +601,9 @@ export function DeviceOnboardingPage() {
           </div>
           <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:text-[#245A34]" />
         </div>
-        <h3 className="mt-4 text-lg font-black text-slate-900">Quét mã QR</h3>
+        <h3 className="mt-4 text-lg font-black text-slate-900">{t("iot.devices.onboarding.chooseQrTitle")}</h3>
         <p className="mt-1 text-sm font-semibold text-slate-500">
-          Tự đọc deviceUid, deviceCode, deviceType và model từ payload JSON.
+          {t("iot.devices.onboarding.chooseQrDescription")}
         </p>
       </button>
 
@@ -612,9 +618,9 @@ export function DeviceOnboardingPage() {
           </div>
           <ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:text-[#245A34]" />
         </div>
-        <h3 className="mt-4 text-lg font-black text-slate-900">Nhập thủ công</h3>
+        <h3 className="mt-4 text-lg font-black text-slate-900">{t("iot.devices.onboarding.chooseManualTitle")}</h3>
         <p className="mt-1 text-sm font-semibold text-slate-500">
-          Dành cho thiết bị chưa có QR hoặc cần kiểm thử nhanh.
+          {t("iot.devices.onboarding.chooseManualDescription")}
         </p>
       </button>
     </div>
@@ -633,16 +639,16 @@ export function DeviceOnboardingPage() {
             <QrCode className="mt-0.5 h-5 w-5 text-[#245A34]" />
             <div>
               <p className="text-sm font-bold text-slate-800">
-                Dán JSON của QR để kiểm thử luồng onboarding.
+                {t("iot.devices.onboarding.pasteQrTitle")}
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Nếu camera không khả dụng, bạn vẫn có thể dán payload JSON để tiếp tục.
+                {t("iot.devices.onboarding.pasteQrDescription")}
               </p>
             </div>
           </div>
 
           <Field
-            label="Nội dung QR JSON"
+            label={t("iot.devices.onboarding.qrJson")}
             value={qrInput}
             onChange={(value) => {
               setQrInput(value);
@@ -666,7 +672,7 @@ export function DeviceOnboardingPage() {
               }}
               className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
             >
-              Đọc QR
+              {t("iot.devices.onboarding.readQr")}
             </button>
             <button
               type="button"
@@ -676,7 +682,7 @@ export function DeviceOnboardingPage() {
               }}
               className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
             >
-              Xóa nội dung
+              {t("iot.devices.onboarding.clearContent")}
             </button>
           </div>
         </div>
@@ -688,7 +694,7 @@ export function DeviceOnboardingPage() {
           onClick={() => setStep("choose")}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
-          Quay lại
+          {t("iot.devices.onboarding.back")}
         </button>
       </div>
     </div>
@@ -698,7 +704,7 @@ export function DeviceOnboardingPage() {
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Field
-          label="deviceUid"
+          label={t("iot.devices.onboarding.deviceUid")}
           value={draft.deviceUid}
           onChange={(value) =>
             updateDraft((current) => ({ ...current, deviceUid: value }))
@@ -707,7 +713,7 @@ export function DeviceOnboardingPage() {
           required
         />
         <Field
-          label="deviceCode"
+          label={t("iot.devices.onboarding.deviceCode")}
           value={draft.deviceCode}
           onChange={(value) =>
             updateDraft((current) => ({ ...current, deviceCode: value }))
@@ -716,7 +722,7 @@ export function DeviceOnboardingPage() {
           required
         />
         <Field
-          label="deviceType"
+          label={t("iot.devices.onboarding.deviceType")}
           value={draft.deviceType}
           onChange={(value) =>
             updateDraft((current) => ({ ...current, deviceType: value }))
@@ -725,7 +731,7 @@ export function DeviceOnboardingPage() {
           required
         />
         <Field
-          label="model"
+          label={t("iot.devices.onboarding.model")}
           value={draft.model}
           onChange={(value) =>
             updateDraft((current) => ({ ...current, model: value }))
@@ -735,11 +741,11 @@ export function DeviceOnboardingPage() {
       </div>
 
       <Field
-        label="deviceName"
+        label={t("iot.devices.onboarding.deviceName")}
         value={draft.deviceName}
         onChange={handleDeviceNameChange}
-        placeholder={buildSuggestedDeviceName()}
-        helperText="Bạn có thể để trống, hệ thống sẽ tự gợi ý tên theo khu vực."
+        placeholder={buildSuggestedDeviceName(t)}
+        helperText={t("iot.devices.onboarding.deviceNameHelper")}
       />
 
       {formError ? (
@@ -754,14 +760,14 @@ export function DeviceOnboardingPage() {
           onClick={() => setStep("choose")}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
-          Quay lại
+          {t("iot.devices.onboarding.back")}
         </button>
         <button
           type="button"
           onClick={handleManualContinue}
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
         >
-          Tiếp tục
+          {t("iot.devices.onboarding.continue")}
         </button>
       </div>
     </div>
@@ -770,10 +776,10 @@ export function DeviceOnboardingPage() {
   const renderLocationStep = () => (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <StatCard label="Tên model" value={draftPreview.model || "Chưa có model"} />
-        <StatCard label="deviceCode" value={draftPreview.deviceCode} />
-        <StatCard label="deviceUid" value={draftPreview.deviceUid} />
-        <StatCard label="deviceType" value={draftPreview.deviceType} />
+        <StatCard label={t("iot.devices.onboarding.modelName")} value={draftPreview.model || t("iot.devices.onboarding.noModel")} />
+        <StatCard label={t("iot.devices.onboarding.deviceCode")} value={draftPreview.deviceCode} />
+        <StatCard label={t("iot.devices.onboarding.deviceUid")} value={draftPreview.deviceUid} />
+        <StatCard label={t("iot.devices.onboarding.deviceType")} value={draftPreview.deviceType} />
       </div>
 
       <FarmLocationSelector
@@ -784,11 +790,11 @@ export function DeviceOnboardingPage() {
       />
 
       <Field
-        label="deviceName"
+        label={t("iot.devices.onboarding.deviceName")}
         value={draft.deviceName}
         onChange={handleDeviceNameChange}
-        placeholder={buildSuggestedDeviceName(draft.zoneName || draft.zoneId)}
-        helperText="Tên hiển thị có thể sửa trước khi kết nối."
+        placeholder={buildSuggestedDeviceName(t, draft.zoneName || draft.zoneId)}
+        helperText={t("iot.devices.onboarding.deviceNameLocationHelper")}
       />
 
       {formError ? (
@@ -803,7 +809,7 @@ export function DeviceOnboardingPage() {
           onClick={() => setStep(mode === "manual" ? "manual" : "scan")}
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
-          Quay lại
+          {t("iot.devices.onboarding.back")}
         </button>
         <button
           type="button"
@@ -812,7 +818,7 @@ export function DeviceOnboardingPage() {
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Router className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Kết nối thiết bị
+          {t("iot.devices.onboarding.connectDevice")}
         </button>
       </div>
     </div>
@@ -827,10 +833,10 @@ export function DeviceOnboardingPage() {
           </div>
           <div>
             <h3 className="text-lg font-black text-slate-900">
-              Đang kết nối thiết bị
+              {t("iot.devices.onboarding.connectingDevice")}
             </h3>
             <p className="text-sm font-semibold text-slate-500">
-              Hệ thống đang chạy provision, claim code, claim và refresh.
+              {t("iot.devices.onboarding.connectingDeviceDescription")}
             </p>
           </div>
         </div>
@@ -853,10 +859,10 @@ export function DeviceOnboardingPage() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-[30px] font-black tracking-tight text-slate-900">
-            {currentTitle.title}
+            {t(currentTitle.title)}
           </h2>
           <p className="mt-1 max-w-3xl text-[15px] font-semibold text-slate-500">
-            {currentTitle.description}
+            {t(currentTitle.description)}
           </p>
         </div>
         <WizardProgress step={step} />

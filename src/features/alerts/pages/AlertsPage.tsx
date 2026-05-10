@@ -22,13 +22,15 @@ import {
   formatNumber,
 } from "../../metrics-view/utils/format";
 import { Select } from "../../../components/ui/Select";
+import { useTranslation } from "../../../i18n";
+import {
+  formatAlertStatusLabel,
+  formatAlertTypeLabel,
+  formatSeverityLabel,
+} from "../../iot/utils/iotTranslation";
 import {
   alertSeverityClasses,
-  alertSeverityLabel,
   alertStatusClasses,
-  alertStatusLabel,
-  alertTypeLabel,
-  readableAlertValue,
 } from "../utils/alertLabels";
 
 type TimeRange = "all" | "24h" | "7d" | "30d";
@@ -39,13 +41,6 @@ const statusOptions: AlertStatus[] = [
   "ACKNOWLEDGED",
   "RESOLVED",
   "CLOSED",
-];
-
-const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
-  { value: "24h", label: "Last 24h" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "all", label: "All time" },
 ];
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
@@ -73,6 +68,7 @@ const timeRangeToIsoWindow = (range: TimeRange) => {
 };
 
 export function AlertsPage() {
+  const { t } = useTranslation();
   const [selectedFarmPlotId, setSelectedFarmPlotId] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -138,6 +134,13 @@ export function AlertsPage() {
   const lifecycleActionError =
     acknowledgeAlert.isError || resolveAlert.isError;
 
+  const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
+    { value: "24h", label: t("iot.alerts.timeRanges.last24h") },
+    { value: "7d", label: t("iot.alerts.timeRanges.last7d") },
+    { value: "30d", label: t("iot.alerts.timeRanges.last30d") },
+    { value: "all", label: t("iot.alerts.timeRanges.all") },
+  ];
+
   const isAcknowledging = (alertId: string) =>
     acknowledgeAlert.isPending && acknowledgeAlert.variables === alertId;
 
@@ -145,16 +148,48 @@ export function AlertsPage() {
     resolveAlert.isPending && resolveAlert.variables === alertId;
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return "Không giới hạn thiết bị";
+    if (!deviceId) return t("iot.alerts.scope.noDevice");
     const device = deviceMap.get(deviceId);
-    if (!device) return "Thiết bị không còn trong danh sách";
-    return device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên";
+    if (!device) return t("iot.alerts.scope.missingDevice");
+    return device.deviceName || device.deviceCode || t("iot.alerts.scope.unnamedDevice");
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return "Không giới hạn khu vực";
+    if (!zoneId) return t("iot.alerts.scope.noZone");
     const zone = zoneMap.get(zoneId);
-    return zone?.zoneName || "Khu vực không còn trong danh sách";
+    return zone?.zoneName || t("iot.alerts.scope.missingZone");
+  };
+
+  const readableAlertValue = (alert: {
+    triggerValue: number | null;
+    thresholdMin: number | null;
+    thresholdMax: number | null;
+  }) => {
+    const value =
+      alert.triggerValue === null || alert.triggerValue === undefined
+        ? t("iot.alerts.value.noReading")
+        : t("iot.alerts.value.measured")(formatNumber(alert.triggerValue));
+
+    if (alert.thresholdMin !== null && alert.thresholdMax !== null) {
+      return `${value}; ${t("iot.alerts.value.safeRange")(
+        formatNumber(alert.thresholdMin),
+        formatNumber(alert.thresholdMax),
+      )}`;
+    }
+
+    if (alert.thresholdMax !== null && alert.thresholdMax !== undefined) {
+      return `${value}; ${t("iot.alerts.value.maxThreshold")(
+        formatNumber(alert.thresholdMax),
+      )}`;
+    }
+
+    if (alert.thresholdMin !== null && alert.thresholdMin !== undefined) {
+      return `${value}; ${t("iot.alerts.value.minThreshold")(
+        formatNumber(alert.thresholdMin),
+      )}`;
+    }
+
+    return value;
   };
 
   return (
@@ -162,11 +197,10 @@ export function AlertsPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Trung tâm cảnh báo
+            {t("iot.alerts.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Theo dõi các cảnh báo IoT theo vườn, khu vực, thiết bị, mức độ,
-            trạng thái xử lý và khoảng thời gian.
+            {t("iot.alerts.description")}
           </p>
         </div>
 
@@ -176,7 +210,7 @@ export function AlertsPage() {
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
           <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Refresh
+          {t("iot.common.refresh")}
         </button>
       </div>
 
@@ -184,7 +218,7 @@ export function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Vườn
+              {t("iot.alerts.filters.farmPlot")}
             </span>
             <Select
               ariaLabel="Farm plot"
@@ -198,7 +232,9 @@ export function AlertsPage() {
               options={[
                 {
                   value: "",
-                  label: plotsQuery.isLoading ? "Đang tải vườn..." : "Tất cả vườn",
+                  label: plotsQuery.isLoading
+                    ? t("iot.alerts.filters.loadingFarmPlots")
+                    : t("iot.alerts.filters.allFarmPlots"),
                 },
                 ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
               ]}
@@ -206,13 +242,13 @@ export function AlertsPage() {
               disabled={profileQuery.isLoading || plotsQuery.isLoading}
             />
             <p className="mt-2 text-xs font-semibold text-slate-500">
-              Chọn vườn để thu hẹp danh sách khu vực và thiết bị.
+              {t("iot.alerts.filters.farmHint")}
             </p>
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Khu vực
+              {t("iot.alerts.filters.zone")}
             </span>
             <Select
               ariaLabel="Zone"
@@ -226,10 +262,10 @@ export function AlertsPage() {
                 {
                   value: "",
                   label: !selectedFarmPlotId
-                    ? "Chọn vườn trước"
+                    ? t("iot.alerts.filters.selectFarmFirst")
                     : zonesQuery.isLoading
-                      ? "Đang tải khu vực..."
-                      : "Tất cả khu vực",
+                      ? t("iot.alerts.filters.loadingZones")
+                      : t("iot.alerts.filters.allZones"),
                 },
                 ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
               ]}
@@ -240,7 +276,7 @@ export function AlertsPage() {
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Thiết bị
+              {t("iot.alerts.filters.device")}
             </span>
             <Select
               ariaLabel="Device"
@@ -252,11 +288,13 @@ export function AlertsPage() {
               options={[
                 {
                   value: "",
-                  label: devicesQuery.isLoading ? "Đang tải thiết bị..." : "Tất cả thiết bị",
+                  label: devicesQuery.isLoading
+                    ? t("iot.alerts.filters.loadingDevices")
+                    : t("iot.alerts.filters.allDevices"),
                 },
                 ...devices.map((device) => ({
                   value: device.id,
-                  label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+                  label: device.deviceName || device.deviceCode || t("iot.alerts.scope.unnamedDevice"),
                 })),
               ]}
               className="mt-2"
@@ -266,7 +304,7 @@ export function AlertsPage() {
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Thời gian
+              {t("iot.alerts.filters.timeRange")}
             </span>
             <Select
               ariaLabel="Time range"
@@ -282,7 +320,7 @@ export function AlertsPage() {
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Mức độ
+              {t("iot.alerts.filters.severity")}
             </span>
             <Select
               ariaLabel="Severity"
@@ -292,10 +330,10 @@ export function AlertsPage() {
                 resetToFirstPage();
               }}
               options={[
-                { value: "", label: "Tất cả mức độ" },
+                { value: "", label: t("iot.alerts.filters.allSeverities") },
                 ...severityOptions.map((option) => ({
                   value: option,
-                  label: alertSeverityLabel(option),
+                  label: formatSeverityLabel(t, option),
                 })),
               ]}
               className="mt-2"
@@ -304,7 +342,7 @@ export function AlertsPage() {
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Trạng thái
+              {t("iot.alerts.filters.status")}
             </span>
             <Select
               ariaLabel="Status"
@@ -314,10 +352,10 @@ export function AlertsPage() {
                 resetToFirstPage();
               }}
               options={[
-                { value: "", label: "Tất cả trạng thái" },
+                { value: "", label: t("iot.alerts.filters.allStatuses") },
                 ...statusOptions.map((option) => ({
                   value: option,
-                  label: alertStatusLabel(option),
+                  label: formatAlertStatusLabel(t, option),
                 })),
               ]}
               className="mt-2"
@@ -326,7 +364,7 @@ export function AlertsPage() {
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Page size
+              {t("iot.alerts.filters.pageSize")}
             </span>
             <Select
               ariaLabel="Page size"
@@ -347,7 +385,7 @@ export function AlertsPage() {
 
       {alertEventsQuery.isLoading ? (
         <div
-          aria-label="Loading alert events"
+          aria-label={t("iot.alerts.states.loading")}
           className="rounded-[2rem] bg-white border border-slate-100 p-5 shadow-sm"
         >
           {[0, 1, 2, 3].map((item) => (
@@ -364,10 +402,10 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Không tải được cảnh báo
+                {t("iot.alerts.states.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                Không thể lấy dữ liệu cảnh báo với bộ lọc hiện tại.
+                {t("iot.alerts.states.errorDescription")}
               </p>
             </div>
             <button
@@ -376,7 +414,7 @@ export function AlertsPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.common.retry")}
             </button>
           </div>
         </div>
@@ -388,10 +426,10 @@ export function AlertsPage() {
           className="rounded-[2rem] border border-red-100 bg-red-50 p-5 shadow-sm"
         >
           <h3 className="text-base font-black text-red-700">
-            Không cập nhật được cảnh báo
+            {t("iot.alerts.states.mutationError")}
           </h3>
           <p className="mt-1 text-sm font-semibold text-red-600">
-            Trạng thái cảnh báo có thể đã thay đổi. Hãy tải lại và thử lại.
+            {t("iot.alerts.states.mutationErrorDescription")}
           </p>
         </div>
       ) : null}
@@ -401,11 +439,13 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedAlerts.totalItems)} cảnh báo
+                {t("iot.alerts.count")(pagedAlerts.totalItems)}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Trang {formatNumber(pagedAlerts.page + 1)} /{" "}
-                {formatNumber(Math.max(pagedAlerts.totalPages, 1))}
+                {t("iot.alerts.page")(
+                  pagedAlerts.page + 1,
+                  Math.max(pagedAlerts.totalPages, 1),
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -434,10 +474,10 @@ export function AlertsPage() {
             <div className="p-10 text-center">
               <AlertTriangle className="mx-auto h-8 w-8 text-slate-400" />
               <h3 className="mt-4 text-lg font-black text-slate-800">
-                Không có cảnh báo
+                {t("iot.alerts.states.empty")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Không có cảnh báo phù hợp với bộ lọc hiện tại.
+                {t("iot.alerts.states.emptyDescription")}
               </p>
             </div>
           ) : (
@@ -446,22 +486,22 @@ export function AlertsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Cảnh báo
+                      {t("iot.alerts.table.alert")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Mức độ
+                      {t("iot.alerts.table.severity")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Trạng thái
+                      {t("iot.alerts.table.status")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Phạm vi
+                      {t("iot.alerts.table.scope")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Thời điểm
+                      {t("iot.alerts.table.openedAt")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Thao tác
+                      {t("iot.alerts.table.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -479,7 +519,7 @@ export function AlertsPage() {
                       <tr key={alert.id} className="hover:bg-slate-50/60">
                         <td className="px-5 py-4 align-top">
                           <p className="text-sm font-black text-slate-800">
-                            {alertTypeLabel(alert.alertType)}
+                            {formatAlertTypeLabel(t, alert.alertType)}
                           </p>
                           <p className="mt-1 text-xs font-semibold text-slate-500">
                             {alert.message}
@@ -494,7 +534,7 @@ export function AlertsPage() {
                               alertSeverityClasses[alert.severity]
                             }`}
                           >
-                            {alertSeverityLabel(alert.severity)}
+                            {formatSeverityLabel(t, alert.severity)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -503,7 +543,7 @@ export function AlertsPage() {
                               alertStatusClasses[alert.status]
                             }`}
                           >
-                            {alertStatusLabel(alert.status)}
+                            {formatAlertStatusLabel(t, alert.status)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -529,8 +569,8 @@ export function AlertsPage() {
                               )}`}
                             >
                               {acknowledgePending
-                                ? "Đang xác nhận..."
-                                : "Đã xem"}
+                                ? t("iot.alerts.actions.acknowledging")
+                                : t("iot.alerts.actions.acknowledge")}
                             </button>
                             <button
                               type="button"
@@ -539,7 +579,9 @@ export function AlertsPage() {
                               className="rounded-full bg-[#245A34] px-3 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label={`Resolve alert ${compactId(alert.id)}`}
                             >
-                              {resolvePending ? "Đang xử lý..." : "Đánh dấu đã xử lý"}
+                              {resolvePending
+                                ? t("iot.alerts.actions.resolving")
+                                : t("iot.alerts.actions.resolve")}
                             </button>
                           </div>
                         </td>

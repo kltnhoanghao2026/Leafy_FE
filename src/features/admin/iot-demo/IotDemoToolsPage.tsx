@@ -17,6 +17,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
 import {
   getIotDemoBaseUrl,
   isIotDemoToolsEnabled,
@@ -186,21 +188,21 @@ function buildScenarioPayload({
   };
 }
 
-function validateScenarioPayload(payload: ScenarioRequest) {
-  if (!payload.deviceUid) return "Device UID is required.";
+function validateScenarioPayload(payload: ScenarioRequest, t: TFunction) {
+  if (!payload.deviceUid) return t("iot.demo.validationDeviceUidRequired");
   if (payload.count == null || Number.isNaN(payload.count) || payload.count <= 0) {
-    return "Count must be greater than 0.";
+    return t("iot.demo.validationCountPositive");
   }
   if (payload.targetValue == null || Number.isNaN(payload.targetValue)) {
-    return "Target value must be a number.";
+    return t("iot.demo.validationTargetNumber");
   }
   return null;
 }
 
-function validateConfigAckPayload(payload: ConfigAckScenarioRequest) {
-  if (!payload.deviceUid) return "Device UID is required.";
+function validateConfigAckPayload(payload: ConfigAckScenarioRequest, t: TFunction) {
+  if (!payload.deviceUid) return t("iot.demo.validationDeviceUidRequired");
   if (payload.configVersion != null && Number.isNaN(payload.configVersion)) {
-    return "Config version must be a number.";
+    return t("iot.demo.validationConfigVersionNumber");
   }
   return null;
 }
@@ -230,13 +232,14 @@ function SimulationStatusCard({
   isFetching: boolean;
   onRefresh: () => void;
 }) {
+  const { t } = useTranslation();
   const running = isSimulationRunning(status);
 
   return (
     <SectionCard
       icon={<Gauge className="w-5 h-5" />}
-      title="Simulation status"
-      description="Current live simulation state from iot-test-data-service"
+      title={t("iot.demo.simulationStatus")}
+      description={t("iot.demo.simulationStatusDescription")}
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between gap-3">
@@ -252,12 +255,12 @@ function SimulationStatusCard({
             )}
             <span className="text-sm font-semibold text-slate-800">
               {isLoading
-                ? "Loading"
+                ? t("iot.demo.loading")
                 : isError
-                  ? "Unavailable"
+                  ? t("iot.demo.unavailable")
                   : running
-                    ? "Running"
-                    : "Stopped"}
+                    ? t("iot.demo.running")
+                    : t("iot.demo.stopped")}
             </span>
           </div>
           <ActionButton
@@ -266,13 +269,13 @@ function SimulationStatusCard({
             variant="secondary"
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh status
+            {t("iot.demo.refreshStatus")}
           </ActionButton>
         </div>
 
         {isError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-            Could not load simulation status.
+            {t("iot.demo.statusError")}
           </div>
         )}
 
@@ -297,6 +300,7 @@ function AlertAnomalyScenarios({
   onHighTemperature: (payload: ScenarioRequest) => void;
   onLowSoilMoisture: (payload: ScenarioRequest) => void;
 }) {
+  const { t } = useTranslation();
   const [deviceUid, setDeviceUid] = useState("prod-minimal-device-1");
   const [count, setCount] = useState("5");
   const [highTemperatureTarget, setHighTemperatureTarget] = useState("44");
@@ -312,7 +316,7 @@ function AlertAnomalyScenarios({
           ? highTemperatureTarget
           : lowSoilMoistureTarget,
     });
-    const error = validateScenarioPayload(payload);
+    const error = validateScenarioPayload(payload, t);
     setValidationError(error);
     if (error) return;
     if (target === "high-temperature") {
@@ -325,31 +329,31 @@ function AlertAnomalyScenarios({
   return (
     <SectionCard
       icon={<ThermometerSun className="w-5 h-5" />}
-      title="Alert anomaly scenarios"
-      description="Use after Bootstrap minimal/full. Default device UID works for minimal seed."
+      title={t("iot.demo.alertScenarios")}
+      description={t("iot.demo.alertScenariosDescription")}
     >
       <div className="space-y-4">
         <TextInput
-          label="Device UID"
+          label={t("iot.demo.deviceUid")}
           value={deviceUid}
           onChange={setDeviceUid}
           placeholder="prod-minimal-device-1"
         />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <NumberInput
-            label="Count"
+            label={t("iot.demo.count")}
             value={count}
             onChange={setCount}
             min={1}
           />
           <NumberInput
-            label="High temperature target"
+            label={t("iot.demo.highTemperatureTarget")}
             value={highTemperatureTarget}
             onChange={setHighTemperatureTarget}
             step="0.1"
           />
           <NumberInput
-            label="Low soil moisture target"
+            label={t("iot.demo.lowSoilMoistureTarget")}
             value={lowSoilMoistureTarget}
             onChange={setLowSoilMoistureTarget}
             step="0.1"
@@ -365,13 +369,13 @@ function AlertAnomalyScenarios({
             isPending={highTemperaturePending}
             onClick={() => submit("high-temperature")}
           >
-            Trigger high temperature
+            {t("iot.demo.triggerHighTemperature")}
           </ActionButton>
           <ActionButton
             isPending={lowSoilMoisturePending}
             onClick={() => submit("low-soil-moisture")}
           >
-            Trigger low soil moisture
+            {t("iot.demo.triggerLowSoilMoisture")}
           </ActionButton>
         </div>
       </div>
@@ -390,9 +394,10 @@ function ConfigAckScenarios({
   onSuccess: (payload: ConfigAckScenarioRequest) => void;
   onFailure: (payload: ConfigAckScenarioRequest) => void;
 }) {
+  const { t } = useTranslation();
   const [deviceUid, setDeviceUid] = useState("prod-minimal-device-1");
   const [configVersion, setConfigVersion] = useState("");
-  const [error, setError] = useState("Simulated config apply failure");
+  const [error, setError] = useState(t("iot.demo.simulatedConfigFailure"));
   const [validationError, setValidationError] = useState<string | null>(null);
 
   function buildPayload(includeError: boolean): ConfigAckScenarioRequest {
@@ -406,7 +411,7 @@ function ConfigAckScenarios({
 
   function submit(kind: "success" | "failure") {
     const payload = buildPayload(kind === "failure");
-    const validation = validateConfigAckPayload(payload);
+    const validation = validateConfigAckPayload(payload, t);
     setValidationError(validation);
     if (validation) return;
     if (kind === "success") onSuccess(payload);
@@ -416,28 +421,28 @@ function ConfigAckScenarios({
   return (
     <SectionCard
       icon={<Settings2 className="w-5 h-5" />}
-      title="Config ACK scenarios"
-      description="Use after triggering config push from collector/device config page."
+      title={t("iot.demo.configAckScenarios")}
+      description={t("iot.demo.configAckScenariosDescription")}
     >
       <div className="space-y-4">
         <TextInput
-          label="Device UID"
+          label={t("iot.demo.deviceUid")}
           value={deviceUid}
           onChange={setDeviceUid}
           placeholder="prod-minimal-device-1"
         />
         <NumberInput
-          label="Config version"
+          label={t("iot.demo.configVersion")}
           value={configVersion}
           onChange={setConfigVersion}
           min={1}
-          placeholder="Leave blank to let backend/test service use current/default version"
+          placeholder={t("iot.demo.configVersionPlaceholder")}
         />
         <TextInput
-          label="Error"
+          label={t("iot.demo.error")}
           value={error}
           onChange={setError}
-          placeholder="Simulated config apply failure"
+          placeholder={t("iot.demo.simulatedConfigFailure")}
         />
         {validationError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
@@ -446,14 +451,14 @@ function ConfigAckScenarios({
         )}
         <div className="flex flex-wrap gap-2">
           <ActionButton isPending={successPending} onClick={() => submit("success")}>
-            Send ACK success
+            {t("iot.demo.sendAckSuccess")}
           </ActionButton>
           <ActionButton
             isPending={failurePending}
             onClick={() => submit("failure")}
             variant="danger"
           >
-            Send ACK failure
+            {t("iot.demo.sendAckFailure")}
           </ActionButton>
         </div>
       </div>
@@ -462,6 +467,7 @@ function ConfigAckScenarios({
 }
 
 export function IotDemoToolsPage() {
+  const { t } = useTranslation();
   const [latestResult, setLatestResult] = useState<IotDemoActionResult | null>(
     null,
   );
@@ -494,10 +500,10 @@ export function IotDemoToolsPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-extrabold text-slate-800">
-          IoT Demo Tools
+          {t("iot.demo.title")}
         </h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          Trigger iot-test-data-service seed and simulation endpoints.
+          {t("iot.demo.description")}
         </p>
       </div>
 
@@ -505,10 +511,9 @@ export function IotDemoToolsPage() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm text-amber-900">
-            <p className="font-bold">Dev/admin-only tool</p>
+            <p className="font-bold">{t("iot.demo.warningTitle")}</p>
             <p className="mt-1">
-              This calls iot-test-data-service directly. Actions mutate IoT demo
-              data. Do not enable in production.
+              {t("iot.demo.warningDescription")}
             </p>
           </div>
         </div>
@@ -517,18 +522,18 @@ export function IotDemoToolsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <SectionCard
           icon={<Server className="w-5 h-5" />}
-          title="Service config"
-          description="Direct connection settings for the test-data service"
+          title={t("iot.demo.serviceConfig")}
+          description={t("iot.demo.serviceConfigDescription")}
         >
           <div className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-slate-500">Base URL</span>
+              <span className="text-slate-500">{t("iot.demo.baseUrl")}</span>
               <span className="font-mono text-xs font-semibold text-slate-800">
                 {getIotDemoBaseUrl()}
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-slate-500">Feature flag</span>
+              <span className="text-slate-500">{t("iot.demo.featureFlag")}</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-bold ${
                   isIotDemoToolsEnabled()
@@ -536,13 +541,11 @@ export function IotDemoToolsPage() {
                     : "bg-slate-100 text-slate-500"
                 }`}
               >
-                {isIotDemoToolsEnabled() ? "Enabled" : "Disabled"}
+                {isIotDemoToolsEnabled() ? t("iot.demo.enabled") : t("iot.demo.disabled")}
               </span>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Local dev uses the Vite proxy path /iot-test-data to avoid browser
-              CORS. The proxy target should point to iot-test-data-service on
-              localhost:8099.
+              {t("iot.demo.proxyHelp")}
             </div>
           </div>
         </SectionCard>
@@ -559,90 +562,90 @@ export function IotDemoToolsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <SectionCard
           icon={<Database className="w-5 h-5" />}
-          title="Bootstrap actions"
-          description="Create the baseline IoT demo dataset"
+          title={t("iot.demo.bootstrapActions")}
+          description={t("iot.demo.bootstrapActionsDescription")}
         >
           <div className="flex flex-wrap gap-2">
             <ActionButton
               isPending={bootstrapMinimal.isPending}
               onClick={() =>
-                void runAction("Bootstrap minimal", () =>
+                void runAction(t("iot.demo.bootstrapMinimalResult"), () =>
                   bootstrapMinimal.mutateAsync(),
                 )
               }
             >
-              Bootstrap minimal
+              {t("iot.demo.bootstrapMinimal")}
             </ActionButton>
             <ActionButton
               isPending={bootstrapFull.isPending}
               onClick={() =>
-                void runAction("Bootstrap full", () =>
+                void runAction(t("iot.demo.bootstrapFullResult"), () =>
                   bootstrapFull.mutateAsync(),
                 )
               }
             >
-              Bootstrap full
+              {t("iot.demo.bootstrapFull")}
             </ActionButton>
           </div>
         </SectionCard>
 
         <SectionCard
           icon={<History className="w-5 h-5" />}
-          title="Historical seed actions"
-          description="Backfill telemetry history for dashboard and charts"
+          title={t("iot.demo.historyActions")}
+          description={t("iot.demo.historyActionsDescription")}
         >
           <div className="flex flex-wrap gap-2">
             <ActionButton
               isPending={seedHistory7d.isPending}
               onClick={() =>
-                void runAction("Seed last 7 days", () =>
+                void runAction(t("iot.demo.seedLast7Days"), () =>
                   seedHistory7d.mutateAsync(),
                 )
               }
             >
-              Seed last 7 days
+              {t("iot.demo.seedLast7Days")}
             </ActionButton>
             <ActionButton
               isPending={seedHistory30d.isPending}
               onClick={() =>
-                void runAction("Seed last 30 days", () =>
+                void runAction(t("iot.demo.seedLast30Days"), () =>
                   seedHistory30d.mutateAsync(),
                 )
               }
             >
-              Seed last 30 days
+              {t("iot.demo.seedLast30Days")}
             </ActionButton>
           </div>
         </SectionCard>
 
         <SectionCard
           icon={<Play className="w-5 h-5" />}
-          title="Simulation controls"
-          description="Start or stop live telemetry simulation"
+          title={t("iot.demo.simulationControls")}
+          description={t("iot.demo.simulationControlsDescription")}
         >
           <div className="flex flex-wrap gap-2">
             <ActionButton
               isPending={startSimulation.isPending}
               onClick={() =>
-                void runAction("Start simulation", () =>
+                void runAction(t("iot.demo.actionStartSimulation"), () =>
                   startSimulation.mutateAsync(),
                 )
               }
             >
               <Play className="w-4 h-4" />
-              Start simulation
+              {t("iot.demo.startSimulation")}
             </ActionButton>
             <ActionButton
               isPending={stopSimulation.isPending}
               onClick={() =>
-                void runAction("Stop simulation", () =>
+                void runAction(t("iot.demo.actionStopSimulation"), () =>
                   stopSimulation.mutateAsync(),
                 )
               }
               variant="danger"
             >
               <Square className="w-4 h-4" />
-              Stop simulation
+              {t("iot.demo.stopSimulation")}
             </ActionButton>
           </div>
         </SectionCard>
@@ -653,12 +656,12 @@ export function IotDemoToolsPage() {
           highTemperaturePending={highTemperatureScenario.isPending}
           lowSoilMoisturePending={lowSoilMoistureScenario.isPending}
           onHighTemperature={(payload) =>
-            void runAction("High temperature anomaly", () =>
+            void runAction(t("iot.demo.actionHighTemperature"), () =>
               highTemperatureScenario.mutateAsync(payload),
             )
           }
           onLowSoilMoisture={(payload) =>
-            void runAction("Low soil moisture anomaly", () =>
+            void runAction(t("iot.demo.actionLowSoilMoisture"), () =>
               lowSoilMoistureScenario.mutateAsync(payload),
             )
           }
@@ -667,12 +670,12 @@ export function IotDemoToolsPage() {
           successPending={configAckSuccess.isPending}
           failurePending={configAckFailure.isPending}
           onSuccess={(payload) =>
-            void runAction("Config ACK success", () =>
+            void runAction(t("iot.demo.actionConfigAckSuccess"), () =>
               configAckSuccess.mutateAsync(payload),
             )
           }
           onFailure={(payload) =>
-            void runAction("Config ACK failure", () =>
+            void runAction(t("iot.demo.actionConfigAckFailure"), () =>
               configAckFailure.mutateAsync(payload),
             )
           }
@@ -681,8 +684,8 @@ export function IotDemoToolsPage() {
 
       <SectionCard
         icon={<TerminalSquare className="w-5 h-5" />}
-        title="Latest response"
-        description="Last action response or error payload"
+        title={t("iot.demo.latestResponse")}
+        description={t("iot.demo.latestResponseDescription")}
       >
         {latestResult ? (
           <div className="space-y-3">
@@ -701,39 +704,39 @@ export function IotDemoToolsPage() {
             </pre>
           </div>
         ) : (
-          <p className="text-sm text-slate-500">No action has run yet.</p>
+          <p className="text-sm text-slate-500">{t("iot.demo.noActionRun")}</p>
         )}
       </SectionCard>
 
       <SectionCard
         icon={<RefreshCw className="w-5 h-5" />}
-        title="Quick links"
-        description="Open the main IoT screens used to verify demo data"
+        title={t("iot.demo.quickLinks")}
+        description={t("iot.demo.quickLinksDescription")}
       >
         <div className="flex flex-wrap gap-2">
           <Link
             to={ROUTES.DASHBOARD.ROOT}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Dashboard
+            {t("iot.demo.dashboard")}
           </Link>
           <Link
             to={ROUTES.DASHBOARD.DEVICE_ONBOARDING}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Device onboarding
+            {t("iot.demo.deviceOnboarding")}
           </Link>
           <Link
             to={ROUTES.DASHBOARD.ALERTS}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Alert Center
+            {t("iot.demo.alertCenter")}
           </Link>
           <Link
             to={ROUTES.DASHBOARD.ALERT_RULES}
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
           >
-            Alert Rules
+            {t("iot.demo.alertRules")}
           </Link>
         </div>
       </SectionCard>

@@ -1,14 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { useTranslation } from "../../../i18n";
 import { iotDemoApi, toIotDemoErrorMessage } from "./iotDemo.api";
 
 const iotDemoKeys = {
   simulationStatus: ["iot-demo", "simulation-status"] as const,
 };
-
-const successToast = (message: string) => toast.success(message);
-const errorToast = (message: string, error: unknown) =>
-  toast.error(`${message}: ${toIotDemoErrorMessage(error)}`);
 
 export const useSimulationStatusQuery = () =>
   useQuery({
@@ -16,86 +13,114 @@ export const useSimulationStatusQuery = () =>
     queryFn: iotDemoApi.getSimulationStatus,
   });
 
-export const useBootstrapMinimalMutation = () =>
-  useMutation({
+export const useBootstrapMinimalMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.bootstrapMinimal,
-    onSuccess: () => successToast("Bootstrap minimal completed"),
-    onError: (error) => errorToast("Bootstrap minimal failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastBootstrapMinimalCompleted")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastBootstrapMinimalFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useBootstrapFullMutation = () =>
-  useMutation({
+export const useBootstrapFullMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.bootstrapFull,
-    onSuccess: () => successToast("Bootstrap full completed"),
-    onError: (error) => errorToast("Bootstrap full failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastBootstrapFullCompleted")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastBootstrapFullFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useSeedHistory7dMutation = () =>
-  useMutation({
+export const useSeedHistory7dMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.seedHistory7d,
-    onSuccess: () => successToast("Seed last 7 days completed"),
-    onError: (error) => errorToast("Seed last 7 days failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastSeed7dCompleted")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastSeed7dFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useSeedHistory30dMutation = () =>
-  useMutation({
+export const useSeedHistory30dMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.seedHistory30d,
-    onSuccess: () => successToast("Seed last 30 days completed"),
-    onError: (error) => errorToast("Seed last 30 days failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastSeed30dCompleted")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastSeed30dFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
 export const useStartSimulationMutation = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: iotDemoApi.startSimulation,
     onSuccess: () => {
-      successToast("Simulation started");
+      toast.success(t("iot.demo.toastSimulationStarted"));
       void queryClient.invalidateQueries({
         queryKey: iotDemoKeys.simulationStatus,
       });
     },
-    onError: (error) => errorToast("Start simulation failed", error),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastStartSimulationFailed"), toIotDemoErrorMessage(error))),
   });
 };
 
 export const useStopSimulationMutation = () => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: iotDemoApi.stopSimulation,
     onSuccess: () => {
-      successToast("Simulation stopped");
+      toast.success(t("iot.demo.toastSimulationStopped"));
       void queryClient.invalidateQueries({
         queryKey: iotDemoKeys.simulationStatus,
       });
     },
-    onError: (error) => errorToast("Stop simulation failed", error),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastStopSimulationFailed"), toIotDemoErrorMessage(error))),
   });
 };
 
-export const useTriggerHighTemperatureMutation = () =>
-  useMutation({
+export const useTriggerHighTemperatureMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.triggerHighTemperature,
-    onSuccess: () => successToast("High temperature scenario published"),
-    onError: (error) => errorToast("High temperature scenario failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastHighTemperaturePublished")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastHighTemperatureFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useTriggerLowSoilMoistureMutation = () =>
-  useMutation({
+export const useTriggerLowSoilMoistureMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.triggerLowSoilMoisture,
-    onSuccess: () => successToast("Low soil moisture scenario published"),
-    onError: (error) => errorToast("Low soil moisture scenario failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastLowSoilMoisturePublished")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastLowSoilMoistureFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useConfigAckSuccessMutation = () =>
-  useMutation({
+export const useConfigAckSuccessMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.sendConfigAckSuccess,
-    onSuccess: () => successToast("Config ACK success published"),
-    onError: (error) => errorToast("Config ACK success failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastConfigAckSuccessPublished")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastConfigAckSuccessFailed"), toIotDemoErrorMessage(error))),
   });
+};
 
-export const useConfigAckFailureMutation = () =>
-  useMutation({
+export const useConfigAckFailureMutation = () => {
+  const { t } = useTranslation();
+  return useMutation({
     mutationFn: iotDemoApi.sendConfigAckFailure,
-    onSuccess: () => successToast("Config ACK failure published"),
-    onError: (error) => errorToast("Config ACK failure failed", error),
+    onSuccess: () => toast.success(t("iot.demo.toastConfigAckFailurePublished")),
+    onError: (error) =>
+      toast.error(t("iot.demo.errorPrefix")(t("iot.demo.toastConfigAckFailureFailed"), toIotDemoErrorMessage(error))),
   });
+};
