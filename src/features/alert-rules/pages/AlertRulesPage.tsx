@@ -27,11 +27,11 @@ import type {
 } from "../../../types/iot";
 import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { Select } from "../../../components/ui/Select";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
+import { formatSeverityLabel } from "../../iot/utils/iotTranslation";
 import {
   alertSeverityClasses,
-  alertSeverityLabel,
-  friendlyMissingScope,
-  readableRuleThreshold,
 } from "../../alerts/utils/alertLabels";
 
 type EnabledFilter = "all" | "true" | "false";
@@ -116,30 +116,56 @@ const buildPayload = (form: RuleFormState): CreateAlertRuleRequest => ({
   enabled: form.enabled,
 });
 
-const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
-  if (!payload.sensorTypeId) return "Cần chọn loại cảm biến.";
+const validatePayload = (
+  payload: CreateAlertRuleRequest,
+  t: TFunction,
+): string | null => {
+  if (!payload.sensorTypeId) return t("iot.alertRules.validation.sensorTypeRequired");
   if (payload.minThreshold == null && payload.maxThreshold == null) {
-    return "Cần đặt ít nhất một ngưỡng cảnh báo.";
+    return t("iot.alertRules.validation.thresholdRequired");
   }
   if (
     payload.minThreshold != null &&
     payload.maxThreshold != null &&
     payload.minThreshold >= payload.maxThreshold
   ) {
-    return "Ngưỡng thấp phải nhỏ hơn ngưỡng cao.";
+    return t("iot.alertRules.validation.minLessThanMax");
   }
   if (!payload.deviceId && !payload.zoneId && !payload.farmPlotId) {
-    return "Cần chọn ít nhất một phạm vi: vườn, khu vực hoặc thiết bị.";
+    return t("iot.alertRules.validation.scopeRequired");
   }
   if (
     payload.cooldownMinutes !== null &&
     payload.cooldownMinutes !== undefined &&
     payload.cooldownMinutes < 0
   ) {
-    return "Thời gian chờ phải lớn hơn hoặc bằng 0.";
+    return t("iot.alertRules.validation.cooldownInvalid");
   }
 
   return null;
+};
+
+const readableRuleThreshold = (
+  t: TFunction,
+  minThreshold?: number | null,
+  maxThreshold?: number | null,
+) => {
+  if (minThreshold !== null && minThreshold !== undefined && maxThreshold !== null && maxThreshold !== undefined) {
+    return t("iot.alertRules.threshold.outsideRange")(
+      formatNumber(minThreshold),
+      formatNumber(maxThreshold),
+    );
+  }
+
+  if (maxThreshold !== null && maxThreshold !== undefined) {
+    return t("iot.alertRules.threshold.higherThan")(formatNumber(maxThreshold));
+  }
+
+  if (minThreshold !== null && minThreshold !== undefined) {
+    return t("iot.alertRules.threshold.lowerThan")(formatNumber(minThreshold));
+  }
+
+  return t("iot.alertRules.threshold.unset");
 };
 
 interface RuleFormDialogProps {
@@ -163,6 +189,7 @@ function RuleFormDialog({
   onSubmit,
   onFormChange,
 }: RuleFormDialogProps) {
+  const { t } = useTranslation();
   const {
     farmPlots,
     zones,
@@ -201,18 +228,19 @@ function RuleFormDialog({
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[22px] font-black text-slate-900">
-              {editingRule ? "Sửa quy tắc cảnh báo" : "Tạo quy tắc cảnh báo"}
+              {editingRule
+                ? t("iot.alertRules.form.editTitle")
+                : t("iot.alertRules.form.createTitle")}
             </h3>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              Chọn vườn, khu vực và thiết bị bằng danh sách có sẵn. Loại cảm
-              biến cần dùng mã thật từ backend nếu chưa suy luận được.
+              {t("iot.alertRules.form.description")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-            aria-label="Close alert rule dialog"
+            aria-label={t("iot.alertRules.form.closeDialog")}
           >
             <X className="h-4 w-4" strokeWidth={3} />
           </button>
@@ -221,12 +249,12 @@ function RuleFormDialog({
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
-              Phạm vi áp dụng
+              {t("iot.alertRules.form.scopeSection")}
             </h4>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Vườn
+                  {t("iot.alertRules.form.farmPlot")}
                 </span>
                 <Select
                   ariaLabel="Rule farm plot"
@@ -243,7 +271,9 @@ function RuleFormDialog({
                   options={[
                     {
                       value: "",
-                      label: plotsQuery.isLoading ? "Đang tải vườn..." : "Không giới hạn vườn",
+                      label: plotsQuery.isLoading
+                        ? t("iot.alertRules.filters.loadingFarmPlots")
+                        : t("iot.alertRules.form.noFarmLimit"),
                     },
                     ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
                   ]}
@@ -254,7 +284,7 @@ function RuleFormDialog({
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Khu vực
+                  {t("iot.alertRules.form.zone")}
                 </span>
                 <Select
                   ariaLabel="Rule zone"
@@ -271,10 +301,10 @@ function RuleFormDialog({
                     {
                       value: "",
                       label: !form.farmPlotId
-                        ? "Chọn vườn trước"
+                        ? t("iot.alertRules.filters.selectFarmFirst")
                         : zonesQuery.isLoading
-                          ? "Đang tải khu vực..."
-                          : "Không giới hạn khu vực",
+                          ? t("iot.alertRules.filters.loadingZones")
+                          : t("iot.alertRules.form.noZoneLimit"),
                     },
                     ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
                   ]}
@@ -285,7 +315,7 @@ function RuleFormDialog({
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Thiết bị
+                  {t("iot.alertRules.form.device")}
                 </span>
                 <Select
                   ariaLabel="Rule device"
@@ -300,12 +330,12 @@ function RuleFormDialog({
                     {
                       value: "",
                       label: devicesQuery.isLoading
-                        ? "Đang tải thiết bị..."
-                        : "Không giới hạn thiết bị",
+                        ? t("iot.alertRules.filters.loadingDevices")
+                        : t("iot.alertRules.form.noDeviceLimit"),
                     },
                     ...devices.map((device) => ({
                       value: device.id,
-                      label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+                      label: device.deviceName || device.deviceCode || t("iot.alertRules.scope.unnamedDevice"),
                     })),
                   ]}
                   className="mt-2"
@@ -317,17 +347,15 @@ function RuleFormDialog({
 
           <section className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-amber-700">
-              Loại cảm biến
+              {t("iot.alertRules.form.sensorSection")}
             </h4>
             <p className="mt-2 text-sm font-semibold text-amber-700">
-              Quy tắc cảnh báo cần đúng mã loại cảm biến từ backend. Ứng dụng
-              chỉ suy luận được lựa chọn khi đã có readings; nếu chưa có, hãy
-              dùng trường nâng cao bên dưới.
+              {t("iot.alertRules.form.sensorHelp")}
             </p>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Loại cảm biến suy luận được
+                  {t("iot.alertRules.form.inferredSensorType")}
                 </span>
                 <Select
                   ariaLabel="Inferred sensor type"
@@ -342,10 +370,10 @@ function RuleFormDialog({
                     {
                       value: "",
                       label: sensorOptionsLoading
-                        ? "Đang tải readings..."
+                        ? t("iot.alertRules.form.loadingReadings")
                         : sensorOptions.length === 0
-                          ? "Chưa có loại cảm biến từ readings"
-                          : "Chọn loại cảm biến",
+                          ? t("iot.alertRules.form.noInferredSensors")
+                          : t("iot.alertRules.form.chooseSensorType"),
                     },
                     ...sensorOptions.map((option) => ({
                       value: option.id,
@@ -360,7 +388,7 @@ function RuleFormDialog({
               </label>
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Mã loại cảm biến (nâng cao)
+                  {t("iot.alertRules.form.advancedSensorTypeId")}
                 </span>
                 <input
                   aria-label="Advanced sensorTypeId"
@@ -371,7 +399,7 @@ function RuleFormDialog({
                       sensorTypeId: event.target.value,
                     }))
                   }
-                  placeholder="Dán sensorTypeId UUID"
+                  placeholder={t("iot.alertRules.form.sensorTypePlaceholder")}
                   className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
                 />
               </label>
@@ -381,7 +409,7 @@ function RuleFormDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Ngưỡng thấp
+                {t("iot.alertRules.form.minThreshold")}
               </span>
               <input
                 aria-label="Min threshold"
@@ -398,7 +426,7 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Ngưỡng cao
+                {t("iot.alertRules.form.maxThreshold")}
               </span>
               <input
                 aria-label="Max threshold"
@@ -415,7 +443,7 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Mức độ cảnh báo
+                {t("iot.alertRules.form.severity")}
               </span>
               <Select
                 ariaLabel="Severity"
@@ -427,14 +455,14 @@ function RuleFormDialog({
                   }))
                 }
                 options={(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
-                  (severity) => ({ value: severity, label: alertSeverityLabel(severity) }),
+                  (severity) => ({ value: severity, label: formatSeverityLabel(t, severity) }),
                 )}
                 className="mt-2"
               />
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Thời gian chờ (phút)
+                {t("iot.alertRules.form.cooldownMinutes")}
               </span>
               <input
                 aria-label="Cooldown minutes"
@@ -454,9 +482,9 @@ function RuleFormDialog({
 
           <div className="flex flex-wrap gap-3">
             {[
-              ["notifyWeb", "Thông báo trên web"],
-              ["notifyMobile", "Thông báo trên mobile"],
-              ["enabled", "Đang bật"],
+              ["notifyWeb", t("iot.alertRules.form.notifyWeb")],
+              ["notifyMobile", t("iot.alertRules.form.notifyMobile")],
+              ["enabled", t("iot.alertRules.form.enabled")],
             ].map(([key, label]) => (
               <label
                 key={key}
@@ -485,7 +513,7 @@ function RuleFormDialog({
           ) : null}
           {requestFailed ? (
             <p role="alert" className="text-sm font-bold text-red-600">
-              Không lưu được quy tắc. Hãy kiểm tra lại thông tin và thử lại.
+              {t("iot.alertRules.form.requestFailed")}
             </p>
           ) : null}
 
@@ -495,7 +523,7 @@ function RuleFormDialog({
               onClick={onClose}
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
             >
-              Hủy
+              {t("iot.alertRules.actions.cancel")}
             </button>
             <button
               type="submit"
@@ -503,10 +531,10 @@ function RuleFormDialog({
               className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting
-                ? "Đang lưu..."
+                ? t("iot.alertRules.actions.saving")
                 : editingRule
-                  ? "Lưu quy tắc"
-                  : "Tạo quy tắc"}
+                  ? t("iot.alertRules.actions.save")
+                  : t("iot.alertRules.actions.create")}
             </button>
           </div>
         </form>
@@ -516,6 +544,7 @@ function RuleFormDialog({
 }
 
 export function AlertRulesPage() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
@@ -623,7 +652,7 @@ export function AlertRulesPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const payload = buildPayload(form);
-    const validationError = validatePayload(payload);
+    const validationError = validatePayload(payload, t);
     setValidationMessage(validationError);
     if (validationError) return;
 
@@ -665,26 +694,26 @@ export function AlertRulesPage() {
   };
 
   const resolveFarmLabel = (farmPlotId: string | null) => {
-    if (!farmPlotId) return friendlyMissingScope("farm");
-    return farmPlotMap.get(farmPlotId)?.name || "Vườn không còn trong danh sách";
+    if (!farmPlotId) return t("iot.alertRules.form.noFarmLimit");
+    return farmPlotMap.get(farmPlotId)?.name || t("iot.alertRules.scope.missingFarm");
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return friendlyMissingScope("zone");
+    if (!zoneId) return t("iot.alertRules.form.noZoneLimit");
     return (
       ruleZoneMap.get(zoneId)?.zoneName ||
       zoneMap.get(zoneId)?.zoneName ||
-      "Khu vực không còn trong danh sách"
+      t("iot.alertRules.scope.missingZone")
     );
   };
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return friendlyMissingScope("device");
+    if (!deviceId) return t("iot.alertRules.form.noDeviceLimit");
     const device = deviceMap.get(deviceId);
     return (
       device?.deviceName ||
       device?.deviceCode ||
-      "Thiết bị không còn trong danh sách"
+      t("iot.alertRules.scope.missingDevice")
     );
   };
 
@@ -693,11 +722,10 @@ export function AlertRulesPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Quy tắc cảnh báo
+            {t("iot.alertRules.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Quản lý điều kiện cảnh báo theo vườn, khu vực, thiết bị và loại
-            cảm biến.
+            {t("iot.alertRules.description")}
           </p>
         </div>
         <button
@@ -706,7 +734,7 @@ export function AlertRulesPage() {
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
         >
           <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Tạo quy tắc
+          {t("iot.alertRules.actions.create")}
         </button>
       </div>
 
@@ -724,7 +752,9 @@ export function AlertRulesPage() {
             options={[
               {
                 value: "",
-                label: plotsQuery.isLoading ? "Đang tải vườn..." : "Tất cả vườn",
+                label: plotsQuery.isLoading
+                  ? t("iot.alertRules.filters.loadingFarmPlots")
+                  : t("iot.alertRules.filters.allFarmPlots"),
               },
               ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
             ]}
@@ -743,10 +773,10 @@ export function AlertRulesPage() {
               {
                 value: "",
                 label: !filterFarmPlotId
-                  ? "Chọn vườn trước"
+                  ? t("iot.alertRules.filters.selectFarmFirst")
                   : zonesQuery.isLoading
-                    ? "Đang tải khu vực..."
-                    : "Tất cả khu vực",
+                    ? t("iot.alertRules.filters.loadingZones")
+                    : t("iot.alertRules.filters.allZones"),
               },
               ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
             ]}
@@ -763,11 +793,13 @@ export function AlertRulesPage() {
             options={[
               {
                 value: "",
-                label: devicesQuery.isLoading ? "Đang tải thiết bị..." : "Tất cả thiết bị",
+                label: devicesQuery.isLoading
+                  ? t("iot.alertRules.filters.loadingDevices")
+                  : t("iot.alertRules.filters.allDevices"),
               },
               ...devices.map((device) => ({
                 value: device.id,
-                label: device.deviceName || device.deviceCode || "Thiết bị chưa đặt tên",
+                label: device.deviceName || device.deviceCode || t("iot.alertRules.scope.unnamedDevice"),
               })),
             ]}
             disabled={devicesQuery.isLoading}
@@ -780,7 +812,7 @@ export function AlertRulesPage() {
               setFilterSensorTypeId(event.target.value);
               resetToFirstPage();
             }}
-            placeholder="Mã loại cảm biến nâng cao"
+            placeholder={t("iot.alertRules.filters.sensorTypePlaceholder")}
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
           />
 
@@ -792,9 +824,9 @@ export function AlertRulesPage() {
               resetToFirstPage();
             }}
             options={[
-              { value: "all", label: "Tất cả trạng thái" },
-              { value: "true", label: "Đang bật" },
-              { value: "false", label: "Đang tắt" },
+              { value: "all", label: t("iot.alertRules.filters.allStatuses") },
+              { value: "true", label: t("iot.alertRules.filters.enabledOnly") },
+              { value: "false", label: t("iot.alertRules.filters.disabledOnly") },
             ]}
           />
           <Select
@@ -814,7 +846,7 @@ export function AlertRulesPage() {
 
       {rulesQuery.isLoading ? (
         <div
-          aria-label="Loading alert rules"
+          aria-label={t("iot.alertRules.states.loading")}
           className="rounded-[2rem] bg-white border border-slate-100 p-5 shadow-sm"
         >
           {[0, 1, 2].map((item) => (
@@ -831,10 +863,10 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Không tải được quy tắc cảnh báo
+                {t("iot.alertRules.states.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                Không thể lấy quy tắc với bộ lọc hiện tại.
+                {t("iot.alertRules.states.errorDescription")}
               </p>
             </div>
             <button
@@ -843,7 +875,7 @@ export function AlertRulesPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.common.retry")}
             </button>
           </div>
         </div>
@@ -851,7 +883,7 @@ export function AlertRulesPage() {
 
       {deleteRule.isError ? (
         <p role="alert" className="text-sm font-bold text-red-600">
-          Không xóa được quy tắc. Hãy thử lại.
+          {t("iot.alertRules.states.deleteError")}
         </p>
       ) : null}
 
@@ -860,11 +892,13 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedRules.totalItems)} quy tắc
+                {t("iot.alertRules.count")(pagedRules.totalItems)}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Trang {formatNumber(pagedRules.page + 1)} /{" "}
-                {formatNumber(Math.max(pagedRules.totalPages, 1))}
+                {t("iot.alertRules.page")(
+                  pagedRules.page + 1,
+                  Math.max(pagedRules.totalPages, 1),
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -892,10 +926,10 @@ export function AlertRulesPage() {
           {rules.length === 0 ? (
             <div className="p-10 text-center">
               <h3 className="text-lg font-black text-slate-800">
-                Không có quy tắc cảnh báo
+                {t("iot.alertRules.states.empty")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Không có quy tắc phù hợp với bộ lọc hiện tại.
+                {t("iot.alertRules.states.emptyDescription")}
               </p>
             </div>
           ) : (
@@ -904,22 +938,22 @@ export function AlertRulesPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Quy tắc
+                      {t("iot.alertRules.table.rule")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Điều kiện
+                      {t("iot.alertRules.table.condition")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Mức độ
+                      {t("iot.alertRules.table.severity")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Trạng thái
+                      {t("iot.alertRules.table.status")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Cập nhật
+                      {t("iot.alertRules.table.updatedAt")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Thao tác
+                      {t("iot.alertRules.table.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -928,7 +962,7 @@ export function AlertRulesPage() {
                     <tr key={rule.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-4 align-top">
                         <p className="text-sm font-black text-slate-800">
-                          Loại cảm biến đã cấu hình
+                          {t("iot.alertRules.table.configuredSensor")}
                         </p>
                         <p className="mt-1 text-xs font-semibold text-slate-500">
                           {resolveDeviceLabel(rule.deviceId)} -{" "}
@@ -937,9 +971,11 @@ export function AlertRulesPage() {
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
-                        {readableRuleThreshold(rule.minThreshold, rule.maxThreshold)}
+                        {readableRuleThreshold(t, rule.minThreshold, rule.maxThreshold)}
                         <p className="mt-1 text-xs font-semibold text-slate-400">
-                          Tạm dừng {formatNumber(rule.cooldownMinutes)} phút sau mỗi lần cảnh báo
+                          {t("iot.alertRules.table.cooldownAfterAlert")(
+                            formatNumber(rule.cooldownMinutes),
+                          )}
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top">
@@ -948,7 +984,7 @@ export function AlertRulesPage() {
                             alertSeverityClasses[rule.severity]
                           }`}
                         >
-                          {alertSeverityLabel(rule.severity)}
+                          {formatSeverityLabel(t, rule.severity)}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top">
@@ -957,7 +993,9 @@ export function AlertRulesPage() {
                             enabledClasses[String(rule.enabled !== false) as "true" | "false"]
                           }`}
                         >
-                          {rule.enabled === false ? "Đang tắt" : "Đang bật"}
+                          {rule.enabled === false
+                            ? t("iot.alertRules.filters.disabledOnly")
+                            : t("iot.alertRules.filters.enabledOnly")}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
@@ -978,7 +1016,9 @@ export function AlertRulesPage() {
                             onClick={() => void handleToggleEnabled(rule)}
                             className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50"
                           >
-                            {rule.enabled === false ? "Bật" : "Tắt"}
+                            {rule.enabled === false
+                              ? t("iot.alertRules.actions.enable")
+                              : t("iot.alertRules.actions.disable")}
                           </button>
                           <button
                             type="button"
@@ -1020,11 +1060,10 @@ export function AlertRulesPage() {
         >
           <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
             <h3 className="text-xl font-black text-slate-900">
-              Xóa quy tắc cảnh báo?
+              {t("iot.alertRules.deleteDialog.title")}
             </h3>
             <p className="mt-2 text-sm font-semibold text-slate-600">
-              Quy tắc này sẽ bị xóa khỏi danh sách đang áp dụng. Các cảnh báo
-              đã phát sinh trước đó vẫn được giữ lại để xem lịch sử.
+              {t("iot.alertRules.deleteDialog.description")}
             </p>
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -1032,7 +1071,7 @@ export function AlertRulesPage() {
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
               >
-                Hủy
+                {t("iot.alertRules.deleteDialog.cancel")}
               </button>
               <button
                 type="button"
@@ -1040,7 +1079,9 @@ export function AlertRulesPage() {
                 disabled={deleteRule.isPending}
                 className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deleteRule.isPending ? "Đang xóa..." : "Xác nhận xóa"}
+                {deleteRule.isPending
+                  ? t("iot.alertRules.actions.deleting")
+                  : t("iot.alertRules.deleteDialog.confirm")}
               </button>
             </div>
           </div>

@@ -29,13 +29,17 @@ import { useAlertEvents } from "../../alerts/queries";
 import { MediaImage } from "../../community/components/MediaImage";
 import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import {
-  configPushStatusLabel,
-  deviceStatusLabel,
   deviceTypeLabel,
-  mediaStatusLabel,
-  provisioningStatusLabel,
   readableDeviceName,
 } from "../../device-onboarding/utils/deviceLabels";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
+import {
+  formatConfigStatusLabel,
+  formatDeviceStatusLabel,
+  formatMediaStatusLabel,
+  formatSensorLabel,
+} from "../../iot/utils/iotTranslation";
 import {
   chartToTrend,
   DISPLAY_CHART_RANGE_OPTIONS,
@@ -190,21 +194,24 @@ const isMediaWaiting = (media?: DeviceMediaEventResponse) =>
   media?.status === "COMMAND_SENT" ||
   media?.status === "UPLOADING";
 
-const validateConfig = (payload: UpdateDeviceConfigRequest): string | null => {
+const validateConfig = (
+  payload: UpdateDeviceConfigRequest,
+  t: TFunction,
+): string | null => {
   if (payload.samplingIntervalSec <= 0) {
-    return "Sampling interval must be greater than 0.";
+    return t("iot.devices.config.samplingPositive");
   }
   if (payload.publishIntervalSec <= 0) {
-    return "Publish interval must be greater than 0.";
+    return t("iot.devices.config.publishPositive");
   }
   if (payload.offlineTimeoutSec <= 0) {
-    return "Offline timeout must be greater than 0.";
+    return t("iot.devices.config.offlinePositive");
   }
   if (payload.publishIntervalSec < payload.samplingIntervalSec) {
-    return "Publish interval must be greater than or equal to sampling interval.";
+    return t("iot.devices.config.publishAfterSampling");
   }
   if (payload.offlineTimeoutSec <= payload.publishIntervalSec) {
-    return "Offline timeout must be greater than publish interval.";
+    return t("iot.devices.config.offlineAfterPublish");
   }
 
   return null;
@@ -267,6 +274,7 @@ function DeviceSensorCard({
   eventMarkers,
   exportFilename,
 }: DeviceSensorCardProps) {
+  const { t } = useTranslation();
   const knownSensor = SENSOR_CONFIG.find((sensor) => sensor.code === reading.sensorCode);
   const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange);
   const alertsKey = useMemo(() => alertEventsKey(alerts), [alerts]);
@@ -279,12 +287,16 @@ function DeviceSensorCard({
     () => thresholdsFromAlertEvents(stableAlerts),
     [stableAlerts],
   );
-  const title = reading.sensorName || knownSensor?.title || reading.sensorCode;
+  const title = formatSensorLabel(
+    t,
+    reading.sensorCode,
+    reading.sensorName || knownSensor?.title || reading.sensorCode,
+  );
   const unit = normalizeUnit(reading.unit || chartQuery.data?.unit);
   const metricData: MetricData = {
     value: readingValue(reading),
     unit,
-    badge: reading.qualityStatus || "Live",
+    badge: reading.qualityStatus || t("iot.devices.detail.live"),
     latestUpdatedAt: reading.readingTime,
     trend,
   };
@@ -351,6 +363,7 @@ function DeviceMediaPanel({
   isPolling,
   onCapture,
 }: DeviceMediaPanelProps) {
+  const { t } = useTranslation();
   const latestMedia = mediaEvents[0];
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
@@ -366,10 +379,10 @@ function DeviceMediaPanel({
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
         <div>
           <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
-            Camera capture
+            {t("iot.devices.media.title")}
           </h3>
           <p className="text-sm font-semibold text-slate-500">
-            User-triggered ESP32-CAM snapshots uploaded through file-service.
+            {t("iot.devices.media.description")}
           </p>
         </div>
         <button
@@ -379,29 +392,29 @@ function DeviceMediaPanel({
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          {isCapturing ? "Đang gửi lệnh chụp..." : "Chụp ảnh hiện tại"}
+          {isCapturing ? t("iot.devices.media.capturing") : t("iot.devices.media.captureImage")}
         </button>
       </div>
 
       {!canCapture ? (
         <p className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
-          Thiết bị cần active và CLAIMED trước khi chụp ảnh.
+          {t("iot.devices.media.requiresClaimed")}
         </p>
       ) : null}
 
       {isWaiting ? (
         <p className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700">
           {isCapturing
-            ? "Đang gửi lệnh chụp..."
-            : "Đang chờ thiết bị upload ảnh..."}
+            ? t("iot.devices.media.capturing")
+            : t("iot.devices.media.waitingUpload")}
         </p>
       ) : null}
 
       {failedLatest ? (
         <p role="alert" className="mt-5 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
           {failedLatest.status === "TIMEOUT"
-            ? "Thiết bị không gửi ảnh trong thời gian chờ."
-            : failedLatest.error || "Chụp ảnh thất bại."}
+            ? t("iot.devices.media.timeout")
+            : failedLatest.error || t("iot.devices.media.captureFailed")}
         </p>
       ) : null}
 
@@ -410,24 +423,24 @@ function DeviceMediaPanel({
           {latestUploaded?.fileId ? (
             <MediaImage
               source={latestUploaded.fileId}
-              alt="Latest device capture"
+              alt={t("iot.devices.media.latestImageAlt")}
               className="h-[320px] w-full object-cover"
             />
           ) : (
             <div className="flex h-[320px] flex-col items-center justify-center gap-3 text-slate-500">
               <ImageOff className="h-8 w-8" strokeWidth={2.5} />
-              <span className="text-sm font-bold">Chưa có ảnh upload thành công.</span>
+              <span className="text-sm font-bold">{t("iot.devices.media.noUploadedImage")}</span>
             </div>
           )}
         </div>
 
         <div className="space-y-3">
           <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
-            Media history
+            {t("iot.devices.media.mediaHistory")}
           </h4>
           {mediaEvents.length === 0 ? (
             <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
-              Chưa có lần chụp nào.
+              {t("iot.devices.media.noEvents")}
             </p>
           ) : null}
           {mediaEvents.slice(0, 6).map((event) => (
@@ -437,7 +450,7 @@ function DeviceMediaPanel({
             >
               <div className="flex items-center justify-between gap-3">
                 <span className={badgeClass(statusTone(event.status))}>
-                  {mediaStatusLabel(event.status)}
+                  {formatMediaStatusLabel(t, event.status)}
                 </span>
                 <span className="text-xs font-bold text-slate-500">
                   {formatDateTime(event.uploadedAt || event.requestedAt)}
@@ -446,7 +459,7 @@ function DeviceMediaPanel({
               <p className="mt-2 text-xs font-semibold text-slate-500">
                 {event.fileId
                   ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
-                  : event.error || event.requestId || "Waiting for upload"}
+                  : event.error || event.requestId || t("iot.devices.media.waitingForUpload")}
               </p>
             </div>
           ))}
@@ -469,6 +482,7 @@ function ConfigForm({
   isSaving,
   onSave,
 }: ConfigFormProps) {
+  const { t } = useTranslation();
   const [samplingIntervalSec, setSamplingIntervalSec] = useState(
     String(config.samplingIntervalSec ?? ""),
   );
@@ -490,7 +504,7 @@ function ConfigForm({
       offlineTimeoutSec: Number(offlineTimeoutSec),
       alertEnabled,
     };
-    const validationError = validateConfig(payload);
+    const validationError = validateConfig(payload, t);
     setValidationMessage(validationError);
 
     if (validationError) return;
@@ -503,7 +517,7 @@ function ConfigForm({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <label className="block">
           <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-            Sampling sec
+            {t("iot.devices.config.samplingIntervalSec")}
           </span>
           <input
             value={samplingIntervalSec}
@@ -516,7 +530,7 @@ function ConfigForm({
         </label>
         <label className="block">
           <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-            Publish sec
+            {t("iot.devices.config.publishIntervalSec")}
           </span>
           <input
             value={publishIntervalSec}
@@ -529,7 +543,7 @@ function ConfigForm({
         </label>
         <label className="block">
           <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-            Offline timeout sec
+            {t("iot.devices.config.offlineTimeoutSec")}
           </span>
           <input
             value={offlineTimeoutSec}
@@ -550,7 +564,7 @@ function ConfigForm({
           disabled={!canManageConfig || isSaving}
           className="h-4 w-4 accent-[#245A34]"
         />
-        Alert evaluation enabled
+        {t("iot.devices.config.alertEnabled")}
       </label>
 
       {validationMessage ? (
@@ -565,13 +579,14 @@ function ConfigForm({
         className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Save className="mr-2 h-4 w-4" strokeWidth={2.5} />
-        {isSaving ? "Saving..." : "Save config"}
+        {isSaving ? t("iot.devices.config.saving") : t("iot.devices.config.save")}
       </button>
     </form>
   );
 }
 
 export function DeviceDetailPage() {
+  const { t } = useTranslation();
   const { deviceId } = useParams();
   const resolvedDeviceId = deviceId ?? "";
   const [range, setRange] = useState<DisplayChartRange>("D1");
@@ -772,7 +787,7 @@ export function DeviceDetailPage() {
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       {isPageLoading ? (
-        <div aria-label="Loading device detail" className="space-y-5">
+        <div aria-label={t("iot.devices.detail.loading")} className="space-y-5">
           <div className="h-36 rounded-[2rem] bg-slate-100 animate-pulse" />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[0, 1, 2].map((item) => (
@@ -790,10 +805,10 @@ export function DeviceDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Device detail could not be loaded
+                {t("iot.devices.detail.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                Check the route deviceId or collector service availability.
+                {t("iot.devices.detail.errorDescription")}
               </p>
             </div>
             <button
@@ -805,7 +820,7 @@ export function DeviceDetailPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.devices.detail.retry")}
             </button>
           </div>
         </div>
@@ -815,10 +830,10 @@ export function DeviceDetailPage() {
         <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto h-8 w-8 text-slate-400" />
           <h3 className="mt-4 text-lg font-black text-slate-800">
-            Device not found
+            {t("iot.devices.detail.notFound")}
           </h3>
           <p className="mt-1 text-sm font-semibold text-slate-500">
-            The backend returned no device detail for this route.
+            {t("iot.devices.detail.notFoundDescription")}
           </p>
         </div>
       ) : null}
@@ -833,23 +848,23 @@ export function DeviceDetailPage() {
                     {readableDeviceName(device)}
                   </h2>
                   <span className={badgeClass(statusTone(device.status))}>
-                    {deviceStatusLabel(device.status)}
+                    {formatDeviceStatusLabel(t, device.status)}
                   </span>
                   <span
                     className={badgeClass(statusTone(device.provisioningStatus))}
                   >
-                    {provisioningStatusLabel(device.provisioningStatus)}
+                    {formatDeviceStatusLabel(t, device.provisioningStatus)}
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-slate-500">
-                  {deviceTypeLabel(device.deviceType)} · {deviceStatusLabel(device.status)}
+                  {deviceTypeLabel(device.deviceType)} · {formatDeviceStatusLabel(t, device.status)}
                 </p>
               </div>
               <div className="flex items-center gap-3 rounded-3xl bg-[#F2FCF4] px-4 py-3">
                 <CheckCircle2 className="h-5 w-5 text-[#245A34]" strokeWidth={3} />
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest text-[#245A34]">
-                    Last seen
+                    {t("iot.devices.detail.lastSeenAt")}
                   </p>
                   <p className="text-sm font-bold text-slate-700">
                     {formatDateTime(device.lastSeenAt)}
@@ -859,18 +874,18 @@ export function DeviceDetailPage() {
             </div>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <InfoTile label="Type" value={deviceTypeLabel(device.deviceType)} />
+              <InfoTile label={t("iot.devices.detail.type")} value={deviceTypeLabel(device.deviceType)} />
               <InfoTile
-                label="Firmware"
-                value={device.firmwareVersion || "Unknown"}
+                label={t("iot.devices.detail.firmwareVersion")}
+                value={device.firmwareVersion || t("iot.devices.detail.unknown")}
               />
               <InfoTile
-                label="Farm plot"
-                value={device.farmPlotId ? "Đã gán vào vườn" : "Chưa gán vườn"}
+                label={t("iot.common.farm")}
+                value={device.farmPlotId ? t("iot.devices.detail.farmPlotAssigned") : t("iot.devices.detail.farmPlotUnassigned")}
               />
               <InfoTile
-                label="Zone"
-                value={device.zoneId ? "Đã gán vào khu vực" : "Chưa gán khu vực"}
+                label={t("iot.common.zone")}
+                value={device.zoneId ? t("iot.devices.detail.zoneAssigned") : t("iot.devices.detail.zoneUnassigned")}
               />
             </div>
 
@@ -881,19 +896,18 @@ export function DeviceDetailPage() {
                   <div className="space-y-3">
                     <div>
                       <h3 className="text-sm font-black text-amber-800">
-                        Thiết bị đã liên kết nhưng chưa online
+                        {t("iot.devices.detail.offlineTitle")}
                       </h3>
                       <p className="mt-1 text-sm font-semibold text-amber-700">
-                        Không cần nhập Wi-Fi trong form claim. Hãy hoàn tất cấu
-                        hình mạng trực tiếp trên thiết bị.
+                        {t("iot.devices.detail.offlineDescription")}
                       </p>
                     </div>
                     <ol className="space-y-2 text-sm font-semibold text-amber-800">
-                      <li>1. Bật nguồn thiết bị.</li>
-                      <li>2. Kết nối Wi-Fi "Leafy-Setup-xxxx".</li>
-                      <li>3. Mở http://192.168.4.1.</li>
-                      <li>4. Nhập Wi-Fi của vườn hoặc nhà.</li>
-                      <li>5. Chờ thiết bị online.</li>
+                      <li>{t("iot.devices.detail.offlineStepPower")}</li>
+                      <li>{t("iot.devices.detail.offlineStepWifi")}</li>
+                      <li>{t("iot.devices.detail.offlineStepPortal")}</li>
+                      <li>{t("iot.devices.detail.offlineStepCredential")}</li>
+                      <li>{t("iot.devices.detail.offlineStepWait")}</li>
                     </ol>
                   </div>
                 </div>
@@ -905,10 +919,10 @@ export function DeviceDetailPage() {
             <div className="mb-6">
               <div>
                 <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
-                  Latest readings and charts
+                  {t("iot.devices.detail.latestReadings")}
                 </h3>
                 <p className="text-sm font-semibold text-slate-500">
-                  Realtime readings use the device latest-readings endpoint.
+                  {t("iot.devices.detail.latestReadingsDescription")}
                 </p>
               </div>
             </div>
@@ -923,7 +937,7 @@ export function DeviceDetailPage() {
                     className="h-4 w-4 accent-[#245A34]"
                     aria-checked={compareEnabled}
                   />
-                  Compare mode
+                  {t("iot.devices.detail.compareMode")}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {visibleReadings.map((reading) => {
@@ -949,7 +963,11 @@ export function DeviceDetailPage() {
                           className="h-3.5 w-3.5 accent-[#245A34]"
                           aria-checked={checked}
                         />
-                        {reading.sensorName || knownSensor?.title || reading.sensorCode}
+                        {formatSensorLabel(
+                          t,
+                          reading.sensorCode,
+                          reading.sensorName || knownSensor?.title || reading.sensorCode,
+                        )}
                       </label>
                     );
                   })}
@@ -974,10 +992,10 @@ export function DeviceDetailPage() {
             <div className="mb-6 flex flex-col gap-3 rounded-[2rem] border border-slate-100 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Chart display
+                  {t("iot.devices.detail.chartDisplay")}
                 </p>
                 <p className="text-sm font-semibold text-slate-500">
-                  Applies to all sensor cards in this section.
+                  {t("iot.devices.detail.chartDisplayDescription")}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -1025,13 +1043,13 @@ export function DeviceDetailPage() {
                       : "bg-slate-50 text-slate-600 hover:bg-slate-100"
                   }`}
                 >
-                  Analytics
+                  {t("iot.devices.detail.analytics")}
                 </button>
               </div>
             </div>
 
             {latestReadingsQuery.isLoading ? (
-              <div aria-label="Loading device readings" className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              <div aria-label={t("iot.devices.detail.loadingReadings")} className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                 {[0, 1].map((item) => (
                   <div key={item} className="h-[240px] rounded-3xl bg-slate-100 animate-pulse" />
                 ))}
@@ -1041,10 +1059,10 @@ export function DeviceDetailPage() {
             {!latestReadingsQuery.isLoading && visibleReadings.length === 0 ? (
               <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-center shadow-sm">
                 <h3 className="text-lg font-black text-slate-800">
-                  No latest sensor readings
+                  {t("iot.devices.detail.noReadings")}
                 </h3>
                 <p className="mt-1 text-sm font-semibold text-slate-500">
-                  The backend returned no sensor readings for this device.
+                  {t("iot.devices.detail.noReadingsDescription")}
                 </p>
               </div>
             ) : null}
@@ -1091,10 +1109,10 @@ export function DeviceDetailPage() {
             <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-6">
               <div>
                 <h3 className="text-[20px] font-bold text-gray-900 tracking-tight">
-                  Device config
+                  {t("iot.devices.config.title")}
                 </h3>
                 <p className="text-sm font-semibold text-slate-500">
-                  Save updates desired config. Push sends that config to the device.
+                  {t("iot.devices.config.description")}
                 </p>
               </div>
               <button
@@ -1104,38 +1122,38 @@ export function DeviceDetailPage() {
                 className="inline-flex items-center justify-center rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Send className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                {pushConfigMutation.isPending ? "Pushing..." : "Push config"}
+                {pushConfigMutation.isPending ? t("iot.devices.config.pushing") : t("iot.devices.config.push")}
               </button>
             </div>
 
             {!canManageConfig ? (
               <p className="mb-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
-                Config actions are disabled because this device is not active and CLAIMED.
+                {t("iot.devices.config.actionsDisabled")}
               </p>
             ) : null}
 
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <InfoTile
-                label="Version"
+                label={t("iot.devices.config.configVersion")}
                 value={formatNumber(config.configVersion)}
               />
               <InfoTile
-                label="Last push"
-                value={configPushStatusLabel(config.lastPushStatus)}
+                label={t("iot.devices.config.pushStatus")}
+                value={formatConfigStatusLabel(t, config.lastPushStatus)}
               />
-              <InfoTile label="Last ACK" value={formatDateTime(config.lastAckAt)} />
-              <InfoTile label="Applied" value={formatDateTime(config.appliedAt)} />
+              <InfoTile label={t("iot.devices.config.lastAckAt")} value={formatDateTime(config.lastAckAt)} />
+              <InfoTile label={t("iot.devices.config.appliedAt")} value={formatDateTime(config.appliedAt)} />
             </div>
 
             {config.lastPushStatus ? (
               <div className="mb-6 flex flex-wrap items-center gap-3">
                 <span className={badgeClass(statusTone(config.lastPushStatus))}>
-                  {configPushStatusLabel(config.lastPushStatus)}
+                  {formatConfigStatusLabel(t, config.lastPushStatus)}
                 </span>
                 {config.lastPushStatus === "SENT" ||
                 config.lastPushStatus === "PENDING" ? (
                   <span className="text-sm font-bold text-slate-500">
-                    Waiting for device acknowledgement.
+                    {t("iot.devices.config.waitingAck")}
                   </span>
                 ) : null}
               </div>
@@ -1149,13 +1167,13 @@ export function DeviceDetailPage() {
 
             {updateConfigMutation.isError ? (
               <p role="alert" className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                Config update failed. Please review the values and try again.
+                {t("iot.devices.config.updateFailed")}
               </p>
             ) : null}
 
             {pushConfigMutation.isError ? (
               <p role="alert" className="mb-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
-                Config push failed. Please try again.
+                {t("iot.devices.config.pushFailed")}
               </p>
             ) : null}
 

@@ -6,6 +6,7 @@ import { CSVExportButton } from "./CSVExportButton";
 import { EventMarker } from "./EventMarker";
 import type { EventMarkerData } from "../utils/chartAnalytics";
 import type { SensorThresholds } from "../utils/chartThresholds";
+import { useTranslation } from "../../../i18n";
 
 export type SensorChartType = "area" | "line" | "bar" | "scatter";
 type TimestampValue = string | number | Date | null | undefined;
@@ -65,6 +66,13 @@ export const CHART_TYPES: Array<{ value: SensorChartType; label: string }> = [
   { value: "scatter", label: "Dots" },
 ];
 
+export const CHART_TYPE_LABEL_KEYS = {
+  area: "iot.charts.area",
+  line: "iot.charts.line",
+  bar: "iot.charts.bar",
+  scatter: "iot.charts.scatter",
+} as const;
+
 const parseTime = (value?: TimestampValue): number => {
   if (!value) return Number.NaN;
   if (value instanceof Date) return value.getTime();
@@ -111,6 +119,7 @@ export function IoTMetricCard({
   eventMarkers = [],
   exportFilename,
 }: IoTMetricCardProps) {
+  const { t } = useTranslation();
   const [hoveredPoint, setHoveredPoint] = useState<SensorTrend | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
   const [hoveredEvent, setHoveredEvent] = useState<EventMarkerData | null>(null);
@@ -142,12 +151,14 @@ export function IoTMetricCard({
   const lastUpdated =
     formatDisplayTime(data.latestUpdatedAt) ||
     formatDisplayTime(lastTrendPoint?.timestamp) ||
-    "No data";
+    t("iot.metrics.noData");
   const formatTooltipValue = (point: SensorTrend) => {
     const formattedValue = new Intl.NumberFormat("en", {
       maximumFractionDigits: 2,
     }).format(point.value);
-    const sampleSuffix = point.sampleCount ? ` - ${point.sampleCount} samples` : "";
+    const sampleSuffix = point.sampleCount
+      ? ` - ${t("iot.metrics.samples")(String(point.sampleCount))}`
+      : "";
     return `${formattedValue} ${data.unit}${sampleSuffix}`;
   };
   const labelInterval = Math.max(1, Math.ceil(data.trend.length / 4));
@@ -222,7 +233,7 @@ export function IoTMetricCard({
 
   return (
     <article
-      aria-label={`${title} latest reading and chart`}
+      aria-label={t("iot.metrics.latestReadingChartAria")(title)}
       className={`bg-white rounded-3xl p-5 flex min-w-0 flex-col shadow-sm border border-slate-100/50 ${
         expanded ? "min-h-[520px]" : "min-h-[320px]"
       }`}
@@ -251,14 +262,14 @@ export function IoTMetricCard({
               </span>
             </div>
             <p className="mt-2 text-[11px] font-bold text-slate-400">
-              Last updated: {lastUpdated}
+              {t("iot.metrics.lastUpdated")}: {lastUpdated}
             </p>
           </div>
         </div>
 
         <div className="flex min-w-[96px] flex-col items-end gap-2">
           <div className="flex items-center rounded-full bg-slate-50 px-2.5 py-1 text-[12px] font-bold text-slate-500">
-            {isError ? "Error" : data.badge || "Live"}
+            {isError ? t("iot.metrics.errorBadge") : data.badge || t("iot.metrics.live")}
           </div>
           <div className="flex items-center justify-end gap-1">
             <CSVExportButton
@@ -270,7 +281,7 @@ export function IoTMetricCard({
             {onExpand ? (
               <button
                 type="button"
-                aria-label={`Expand ${title} chart`}
+                aria-label={t("iot.metrics.expandChartAria")(title)}
                 onClick={onExpand}
                 className="rounded-full bg-slate-50 p-1.5 text-slate-500 hover:bg-slate-100 hover:text-[#245A34]"
               >
@@ -283,11 +294,11 @@ export function IoTMetricCard({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          {chartPointCount} chart points
+          {t("iot.metrics.chartPoints")(chartPointCount)}
         </p>
         {showThresholds && (thresholds?.min !== undefined || thresholds?.max !== undefined) ? (
           <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">
-            Threshold {thresholds.min ?? "-"} / {thresholds.max ?? "-"}
+            {t("iot.metrics.threshold")(String(thresholds.min ?? "-"), String(thresholds.max ?? "-"))}
           </p>
         ) : null}
       </div>
@@ -298,14 +309,14 @@ export function IoTMetricCard({
         />
         {isError ? (
           <div className="relative z-10 flex h-full flex-col items-center justify-center gap-2 text-sm font-bold text-rose-500">
-            <span>Failed to load chart</span>
+            <span>{t("iot.metrics.failedChart")}</span>
             {onRetry ? (
               <button
                 type="button"
                 onClick={onRetry}
                 className="rounded-full border border-rose-200 bg-white px-3 py-1 text-xs font-black text-rose-600 hover:bg-rose-50"
               >
-                Retry
+                {t("iot.metrics.retry")}
               </button>
             ) : null}
           </div>
@@ -327,7 +338,7 @@ export function IoTMetricCard({
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label={`${title} ${chartType} chart`}
+              aria-label={t("iot.metrics.chartAria")(title, t(CHART_TYPE_LABEL_KEYS[chartType]))}
             >
               <defs>
                 <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
@@ -437,7 +448,7 @@ export function IoTMetricCard({
                       y={Math.max(10, point.y - 8)}
                       height={chartHeight}
                       severity={point.alertSeverity}
-                      label={point.alertMessage || `${point.alertSeverity} alert`}
+                      label={point.alertMessage || `${point.alertSeverity} ${t("iot.metrics.alert")}`}
                     />
                   ) : null}
                   {chartType !== "bar" ? (
@@ -477,30 +488,30 @@ export function IoTMetricCard({
                 }}
               >
                 <p className="text-[10px] uppercase tracking-wide text-slate-300">
-                  Time: {activePoint.label || "Unknown"}
+                  {t("iot.metrics.time")}: {activePoint.label || t("iot.metrics.unknown")}
                 </p>
                 <p>{title}: {formatTooltipValue(activePoint)}</p>
                 <p className="text-[10px] uppercase tracking-wide text-slate-300">
-                  Status: {data.badge || "Live"}
+                  {t("iot.metrics.status")}: {data.badge || t("iot.metrics.live")}
                 </p>
                 {analyticsEnabled ? (
                   <>
                     <p className="text-[10px] uppercase tracking-wide text-blue-200">
-                      Rolling avg:{" "}
+                      {t("iot.metrics.rollingAvg")}:{" "}
                       {typeof activePoint.rollingAverage === "number"
                         ? activePoint.rollingAverage.toFixed(2)
                         : "-"}{" "}
                       {data.unit}
                     </p>
                     <p className="text-[10px] uppercase tracking-wide text-violet-200">
-                      Trend:{" "}
+                      {t("iot.metrics.trend")}:{" "}
                       {typeof activePoint.trendValue === "number"
                         ? activePoint.trendValue.toFixed(2)
                         : "-"}{" "}
                       {data.unit}
                     </p>
                     <p className="text-[10px] uppercase tracking-wide text-slate-300">
-                      Min/Max:{" "}
+                      {t("iot.metrics.movingRange")}:{" "}
                       {typeof activePoint.movingMin === "number"
                         ? activePoint.movingMin.toFixed(2)
                         : "-"}
@@ -514,12 +525,12 @@ export function IoTMetricCard({
                 ) : null}
                 {activePoint.alertSeverity ? (
                   <p className="text-[10px] uppercase tracking-wide text-red-200">
-                    Alert: {activePoint.alertSeverity} - {activePoint.alertMessage || "Threshold violation"}
+                    {t("iot.metrics.alert")}: {activePoint.alertSeverity} - {activePoint.alertMessage || t("iot.metrics.outsideThreshold")}
                   </p>
                 ) : null}
                 {isOutOfThreshold(activePoint) ? (
                   <p className="text-[10px] uppercase tracking-wide text-red-200">
-                    Threshold exceeded
+                    {t("iot.metrics.outsideThreshold")}
                   </p>
                 ) : null}
               </div>
@@ -534,11 +545,11 @@ export function IoTMetricCard({
                 }}
               >
                 <p className="text-[10px] uppercase tracking-wide text-slate-300">
-                  Event marker
+                  {t("iot.metrics.alertMarkers")}
                 </p>
                 <p>{hoveredEvent.label}</p>
                 <p className="text-[10px] uppercase tracking-wide text-slate-300">
-                  Time: {formatDisplayTime(hoveredEvent.timestamp) || String(hoveredEvent.timestamp)}
+                  {t("iot.metrics.time")}: {formatDisplayTime(hoveredEvent.timestamp) || String(hoveredEvent.timestamp)}
                 </p>
               </div>
             ) : null}
@@ -562,7 +573,7 @@ export function IoTMetricCard({
           </div>
         ) : (
           <div className="relative z-10 h-full flex items-center justify-center text-sm font-bold text-slate-400">
-            No chart data
+            {t("iot.metrics.noChartData")}
           </div>
         )}
       </div>

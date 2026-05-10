@@ -5,6 +5,7 @@ import { ChartStatisticsPanel } from "./ChartStatisticsPanel";
 import { CSVExportButton } from "./CSVExportButton";
 import type { SensorTrend } from "./IoTMetricCard";
 import { calculateStatistics, type AnalyticsPoint } from "../utils/chartAnalytics";
+import { useTranslation } from "../../../i18n";
 
 export interface CompareSeries {
   sensorCode: string;
@@ -29,6 +30,7 @@ export function CompareChart({
   analyticsEnabled = false,
   exportFilename,
 }: CompareChartProps) {
+  const { t } = useTranslation();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
   const drawableSeries = series.filter((item) => item.data.length > 0);
@@ -102,13 +104,13 @@ export function CompareChart({
     <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h4 className="text-base font-black text-slate-900">Compare sensors</h4>
+          <h4 className="text-base font-black text-slate-900">{t("iot.metrics.compareSensors")}</h4>
           <p className="text-sm font-semibold text-slate-500">
-            Multi-sensor trend from the existing chart queries.
+            {t("iot.metrics.compareDescription")}
           </p>
         </div>
         <p className="text-xs font-black uppercase tracking-widest text-slate-400">
-          {drawableSeries.length} selected
+          {t("iot.metrics.selectedCount")(drawableSeries.length)}
         </p>
         <CSVExportButton
           chartData={csvData}
@@ -119,7 +121,7 @@ export function CompareChart({
 
       {drawableSeries.length === 0 ? (
         <div className="flex h-56 items-center justify-center rounded-3xl bg-slate-50 text-sm font-bold text-slate-400">
-          No compare data
+          {t("iot.metrics.noCompareData")}
         </div>
       ) : (
         <div
@@ -134,7 +136,7 @@ export function CompareChart({
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
             preserveAspectRatio="none"
             role="img"
-            aria-label="Multi-sensor compare line chart"
+            aria-label={t("iot.metrics.multiSensorChartAria")}
           >
             {paths.map((item) => (
               <path
@@ -179,7 +181,7 @@ export function CompareChart({
                       y={valueToY(point.value)}
                       height={chartHeight}
                       severity={point.alertSeverity}
-                      label={point.alertMessage || `${point.alertSeverity} alert`}
+                          label={point.alertMessage || `${point.alertSeverity} ${t("iot.metrics.alert")}`}
                     />
                   );
                 })
@@ -215,7 +217,7 @@ export function CompareChart({
               }}
             >
               <p className="mb-2 text-[10px] uppercase tracking-widest text-slate-300">
-                Time: {activePoint.label || "Unknown"}
+                {t("iot.metrics.time")}: {activePoint.label || t("iot.metrics.unknown")}
               </p>
               <div className="space-y-1">
                 {drawableSeries.map((item) => {
@@ -236,7 +238,7 @@ export function CompareChart({
                       </span>
                       {analyticsEnabled && typeof match?.rollingAverage === "number" ? (
                         <span className="text-blue-200">
-                          avg {match.rollingAverage.toFixed(2)}
+                          {t("iot.metrics.avg")} {match.rollingAverage.toFixed(2)}
                         </span>
                       ) : null}
                       {match?.alertSeverity ? (

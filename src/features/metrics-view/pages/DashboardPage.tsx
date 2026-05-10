@@ -36,15 +36,22 @@ import type {
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
 import { FarmPlotFormDialog } from "../../farm-management/components/FarmPlotFormDialog";
 import { FarmZoneFormDialog } from "../../farm-management/components/FarmZoneFormDialog";
-import { STATUS_LABELS } from "../../farm-management/components/formUtils";
 import { useDashboardOverview } from "../queries";
 import { formatDateTime, formatNumber } from "../utils/format";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
 
 const STATUS_STYLES: Record<FarmPlotStatus | FarmZoneStatus, string> = {
   ACTIVE: "border-emerald-100 bg-emerald-50 text-emerald-700",
   INACTIVE: "border-amber-100 bg-amber-50 text-amber-700",
   ARCHIVED: "border-slate-200 bg-slate-100 text-slate-600",
 };
+
+const STATUS_KEYS = {
+  ACTIVE: "iot.dashboard.status.ACTIVE",
+  INACTIVE: "iot.dashboard.status.INACTIVE",
+  ARCHIVED: "iot.dashboard.status.ARCHIVED",
+} as const;
 
 type PlotDialogState =
   | { mode: "create"; plot?: null }
@@ -59,11 +66,12 @@ type DeleteTarget =
   | { type: "zone"; zone: FarmZoneResponse };
 
 function StatusPill({ status }: { status: FarmPlotStatus | FarmZoneStatus }) {
+  const { t } = useTranslation();
   return (
     <span
       className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${STATUS_STYLES[status]}`}
     >
-      {STATUS_LABELS[status]}
+      {t(STATUS_KEYS[status])}
     </span>
   );
 }
@@ -97,7 +105,7 @@ function MetricTile({
   );
 }
 
-function formatPlotAddress(plot: FarmPlotResponse) {
+function formatPlotAddress(plot: FarmPlotResponse, t: TFunction) {
   if (plot.addressLine) {
     return plot.addressLine;
   }
@@ -106,14 +114,15 @@ function formatPlotAddress(plot: FarmPlotResponse) {
     .filter(Boolean)
     .join(" / ");
 
-  return addressCodes ? `Mã địa chỉ: ${addressCodes}` : "Chưa có địa chỉ";
+  return addressCodes ? t("iot.dashboard.addressCode")(addressCodes) : t("iot.dashboard.noAddress");
 }
 
-function AreaValue({ value }: { value?: number | null }) {
-  return <>{value != null ? `${formatNumber(value)} m²` : "Chưa cập nhật"}</>;
+function AreaValue({ value, t }: { value?: number | null; t: TFunction }) {
+  return <>{value != null ? `${formatNumber(value)} m²` : t("iot.dashboard.notUpdated")}</>;
 }
 
 export function DashboardPage() {
+  const { t } = useTranslation();
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
@@ -240,7 +249,7 @@ export function DashboardPage() {
     return (
       <div
         className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4"
-        aria-label="Đang tải quản lý vườn"
+        aria-label={t("iot.dashboard.loading")}
       >
         {[0, 1, 2, 3].map((item) => (
           <div
@@ -256,10 +265,10 @@ export function DashboardPage() {
     return (
       <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
         <h3 className="text-lg font-black text-red-700">
-          Không tải được hồ sơ người dùng
+          {t("iot.dashboard.profileError")}
         </h3>
         <p className="mt-1 text-sm font-semibold text-red-600">
-          Trang quản lý vườn cần profile hiện tại để tải danh sách vườn.
+          {t("iot.dashboard.profileErrorDescription")}
         </p>
         <button
           type="button"
@@ -267,7 +276,7 @@ export function DashboardPage() {
           className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
         >
           <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Tải lại
+          {t("iot.dashboard.reload")}
         </button>
       </div>
     );
@@ -278,14 +287,13 @@ export function DashboardPage() {
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.24em] text-[#245A34]">
-            Farm service
+            {t("iot.dashboard.serviceLabel")}
           </p>
           <h2 className="mt-2 text-[32px] font-black tracking-tight text-slate-900">
-            Quản lý vườn và khu vực
+            {t("iot.dashboard.title")}
           </h2>
           <p className="mt-2 max-w-3xl text-[15px] font-semibold text-slate-500">
-            Chọn vườn ở danh sách bên trái, xem tổng quan IoT và quản lý các
-            khu vực canh tác mà không phải mở nhiều form cùng lúc.
+            {t("iot.dashboard.description")}
           </p>
         </div>
         <button
@@ -294,7 +302,7 @@ export function DashboardPage() {
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-[#1b432a]"
         >
           <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Thêm vườn
+          {t("iot.dashboard.addFarm")}
         </button>
       </header>
 
@@ -303,10 +311,10 @@ export function DashboardPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Không tải được danh sách vườn
+                {t("iot.dashboard.plotsError")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                Kiểm tra farm-service hoặc mapping profile hiện tại.
+                {t("iot.dashboard.plotsErrorDescription")}
               </p>
             </div>
             <button
@@ -315,7 +323,7 @@ export function DashboardPage() {
               className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Tải lại
+              {t("iot.dashboard.reload")}
             </button>
           </div>
         </div>
@@ -323,25 +331,25 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricTile
-          label="Tổng số vườn"
+          label={t("iot.dashboard.totalFarms")}
           value={formatNumber(plots.length)}
-          detail={`${formatNumber(activePlots)} đang hoạt động`}
+          detail={t("iot.dashboard.activeCount")(formatNumber(activePlots))}
           icon={MapPinned}
         />
         <MetricTile
-          label="Khu vực vườn chọn"
+          label={t("iot.dashboard.selectedFarmZones")}
           value={formatNumber(zones.length)}
-          detail={`${formatNumber(activeZones)} đang hoạt động`}
+          detail={t("iot.dashboard.activeCount")(formatNumber(activeZones))}
           icon={Layers3}
         />
         <MetricTile
-          label="Cảnh báo mở"
+          label={t("iot.dashboard.openAlerts")}
           value={formatNumber(overview?.openAlerts ?? 0)}
-          detail={selectedPlot ? `Tổng quan cho ${selectedPlot.name}` : "Chưa chọn vườn"}
+          detail={selectedPlot ? t("iot.dashboard.overviewForFarm")(selectedPlot.name) : t("iot.dashboard.noFarmSelected")}
           icon={Leaf}
         />
         <MetricTile
-          label="Thiết bị online"
+          label={t("iot.dashboard.onlineDevices")}
           value={
             overview
               ? `${formatNumber(overview.onlineDevices)} / ${formatNumber(overview.totalDevices)}`
@@ -349,8 +357,8 @@ export function DashboardPage() {
           }
           detail={
             overview
-              ? `${formatNumber(overview.offlineDevices)} thiết bị offline`
-              : "Chưa có dữ liệu collector"
+              ? t("iot.dashboard.offlineDevicesDetail")(formatNumber(overview.offlineDevices))
+              : t("iot.dashboard.noCollectorData")
           }
           icon={Sprout}
         />
@@ -361,7 +369,7 @@ export function DashboardPage() {
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h3 className="text-xl font-black text-slate-900">
-                Danh sách vườn
+                {t("iot.dashboard.farmList")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
                 {profileQuery.data.fullName}
@@ -376,7 +384,7 @@ export function DashboardPage() {
           </div>
 
           {plotsQuery.isLoading ? (
-            <div className="space-y-3" aria-label="Đang tải danh sách vườn">
+            <div className="space-y-3" aria-label={t("iot.dashboard.loadingFarmList")}>
               {[0, 1, 2].map((item) => (
                 <div
                   key={item}
@@ -389,10 +397,10 @@ export function DashboardPage() {
           {!plotsQuery.isLoading && !plotsQuery.isError && plots.length === 0 ? (
             <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
               <p className="text-base font-black text-slate-800">
-                Chưa có vườn
+                {t("iot.dashboard.emptyFarms")}
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                Bấm “Thêm vườn” để tạo vườn đầu tiên.
+                {t("iot.dashboard.emptyFarmsDescription")}
               </p>
             </div>
           ) : null}
@@ -416,7 +424,7 @@ export function DashboardPage() {
                         {plot.name}
                       </h4>
                       <p className="mt-1 text-sm font-semibold text-slate-500">
-                        {formatPlotAddress(plot)}
+                        {formatPlotAddress(plot, t)}
                       </p>
                     </div>
                     <StatusPill status={plot.status} />
@@ -425,15 +433,15 @@ export function DashboardPage() {
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div className="rounded-2xl bg-white p-3">
                       <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Diện tích
+                        {t("iot.dashboard.area")}
                       </p>
                       <p className="mt-1 font-bold text-slate-800">
-                        <AreaValue value={plot.areaM2} />
+                        <AreaValue value={plot.areaM2} t={t} />
                       </p>
                     </div>
                     <div className="rounded-2xl bg-white p-3">
                       <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                        Mã vườn
+                        {t("iot.dashboard.farmCode")}
                       </p>
                       <p className="mt-1 truncate font-bold text-slate-800">
                         {plot.code || "-"}
@@ -450,9 +458,9 @@ export function DashboardPage() {
                           ? "bg-[#245A34] text-white"
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
-                      aria-label={`Chọn vườn ${plot.name}`}
+                      aria-label={t("iot.dashboard.selectFarmAria")(plot.name)}
                     >
-                      Chọn
+                      {t("iot.dashboard.select")}
                     </button>
                     <button
                       type="button"
@@ -460,7 +468,7 @@ export function DashboardPage() {
                       className="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100"
                     >
                       <Pencil className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
-                      Chỉnh sửa vườn
+                      {t("iot.dashboard.editFarm")}
                     </button>
                     <button
                       type="button"
@@ -468,7 +476,7 @@ export function DashboardPage() {
                       className="inline-flex items-center rounded-xl bg-white px-3 py-2 text-sm font-bold text-red-600 hover:bg-red-50"
                     >
                       <Trash2 className="mr-1.5 h-4 w-4" strokeWidth={2.5} />
-                      Xóa
+                      {t("iot.dashboard.delete")}
                     </button>
                   </div>
                 </article>
@@ -482,11 +490,10 @@ export function DashboardPage() {
             <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
               <MapPinned className="mx-auto h-10 w-10 text-slate-300" />
               <h3 className="mt-4 text-xl font-black text-slate-900">
-                Chọn một vườn để xem chi tiết
+                {t("iot.dashboard.selectFarmTitle")}
               </h3>
               <p className="mt-2 text-sm font-semibold text-slate-500">
-                Sau khi chọn vườn, bạn có thể xem overview IoT và quản lý khu
-                vực của vườn đó.
+                {t("iot.dashboard.selectFarmDescription")}
               </p>
             </div>
           ) : (
@@ -501,7 +508,7 @@ export function DashboardPage() {
                       <StatusPill status={selectedPlot.status} />
                     </div>
                     <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-500">
-                      {selectedPlot.description || "Chưa có mô tả cho vườn này."}
+                      {selectedPlot.description || t("iot.dashboard.noFarmDescription")}
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -513,7 +520,7 @@ export function DashboardPage() {
                       className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
                     >
                       <Pencil className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                      Chỉnh sửa vườn
+                      {t("iot.dashboard.editFarm")}
                     </button>
                     <button
                       type="button"
@@ -521,7 +528,7 @@ export function DashboardPage() {
                       className="inline-flex items-center rounded-2xl bg-[#245A34] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1b432a]"
                     >
                       <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                      Thêm khu vực
+                      {t("iot.dashboard.addZone")}
                     </button>
                   </div>
                 </div>
@@ -529,23 +536,23 @@ export function DashboardPage() {
                 <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      Địa chỉ
+                      {t("iot.dashboard.address")}
                     </p>
                     <p className="mt-2 text-sm font-bold text-slate-800">
-                      {formatPlotAddress(selectedPlot)}
+                      {formatPlotAddress(selectedPlot, t)}
                     </p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      Diện tích
+                      {t("iot.dashboard.area")}
                     </p>
                     <p className="mt-2 text-sm font-bold text-slate-800">
-                      <AreaValue value={selectedPlot.areaM2} />
+                      <AreaValue value={selectedPlot.areaM2} t={t} />
                     </p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      Cập nhật
+                      {t("iot.dashboard.updatedAt")}
                     </p>
                     <p className="mt-2 text-sm font-bold text-slate-800">
                       {formatDateTime(selectedPlot.lastModifiedAt)}
@@ -553,7 +560,7 @@ export function DashboardPage() {
                   </div>
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                      Chủ vườn
+                      {t("iot.dashboard.owner")}
                     </p>
                     <p className="mt-2 truncate text-sm font-bold text-slate-800">
                       {profileQuery.data.fullName}
@@ -565,11 +572,10 @@ export function DashboardPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h4 className="text-base font-black text-slate-900">
-                        Live overview IoT
+                        {t("iot.dashboard.liveOverview")}
                       </h4>
                       <p className="mt-1 text-sm font-semibold text-slate-500">
-                        Dữ liệu từ collector dashboard overview của vườn đang
-                        chọn.
+                        {t("iot.dashboard.liveOverviewDescription")}
                       </p>
                     </div>
                     {overviewQuery.isFetching ? (
@@ -583,13 +589,13 @@ export function DashboardPage() {
                   </div>
                   {overviewQuery.isError ? (
                     <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
-                      Không tải được overview IoT cho vườn này.
+                      {t("iot.dashboard.overviewError")}
                     </p>
                   ) : (
                     <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
                       <div className="rounded-2xl bg-white p-4">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                          Khu vực
+                          {t("iot.dashboard.zones")}
                         </p>
                         <p className="mt-2 text-xl font-black text-slate-900">
                           {formatNumber(overview?.totalZones ?? zones.length)}
@@ -597,7 +603,7 @@ export function DashboardPage() {
                       </div>
                       <div className="rounded-2xl bg-white p-4">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                          Online
+                          {t("iot.dashboard.online")}
                         </p>
                         <p className="mt-2 text-xl font-black text-emerald-700">
                           {formatNumber(overview?.onlineDevices ?? 0)}
@@ -605,7 +611,7 @@ export function DashboardPage() {
                       </div>
                       <div className="rounded-2xl bg-white p-4">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                          Offline
+                          {t("iot.dashboard.offline")}
                         </p>
                         <p className="mt-2 text-xl font-black text-amber-700">
                           {formatNumber(overview?.offlineDevices ?? 0)}
@@ -613,7 +619,7 @@ export function DashboardPage() {
                       </div>
                       <div className="rounded-2xl bg-white p-4">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                          Cảnh báo
+                          {t("iot.dashboard.alerts")}
                         </p>
                         <p className="mt-2 text-xl font-black text-red-700">
                           {formatNumber(overview?.openAlerts ?? 0)}
@@ -628,10 +634,10 @@ export function DashboardPage() {
                 <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-xl font-black text-slate-900">
-                      Danh sách khu vực
+                      {t("iot.dashboard.zoneList")}
                     </h3>
                     <p className="mt-1 text-sm font-semibold text-slate-500">
-                      Quản lý từng khu vực trong {selectedPlot.name}.
+                      {t("iot.dashboard.zoneListDescription")(selectedPlot.name)}
                     </p>
                   </div>
                   <button
@@ -640,12 +646,12 @@ export function DashboardPage() {
                     className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#1b432a]"
                   >
                     <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                    Thêm khu vực
+                    {t("iot.dashboard.addZone")}
                   </button>
                 </div>
 
                 {zonesQuery.isLoading ? (
-                  <div className="space-y-3" aria-label="Đang tải khu vực">
+                  <div className="space-y-3" aria-label={t("iot.dashboard.loadingZones")}>
                     {[0, 1].map((item) => (
                       <div
                         key={item}
@@ -658,7 +664,7 @@ export function DashboardPage() {
                 {zonesQuery.isError ? (
                   <div className="rounded-[1.5rem] border border-red-100 bg-red-50 p-4">
                     <p className="text-sm font-bold text-red-700">
-                      Không tải được khu vực của vườn này.
+                      {t("iot.dashboard.zonesError")}
                     </p>
                     <button
                       type="button"
@@ -666,7 +672,7 @@ export function DashboardPage() {
                       className="mt-3 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
                     >
                       <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                      Tải lại khu vực
+                      {t("iot.dashboard.reloadZones")}
                     </button>
                   </div>
                 ) : null}
@@ -674,11 +680,10 @@ export function DashboardPage() {
                 {!zonesQuery.isLoading && !zonesQuery.isError && zones.length === 0 ? (
                   <div className="rounded-[1.5rem] border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                     <p className="text-base font-black text-slate-800">
-                      Chưa có khu vực
+                      {t("iot.dashboard.emptyZones")}
                     </p>
                     <p className="mt-1 text-sm font-semibold text-slate-500">
-                      Bấm “Thêm khu vực” để chia nhỏ vườn theo luống, nhà kính
-                      hoặc vùng cây trồng.
+                      {t("iot.dashboard.emptyZonesDescription")}
                     </p>
                   </div>
                 ) : null}
@@ -698,7 +703,7 @@ export function DashboardPage() {
                             <StatusPill status={zone.status} />
                           </div>
                           <p className="mt-1 text-sm font-semibold text-slate-500">
-                            {zone.description || zone.zoneCode || "Chưa có mô tả"}
+                            {zone.description || zone.zoneCode || t("iot.dashboard.noDescription")}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -706,7 +711,7 @@ export function DashboardPage() {
                             to={ROUTES.DASHBOARD.ZONE_METRICS(zone.id)}
                             className="inline-flex items-center rounded-2xl border border-[#245A34] bg-white px-4 py-2.5 text-sm font-bold text-[#245A34] hover:bg-green-50"
                           >
-                            Xem số liệu
+                            {t("iot.dashboard.viewMetrics")}
                           </Link>
                           <button
                             type="button"
@@ -714,7 +719,7 @@ export function DashboardPage() {
                             className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100"
                           >
                             <Pencil className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                            Chỉnh sửa khu vực
+                            {t("iot.dashboard.editZone")}
                           </button>
                           <button
                             type="button"
@@ -722,7 +727,7 @@ export function DashboardPage() {
                             className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                            Xóa
+                            {t("iot.dashboard.delete")}
                           </button>
                         </div>
                       </div>
@@ -730,39 +735,39 @@ export function DashboardPage() {
                       <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
                         <div className="rounded-2xl bg-white p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                            Diện tích
+                            {t("iot.dashboard.area")}
                           </p>
                           <p className="mt-2 text-sm font-bold text-slate-800">
-                            <AreaValue value={zone.areaM2} />
+                            <AreaValue value={zone.areaM2} t={t} />
                           </p>
                         </div>
                         <div className="rounded-2xl bg-white p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                            Loại đất
+                            {t("iot.dashboard.soilType")}
                           </p>
                           <p className="mt-2 text-sm font-bold text-slate-800">
-                            {zone.soilType || "Chưa cập nhật"}
+                            {zone.soilType || t("iot.dashboard.notUpdated")}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-white p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                            Cây trồng
+                            {t("iot.dashboard.cropType")}
                           </p>
                           <p className="mt-2 text-sm font-bold text-slate-800">
-                            {zone.cropType || "Chưa cập nhật"}
+                            {zone.cropType || t("iot.dashboard.notUpdated")}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-white p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                            Ngày trồng
+                            {t("iot.dashboard.plantingDate")}
                           </p>
                           <p className="mt-2 text-sm font-bold text-slate-800">
-                            {zone.plantingDate || "Chưa cập nhật"}
+                            {zone.plantingDate || t("iot.dashboard.notUpdated")}
                           </p>
                         </div>
                         <div className="rounded-2xl bg-white p-4">
                           <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                            Mã khu vực
+                            {t("iot.dashboard.zoneCode")}
                           </p>
                           <p className="mt-2 text-sm font-bold text-slate-800">
                             {zone.zoneCode || "-"}
@@ -820,12 +825,12 @@ export function DashboardPage() {
       {deleteTarget ? (
         <ConfirmDeleteDialog
           title={
-            deleteTarget.type === "plot" ? "Xóa vườn" : "Xóa khu vực"
+            deleteTarget.type === "plot" ? t("iot.dashboard.deleteFarmTitle") : t("iot.dashboard.deleteZoneTitle")
           }
           description={
             deleteTarget.type === "plot"
-              ? `Bạn có chắc muốn xóa vườn "${deleteTarget.plot.name}"? Các khu vực của vườn này sẽ không còn hiển thị trong trang quản lý.`
-              : `Bạn có chắc muốn xóa khu vực "${deleteTarget.zone.zoneName}"?`
+              ? t("iot.dashboard.deleteFarmDescription")(deleteTarget.plot.name)
+              : t("iot.dashboard.deleteZoneDescription")(deleteTarget.zone.zoneName)
           }
           isDeleting={
             deleteTarget.type === "plot"

@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AlertCircle, Camera, CameraOff, ClipboardPaste, RefreshCw } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
 
 type ScannerStatus = "idle" | "starting" | "running" | "stopping";
 
@@ -9,13 +11,13 @@ interface QrCameraScannerProps {
   onRequestPaste: () => void;
 }
 
-const getFriendlyCameraError = (error: unknown) => {
+const getFriendlyCameraError = (error: unknown, t: TFunction) => {
   const message =
     error instanceof Error
       ? error.message
       : typeof error === "string"
         ? error
-        : "Không thể khởi động camera";
+        : t("iot.devices.onboarding.cameraStartFailed");
   const normalized = message.trim().toLowerCase();
   const errorName = error instanceof Error ? error.name.toLowerCase() : "";
 
@@ -24,7 +26,7 @@ const getFriendlyCameraError = (error: unknown) => {
     normalized.includes("denied") ||
     errorName.includes("notallowed")
   ) {
-    return "Bạn đã từ chối quyền camera. Hãy cho phép truy cập camera rồi thử lại.";
+    return t("iot.devices.onboarding.cameraPermission");
   }
 
   if (
@@ -32,7 +34,7 @@ const getFriendlyCameraError = (error: unknown) => {
     normalized.includes("no camera") ||
     errorName.includes("notfound")
   ) {
-    return "Không tìm thấy camera trên thiết bị này. Hãy thử dùng dán JSON để kiểm thử.";
+    return t("iot.devices.onboarding.noCamera");
   }
 
   if (
@@ -40,16 +42,17 @@ const getFriendlyCameraError = (error: unknown) => {
     normalized.includes("unsupported") ||
     errorName.includes("notsupported")
   ) {
-    return "Trình duyệt hiện tại không hỗ trợ camera. Hãy dùng dán JSON để kiểm thử.";
+    return t("iot.devices.onboarding.cameraNotSupported");
   }
 
-  return "Không thể bật camera. Hãy thử lại hoặc dùng dán JSON để kiểm thử.";
+  return t("iot.devices.onboarding.cameraStartFailed");
 };
 
 export function QrCameraScanner({
   onDecoded,
   onRequestPaste,
 }: QrCameraScannerProps) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<ScannerStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -117,7 +120,7 @@ export function QrCameraScanner({
     }
 
     if (typeof window === "undefined" || !navigator?.mediaDevices?.getUserMedia) {
-      setError("Trình duyệt không hỗ trợ camera. Hãy dùng dán JSON để kiểm thử.");
+      setError(t("iot.devices.onboarding.cameraUnsupported"));
       return;
     }
 
@@ -127,7 +130,7 @@ export function QrCameraScanner({
     try {
       const cameras = await Html5Qrcode.getCameras();
       if (!cameras.length) {
-        setError("Không tìm thấy camera trên thiết bị này. Hãy dùng dán JSON để kiểm thử.");
+        setError(t("iot.devices.onboarding.noCamera"));
         setStatus("idle");
         return;
       }
@@ -166,7 +169,7 @@ export function QrCameraScanner({
     } catch (scannerError) {
       scannerRef.current = null;
       setStatus("idle");
-      setError(getFriendlyCameraError(scannerError));
+      setError(getFriendlyCameraError(scannerError, t));
     }
   };
 
@@ -185,13 +188,13 @@ export function QrCameraScanner({
         <div className="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-slate-300">
           <span>
             {status === "running"
-              ? "Đang bật camera và chờ quét QR..."
+              ? t("iot.devices.onboarding.cameraRunning")
               : status === "starting"
-                ? "Đang khởi động camera..."
-                : "Chưa bật camera"}
+                ? t("iot.devices.onboarding.cameraStarting")
+                : t("iot.devices.onboarding.cameraIdle")}
           </span>
           <span className="text-slate-400">
-            Quét xong sẽ tự chuyển sang bước chọn vị trí
+            {t("iot.devices.onboarding.cameraHint")}
           </span>
         </div>
       </div>
@@ -218,7 +221,7 @@ export function QrCameraScanner({
           ) : (
             <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
           )}
-          Bật camera
+          {t("iot.devices.onboarding.startCamera")}
         </button>
         <button
           type="button"
@@ -227,7 +230,7 @@ export function QrCameraScanner({
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <CameraOff className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Tắt camera
+          {t("iot.devices.onboarding.stopCamera")}
         </button>
         <button
           type="button"
@@ -235,7 +238,7 @@ export function QrCameraScanner({
           className="inline-flex items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:border-[#245A34] hover:text-[#245A34]"
         >
           <ClipboardPaste className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Dán JSON để kiểm thử
+          {t("iot.devices.onboarding.pasteJson")}
         </button>
       </div>
     </div>

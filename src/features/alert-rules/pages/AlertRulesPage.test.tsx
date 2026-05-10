@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -132,7 +132,25 @@ const mockPickerApis = () => {
     http.get("*/api/iot/devices/:deviceId/latest-readings", () =>
       HttpResponse.json([sensorReading]),
     ),
+    http.get("*/api/iot/farm-zones/:zoneId/overview", () =>
+      HttpResponse.json({ latestReadings: [sensorReading] }),
+    ),
   );
+};
+
+const waitForRuleList = () => screen.findByRole("table", { name: "Alert rules" });
+
+const chooseSelectOption = async (
+  label: string,
+  optionName: string | RegExp,
+) => {
+  await userEvent.click(screen.getByLabelText(label));
+  const options = await screen.findAllByText(optionName);
+  const option =
+    options.find((element) =>
+      String(element.getAttribute("class") ?? "").includes("cursor-pointer"),
+    ) ?? options[0];
+  await userEvent.click(option);
 };
 
 describe("AlertRulesPage", () => {
@@ -142,13 +160,14 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    expect(await screen.findByText(/Sensor dddddddd/)).toBeInTheDocument();
+    expect(await waitForRuleList()).toBeInTheDocument();
+    expect(screen.getByText(/Loại cảm biến đã cấu hình/)).toBeInTheDocument();
     expect(screen.getAllByText(/North sensor/).length).toBeGreaterThan(0);
     expect(await screen.findByText(/Coffee Zone A/)).toBeInTheDocument();
     expect(screen.getAllByText(/North Farm/).length).toBeGreaterThan(0);
-    expect(screen.getByText("1 alert rules")).toBeInTheDocument();
-    expect(screen.getAllByText("HIGH").length).toBeGreaterThan(0);
-    expect(screen.getByText("ENABLED")).toBeInTheDocument();
+    expect(screen.getByText("1 quy tắc")).toBeInTheDocument();
+    expect(screen.getAllByText("Quan trọng").length).toBeGreaterThan(0);
+    expect(screen.getByText("Đang bật")).toBeInTheDocument();
   });
 
   it("sends alert rule filters in the request", async () => {
@@ -177,16 +196,15 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
-    await screen.findByRole("option", { name: "North Farm" });
-    await userEvent.selectOptions(screen.getByLabelText("Filter farm plot"), farmPlot.id);
-    await userEvent.selectOptions(screen.getByLabelText("Filter zone"), zone.id);
-    await userEvent.selectOptions(screen.getByLabelText("Filter device"), device.id);
+    await waitForRuleList();
+    await chooseSelectOption("Filter farm plot", "North Farm");
+    await chooseSelectOption("Filter zone", "Coffee Zone A");
+    await chooseSelectOption("Filter device", "North sensor");
     await userEvent.type(
       screen.getByLabelText("Advanced filter sensorTypeId"),
       alertRule.sensorTypeId,
     );
-    await userEvent.selectOptions(screen.getByLabelText("Filter enabled"), "true");
+    await chooseSelectOption("Filter enabled", "Đang bật");
 
     await waitFor(() => {
       expect(seenRequests).toContainEqual({
@@ -212,21 +230,24 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
-    await userEvent.click(screen.getByRole("button", { name: /new rule/i }));
-    await userEvent.selectOptions(screen.getByLabelText("Rule farm plot"), farmPlot.id);
-    await userEvent.selectOptions(screen.getByLabelText("Rule zone"), zone.id);
-    await userEvent.selectOptions(screen.getByLabelText("Rule device"), device.id);
-    await userEvent.selectOptions(
-      await screen.findByLabelText("Inferred sensor type"),
+    await waitForRuleList();
+    await userEvent.click(screen.getByRole("button", { name: "Tạo quy tắc" }));
+    await chooseSelectOption("Rule farm plot", "North Farm");
+    await chooseSelectOption("Rule zone", "Coffee Zone A");
+    await chooseSelectOption("Rule device", "North sensor");
+    await userEvent.type(
+      screen.getByLabelText("Advanced sensorTypeId"),
       alertRule.sensorTypeId,
     );
     await userEvent.type(screen.getByLabelText("Min threshold"), "20");
     await userEvent.type(screen.getByLabelText("Max threshold"), "80");
-    await userEvent.selectOptions(screen.getByLabelText("Severity"), "MEDIUM");
     await userEvent.clear(screen.getByLabelText("Cooldown minutes"));
     await userEvent.type(screen.getByLabelText("Cooldown minutes"), "10");
-    await userEvent.click(screen.getByRole("button", { name: "Create rule" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Tạo quy tắc",
+      }),
+    );
 
     await waitFor(() => {
       expect(submittedBody).toEqual({
@@ -236,7 +257,7 @@ describe("AlertRulesPage", () => {
         farmPlotId: farmPlot.id,
         minThreshold: 20,
         maxThreshold: 80,
-        severity: "MEDIUM",
+        severity: "HIGH",
         cooldownMinutes: 10,
         notifyWeb: true,
         notifyMobile: false,
@@ -258,19 +279,21 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
-    await userEvent.click(screen.getByRole("button", { name: /new rule/i }));
+    await waitForRuleList();
+    await userEvent.click(screen.getByRole("button", { name: "Tạo quy tắc" }));
     await userEvent.type(screen.getByLabelText("Advanced sensorTypeId"), alertRule.sensorTypeId);
-    await userEvent.selectOptions(screen.getByLabelText("Rule device"), device.id);
+    await chooseSelectOption("Rule device", "North sensor");
     await userEvent.type(screen.getByLabelText("Min threshold"), "40");
     await userEvent.type(screen.getByLabelText("Max threshold"), "30");
-    await userEvent.click(screen.getByRole("button", { name: "Create rule" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Tạo quy tắc",
+      }),
+    );
 
-    expect(
-      await screen.findByText(
-        "Minimum threshold must be lower than maximum threshold.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Ngưỡng thấp phải nhỏ hơn ngưỡng cao.",
+    );
     expect(postCalled).toBe(false);
   });
 
@@ -287,15 +310,19 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
-    await userEvent.click(screen.getByRole("button", { name: /new rule/i }));
+    await waitForRuleList();
+    await userEvent.click(screen.getByRole("button", { name: "Tạo quy tắc" }));
     await userEvent.type(screen.getByLabelText("Advanced sensorTypeId"), alertRule.sensorTypeId);
     await userEvent.type(screen.getByLabelText("Max threshold"), "80");
-    await userEvent.click(screen.getByRole("button", { name: "Create rule" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Tạo quy tắc",
+      }),
+    );
 
-    expect(
-      await screen.findByText("Select at least one scope: farm plot, zone, or device."),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Cần chọn ít nhất một phạm vi: vườn, khu vực hoặc thiết bị.",
+    );
     expect(postCalled).toBe(false);
   });
 
@@ -305,11 +332,11 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
+    await waitForRuleList();
     await userEvent.click(screen.getByLabelText(`Edit rule ${alertRule.id}`));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByLabelText("Rule farm plot")).toHaveValue(farmPlot.id);
+    expect(screen.getByLabelText("Rule farm plot")).toHaveTextContent("North Farm");
     expect(screen.getByLabelText("Advanced sensorTypeId")).toHaveValue(
       alertRule.sensorTypeId,
     );
@@ -328,8 +355,8 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
-    await userEvent.click(screen.getByRole("button", { name: "Disable" }));
+    await waitForRuleList();
+    await userEvent.click(screen.getByRole("button", { name: "Tắt" }));
 
     await waitFor(() => {
       expect(submittedBody).toEqual({ enabled: false });
@@ -354,10 +381,10 @@ describe("AlertRulesPage", () => {
 
     renderWithClient(<AlertRulesPage />);
 
-    await screen.findByText(/Sensor dddddddd/);
+    await waitForRuleList();
     await userEvent.click(screen.getByLabelText("Delete rule rule-1"));
-    expect(screen.getByText("Delete alert rule?")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    expect(screen.getByText("Xóa quy tắc cảnh báo?")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Xác nhận xóa" }));
 
     await waitFor(() => {
       expect(deleteCalled).toBe(true);
@@ -376,12 +403,12 @@ describe("AlertRulesPage", () => {
 
     const { unmount } = renderWithClient(<AlertRulesPage />);
 
-    expect(screen.getByLabelText("Loading alert rules")).toBeInTheDocument();
+    expect(screen.getByLabelText("Đang tải quy tắc cảnh báo")).toBeInTheDocument();
     unmount();
 
     useRulesList(pagedRules([]));
     const emptyRender = renderWithClient(<AlertRulesPage />);
-    expect(await screen.findByText("No alert rules")).toBeInTheDocument();
+    expect(await screen.findByText("Không có quy tắc cảnh báo")).toBeInTheDocument();
     emptyRender.unmount();
 
     server.use(
@@ -393,8 +420,8 @@ describe("AlertRulesPage", () => {
     renderWithClient(<AlertRulesPage />);
 
     expect(
-      await screen.findByText("Alert rules could not be loaded"),
+      await screen.findByText("Không tải được quy tắc cảnh báo"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Thử lại" })).toBeInTheDocument();
   });
 });

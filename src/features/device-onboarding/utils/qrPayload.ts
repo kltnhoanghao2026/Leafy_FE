@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { TFunction } from "../../../i18n/context";
 import type { DeviceQrPayload } from "../types";
 
 const deviceQrSchema = z.object({
@@ -15,13 +16,14 @@ export interface ParsedQrPayload {
 
 export const parseDeviceQrPayload = (
   input: string,
+  t: TFunction,
 ): { success: true; data: ParsedQrPayload } | { success: false; error: string } => {
   const raw = input.trim();
 
   if (!raw) {
     return {
       success: false,
-      error: "Nội dung QR đang trống. Hãy dán JSON từ mã QR vào ô kiểm thử.",
+      error: t("iot.devices.onboarding.qrEmpty"),
     };
   }
 
@@ -31,7 +33,7 @@ export const parseDeviceQrPayload = (
   } catch {
     return {
       success: false,
-      error: "QR không hợp lệ: nội dung phải là JSON hợp lệ.",
+      error: t("iot.devices.onboarding.qrInvalidJson"),
     };
   }
 
@@ -45,8 +47,8 @@ export const parseDeviceQrPayload = (
       success: false,
       error:
         missingFields.length > 0
-          ? `QR thiếu thông tin bắt buộc: ${missingFields.join(", ")}.`
-          : "QR không hợp lệ: thiếu deviceUid, deviceCode hoặc deviceType.",
+          ? t("iot.devices.onboarding.qrMissingFields")(missingFields.join(", "))
+          : t("iot.devices.onboarding.qrMissingRequired"),
     };
   }
 

@@ -199,7 +199,7 @@ describe("AlertsPage", () => {
     await chooseSelectOption("Farm plot", "North Farm");
     await chooseSelectOption("Zone", "Coffee Zone A");
     await chooseSelectOption("Device", "North sensor");
-    await chooseSelectOption("Time range", "Last 24h");
+    await chooseSelectOption("Time range", "24 giờ qua");
 
     await waitFor(() => {
       expect(seenRequests).toEqual(
@@ -409,6 +409,6 @@ describe("AlertsPage", () => {
     expect(
       await screen.findByText("Không tải được cảnh báo"),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Thử lại" })).toBeInTheDocument();
   });
 });

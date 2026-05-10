@@ -10,6 +10,8 @@ interface CSVChartPoint {
   alertMessage?: string | null;
 }
 
+import { useTranslation } from "../../../i18n";
+
 interface CSVExportButtonProps {
   chartData: CSVChartPoint[];
   filename: string;
@@ -31,18 +33,19 @@ export function CSVExportButton({
   status,
   className,
 }: CSVExportButtonProps) {
+  const { t } = useTranslation();
   const handleExport = () => {
     const rows = [
       [
-        "timestamp",
-        "value",
-        "status",
-        "rollingAverage",
-        "trendValue",
-        "movingMin",
-        "movingMax",
-        "alertSeverity",
-        "alertMessage",
+        t("iot.charts.timestamp"),
+        t("iot.charts.value"),
+        t("iot.charts.status"),
+        t("iot.charts.rollingAverage"),
+        t("iot.charts.trendValue"),
+        t("iot.charts.movingMin"),
+        t("iot.charts.movingMax"),
+        t("iot.charts.alertSeverity"),
+        t("iot.charts.alertMessage"),
       ],
       ...chartData.map((point) => [
         point.timestamp,
@@ -73,7 +76,7 @@ export function CSVExportButton({
   return (
     <button
       type="button"
-      aria-label={`Export ${filename} as CSV`}
+      aria-label={t("iot.charts.exportCsvAria")(filename)}
       onClick={handleExport}
       disabled={chartData.length === 0}
       className={
@@ -81,7 +84,7 @@ export function CSVExportButton({
         "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-600 hover:border-[#245A34] hover:text-[#245A34] disabled:cursor-not-allowed disabled:opacity-40"
       }
     >
-      CSV
+      {t("iot.charts.csv")}
     </button>
   );
 }

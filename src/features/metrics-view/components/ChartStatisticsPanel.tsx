@@ -1,4 +1,5 @@
 import type { ChartStatistics } from "../utils/chartAnalytics";
+import { useTranslation } from "../../../i18n";
 
 interface ChartStatisticsPanelProps {
   statistics: ChartStatistics;
@@ -16,20 +17,21 @@ export function ChartStatisticsPanel({
   analyticsEnabled = false,
   hasThresholds = false,
 }: ChartStatisticsPanelProps) {
+  const { t } = useTranslation();
   const items = [
-    { label: "Current", value: formatValue(statistics.current, unit) },
-    { label: "Min", value: formatValue(statistics.min, unit) },
-    { label: "Max", value: formatValue(statistics.max, unit) },
-    { label: "Avg", value: formatValue(statistics.avg, unit) },
-    { label: "Trend", value: analyticsEnabled ? statistics.trend : "-" },
+    { label: t("iot.metrics.current"), value: formatValue(statistics.current, unit) },
+    { label: t("iot.metrics.min"), value: formatValue(statistics.min, unit) },
+    { label: t("iot.metrics.max"), value: formatValue(statistics.max, unit) },
+    { label: t("iot.metrics.avg"), value: formatValue(statistics.avg, unit) },
+    { label: t("iot.metrics.trend"), value: analyticsEnabled ? statistics.trend : "-" },
     {
-      label: "Rolling avg",
+      label: t("iot.metrics.rollingAvg"),
       value: analyticsEnabled ? formatValue(statistics.rollingAvg, unit) : "-",
     },
-    { label: "Alerts", value: String(statistics.alertsCount) },
+    { label: t("iot.metrics.alerts"), value: String(statistics.alertsCount) },
     {
-      label: "Outside threshold",
-      value: hasThresholds ? `${statistics.durationAboveThreshold} points` : "-",
+      label: t("iot.metrics.outsideThreshold"),
+      value: hasThresholds ? t("iot.metrics.points")(statistics.durationAboveThreshold) : "-",
     },
   ];
 
