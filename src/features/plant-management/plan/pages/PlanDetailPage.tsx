@@ -150,32 +150,21 @@ export function PlanDetailPage() {
   const events = eventsQuery.data ?? [];
 
   const previewDraftEvents = useMemo(() => {
-    if (!events.length) return [];
-    const anchors = events
-      .map((e) => e.calculatedStartDate)
-      .filter(Boolean) as string[];
-    anchors.sort();
-    const planAnchor = anchors[0];
-    const anchorMs = planAnchor ? new Date(planAnchor + "T00:00:00").getTime() : null;
-    return events.map((e) => {
-      let daysFromNow = 0;
-      if (e.calculatedStartDate && anchorMs != null) {
-        const eventMs = new Date(e.calculatedStartDate + "T00:00:00").getTime();
-        daysFromNow = Math.round((eventMs - anchorMs) / (1000 * 60 * 60 * 24));
-      }
-      return {
+    if (plan?.events && plan.events.length > 0) {
+      return plan.events.map((e) => ({
         eventType: e.eventType,
         note: e.note ?? "",
         description: e.description ?? undefined,
-        daysFromNow,
+        daysFromNow: e.daysFromNow ?? 0,
         durationDays: e.durationDays ?? undefined,
         phiDays: e.phiDays ?? undefined,
         ppeRequired: e.ppeRequired ?? undefined,
         mrlNote: e.mrlNote ?? undefined,
         estimatedCost: e.estimatedCost ?? undefined,
-      };
-    });
-  }, [events]);
+      }));
+    }
+    return [];
+  }, [plan?.events]);
 
   if (planQuery.isLoading) {
     return (
@@ -610,10 +599,10 @@ export function PlanDetailPage() {
         <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-base font-black text-slate-900">
-              Lịch chăm sóc ({events.length})
+              Lịch chăm sóc đã áp dụng ({events.length})
             </h2>
             <p className="mt-0.5 text-sm font-semibold text-slate-400">
-              Các sự kiện được sinh ra từ kế hoạch này
+              Các sự kiện thực tế được sinh ra khi áp dụng kế hoạch này
             </p>
           </div>
         </div>

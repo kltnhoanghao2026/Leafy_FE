@@ -1,4 +1,3 @@
-import React from 'react';
 import { BanIcon, AlertTriangle, CornerUpLeft, Edit2, Trash2 } from 'lucide-react';
 import type { MessageResponse } from '../api/chatApi';
 import { Avatar } from '../../../components/ui/Avatar';
@@ -102,7 +101,7 @@ export function MessageBubble({ msg, isMe, isFirstInGroup, showSenderInfo, onRep
                 </div>
               )}
               
-              {hasLinkPreview && (
+              {hasLinkPreview && msg.linkPreview && (
                 <LinkPreviewCard linkPreview={msg.linkPreview} content={msg.content} isMe={isMe} />
               )}
 

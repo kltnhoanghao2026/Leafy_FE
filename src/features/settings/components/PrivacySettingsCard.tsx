@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { Lock, Loader2, UserX, MessageSquareOff, PhoneOff, Calendar, Users, Activity, EyeOff, SearchX, Clock } from "lucide-react";
 import {
   useMyPreferences,
@@ -245,7 +245,17 @@ export function PrivacySettingsCard() {
   );
 }
 
-function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: any) {
+interface ToggleRowProps {
+  icon: ReactNode;
+  bgClass: string;
+  title: string;
+  desc: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}
+
+function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: ToggleRowProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-100/60 bg-slate-50/30 rounded-2xl p-4">
       <div className="flex items-center gap-4">
@@ -275,7 +285,23 @@ function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: 
   );
 }
 
-function SelectRow({ icon, bgClass, title, desc, value, options, disabled, onChange }: any) {
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+interface SelectRowProps {
+  icon: ReactNode;
+  bgClass: string;
+  title: string;
+  desc: string;
+  value: string;
+  options: SelectOption[];
+  disabled: boolean;
+  onChange: (value: string) => void;
+}
+
+function SelectRow({ icon, bgClass, title, desc, value, options, disabled, onChange }: SelectRowProps) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border border-slate-100/60 bg-slate-50/30 rounded-2xl p-4">
       <div className="flex items-center gap-4 mb-2 lg:mb-0">
@@ -288,7 +314,7 @@ function SelectRow({ icon, bgClass, title, desc, value, options, disabled, onCha
         </div>
       </div>
       <div className="flex flex-wrap items-center bg-slate-50 p-1 rounded-2xl border border-slate-200/60 shrink-0 gap-1">
-        {options.map((opt: any) => (
+        {options.map((opt) => (
           <button
             key={opt.value}
             type="button"

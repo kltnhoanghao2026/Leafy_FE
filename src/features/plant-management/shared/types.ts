@@ -298,6 +298,9 @@ export interface PlanApplyResponse {
   plantId: string | null;
   farmPlotId: string | null;
   farmZoneId: string | null;
+  planName?: string | null;
+  diseaseName?: string | null;
+  targetName?: string | null;
   startDate: string | null;
   trackingGranularity: TrackingGranularity | null;
   plantEventIds: string[] | null;

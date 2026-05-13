@@ -151,6 +151,7 @@ beforeEach(() => {
   useAuthStore.setState({
     user: {
       id: "user-current",
+      profileId: "profile-current",
       name: "Current Grower",
       email: "grower@example.com",
       avatar: "https://example.com/current-user.png",
@@ -162,6 +163,9 @@ beforeEach(() => {
   server.use(
     http.get("*/api/profiles/me", () => {
       return HttpResponse.json(envelope(currentUserProfile));
+    }),
+    http.get("*/api/profiles/experts", () => {
+      return HttpResponse.json(envelope(springPage([])));
     }),
   );
 });
@@ -542,17 +546,17 @@ describe("CommunityView", () => {
 
     await screen.findByText("Backend coffee leaf question");
     await userEvent.click(
-      screen.getByRole("button", { name: /toggle comments for post post-1/i }),
+      screen.getByRole("button", { name: /open comments for post post-1/i }),
     );
     expect(
       await screen.findByText("Backend comment from service"),
     ).toBeInTheDocument();
 
     await userEvent.type(
-      screen.getByPlaceholderText("Write a comment..."),
+      screen.getByPlaceholderText("Viết bình luận..."),
       "New backend comment",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Submit comment" }));
+    await userEvent.click(screen.getByRole("button", { name: "Post comment" }));
 
     await waitFor(() => {
       expect(submittedBody).toEqual({
@@ -603,8 +607,8 @@ describe("CommunityView", () => {
       expect(voteCalled).toBe(true);
     });
     expect(
-      screen.getByRole("button", { name: /upvote post post-1/i }),
-    ).toHaveTextContent("4");
+      screen.getByRole("button", { name: /view voters/i }),
+    ).toHaveTextContent("4 up");
   });
 
   it("downvotes a post through the backend", async () => {
@@ -646,8 +650,8 @@ describe("CommunityView", () => {
       expect(voteCalled).toBe(true);
     });
     expect(
-      screen.getByRole("button", { name: /downvote post post-1/i }),
-    ).toHaveTextContent("1");
+      screen.getByRole("button", { name: /view voters/i }),
+    ).toHaveTextContent("1 down");
   });
 
   it("votes on a comment through the backend", async () => {
@@ -675,7 +679,7 @@ describe("CommunityView", () => {
 
     await screen.findByText("Backend coffee leaf question");
     await userEvent.click(
-      screen.getByRole("button", { name: /toggle comments for post post-1/i }),
+      screen.getByRole("button", { name: /open comments for post post-1/i }),
     );
     await screen.findByText("Backend comment from service");
     await userEvent.click(
@@ -783,6 +787,6 @@ describe("CommunityView", () => {
     renderWithClient(<CommunityView />);
 
     expect(await screen.findByText("Backend coffee leaf question")).toBeInTheDocument();
-    expect(screen.getByText(/hot/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chuyên gia đề xuất" })).toBeInTheDocument();
   });
 });

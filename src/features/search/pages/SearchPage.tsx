@@ -641,7 +641,7 @@ function SectionHeader({ icon, title, total, onSeeAll }: {
 }
 
 // ── Paginated section wrapper (Posts/Profiles tabs) ────────────────────────────
-function PaginatedSection({ title, icon, totalItems, page, totalPages, hasPrev, hasNext, onPrev, onNext, keyword, children }: {
+function PaginatedSection({ title, icon, totalItems, page, totalPages, hasPrev, hasNext, onPrev, onNext, children }: {
   title: string; icon: React.ReactNode; totalItems: number
   page: number; totalPages: number; hasPrev: boolean; hasNext: boolean
   onPrev: () => void; onNext: () => void; keyword: string

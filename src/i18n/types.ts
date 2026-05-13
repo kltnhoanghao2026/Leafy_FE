@@ -1,4 +1,4 @@
-import { vi } from "./locales/vi";
+import type { vi } from "./locales/vi";
 
 /**
  * Supported locale codes.
@@ -6,14 +6,40 @@ import { vi } from "./locales/vi";
  */
 export type Locale = "vi" | "en";
 
+export type TranslationFunction = (...args: never[]) => string;
+
+export type TranslationValue =
+  | string
+  | TranslationFunction
+  | TranslationTree;
+
+export type TranslationTree = {
+  readonly [key: string]: TranslationValue;
+};
+
+/**
+ * Widen locale string literals while preserving the object shape and function
+ * leaf signatures inferred from the Vietnamese source-of-truth.
+ */
+export type WidenStrings<T> = {
+  readonly [K in keyof T]: T[K] extends string
+    ? string
+    : T[K] extends TranslationFunction
+      ? T[K]
+      : T[K] extends TranslationTree
+        ? WidenStrings<T[K]>
+        : T[K];
+};
+
 /**
  * The canonical shape of a translation dictionary.
- * Inferred from the Vietnamese source-of-truth so all locales stay in sync.
+ * Inferred from the Vietnamese source-of-truth so all locales stay in sync,
+ * without forcing translated string values to match Vietnamese literals.
  *
  * Function-valued leaves (e.g. memberCount) are kept as-is; callers
  * invoke them directly via t('chat.memberCount')(count).
  */
-export type TranslationDict = typeof vi;
+export type TranslationDict = WidenStrings<typeof vi>;
 
 /**
  * Dot-separated key path into TranslationDict, resolving to a leaf value.

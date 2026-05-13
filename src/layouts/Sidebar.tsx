@@ -17,6 +17,7 @@ import {
   MessageSquare,
   UserSquare,
   Stethoscope,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useMyProfile } from "../features/settings/queries";
@@ -24,6 +25,13 @@ import { ROUTES } from "../lib/routes";
 import { useNotificationState } from "../features/notifications/queries/queries";
 import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 import { useTranslation } from "../i18n";
+
+type SidebarNavItem = {
+  name: string;
+  path: string;
+  icon: LucideIcon | React.ElementType;
+  activePath?: string;
+};
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const location = useLocation();
@@ -35,15 +43,15 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
 
-  const coreNavItems = [
+  const coreNavItems: SidebarNavItem[] = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
-    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICE_ONBOARDING, activePath: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
+    { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
   ];
 
-  const agricultureNavItems = [
+  const agricultureNavItems: SidebarNavItem[] = [
     { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
     { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
@@ -55,16 +63,14 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
       : []),
   ];
 
-  const utilityNavItems = [
+  const utilityNavItems: SidebarNavItem[] = [
     { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
     { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
 
-  type NavItem = { name: string; path: string; activePath?: string; icon: React.ElementType };
-
-  const isSectionActive = (items: NavItem[]) =>
+  const isSectionActive = (items: SidebarNavItem[]) =>
     items.some((item) => {
       const activePath = item.activePath ?? item.path;
       return item.path === ROUTES.DASHBOARD.ROOT
@@ -81,7 +87,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const toggleSection = (key: string) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  const renderNavItem = (item: NavItem, badge?: number) => {
+  const renderNavItem = (item: SidebarNavItem, badge?: number) => {
     const isHome = item.path === ROUTES.DASHBOARD.ROOT;
     const activePath = item.activePath ?? item.path;
     const isCurrentlyActive = isHome
@@ -117,7 +123,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     );
   };
 
-  const renderSection = (key: string, label: string, items: NavItem[], badgeMap?: Record<string, number>) => {
+  const renderSection = (key: string, label: string, items: SidebarNavItem[], badgeMap?: Record<string, number>) => {
     const isOpen = openSections[key] ?? true;
     return (
       <div key={key}>

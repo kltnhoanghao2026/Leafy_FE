@@ -84,13 +84,13 @@ export function PlanApplyCard({
   const cfg = STATUS_CONFIG[apply.status] ?? STATUS_CONFIG.PENDING;
   const StatusIcon = cfg.icon;
 
-  const scopeLabel = apply.plantId
+  const scopeLabel = apply.targetName || (apply.plantId
     ? "Cây cụ thể"
     : apply.farmZoneId
       ? "Khu vực"
       : apply.farmPlotId
         ? "Vườn"
-        : "Không rõ";
+        : "Không rõ");
   const ScopeIcon = apply.plantId
     ? Leaf
     : apply.farmZoneId
@@ -113,7 +113,7 @@ export function PlanApplyCard({
               to={ROUTES.DASHBOARD.PLAN_DETAIL(apply.planId)}
               className="truncate text-sm font-black text-slate-900 hover:text-[#245A34] hover:underline"
             >
-              {planName || apply.planId}
+              {planName || apply.planName || apply.diseaseName || apply.planId}
             </Link>
             <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-black ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}>
               {cfg.label}
@@ -166,7 +166,7 @@ export function PlanApplyCard({
               to={ROUTES.DASHBOARD.PLAN_DETAIL(apply.planId)}
               className="block truncate text-[15px] font-black text-slate-900 group-hover:text-[#245A34] transition-colors"
             >
-              {planName || apply.planId}
+              {planName || apply.planName || apply.diseaseName || apply.planId}
             </Link>
             <p className="mt-0.5 text-xs font-semibold text-slate-400">
               Áp dụng lúc {formatDate(apply.createdAt)}

@@ -108,6 +108,12 @@ export function ApplyPlanDialog({
 
   const handleSubmit = () => {
     if (!canSubmit) return;
+    
+    let targetName = "";
+    if (plantId) targetName = selectedPlantLabel ?? "";
+    else if (farmZoneId) targetName = selectedZoneName ?? "";
+    else if (farmPlotId) targetName = selectedPlotName ?? "";
+
     const payload: PlanApplyRequest = {
       startDate,
       ...(plantId ? { plantId } : {}),
@@ -115,6 +121,7 @@ export function ApplyPlanDialog({
       ...(farmZoneId && !plantId ? { farmZoneId } : {}),
       ...(excludedPlantIds.length > 0 ? { excludedPlantIds } : {}),
       ...(excludedFarmZoneIds.length > 0 ? { excludedFarmZoneIds } : {}),
+      ...(targetName ? { targetName } : {}),
     };
     onSubmit(payload);
   };

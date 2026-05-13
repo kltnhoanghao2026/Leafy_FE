@@ -29,7 +29,7 @@ export const ragApi = {
   ) => {
     const response = await apiClient.get<
       RagApiResponse<RagPlan[]> | RagPlan[]
-    >(API_ENDPOINTS.RAG.PLANS, {
+    >(API_ENDPOINTS.RAG.TREATMENT_PLANS, {
       params: { page: params.page ?? 0, size: params.size ?? 20 },
     });
     return unwrapRagResult(response.data).map(

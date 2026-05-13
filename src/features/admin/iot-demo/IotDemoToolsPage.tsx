@@ -540,8 +540,9 @@ export function IotDemoToolsPage() {
               </span>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-              Local dev stack should have iot-test-data-service running on
-              localhost:8099 unless VITE_IOT_TEST_DATA_BASE_URL overrides it.
+              Local dev uses the Vite proxy path /iot-test-data to avoid browser
+              CORS. The proxy target should point to iot-test-data-service on
+              localhost:8099.
             </div>
           </div>
         </SectionCard>

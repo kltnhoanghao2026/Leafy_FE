@@ -6,7 +6,7 @@ import { IotDemoToolsPage } from "./IotDemoToolsPage";
 import { renderWithClient } from "../../../test/render";
 import { server } from "../../../test/server";
 
-const BASE_URL = "http://localhost:8099";
+const BASE_URL = "*/iot-test-data";
 
 function statusHandler(response = { running: false, status: "STOPPED" }) {
   return http.get(`${BASE_URL}/seed/simulation/status`, () =>
