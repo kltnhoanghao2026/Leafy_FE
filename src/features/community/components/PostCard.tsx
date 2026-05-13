@@ -13,10 +13,12 @@ import { CommentModal } from './CommentModal'
 import { ShareModal } from './ShareModal'
 import { SharedPostEmbed } from './SharedPostEmbed'
 import { MediaImage } from './MediaImage'
+import { PlanReferenceCard } from './PlanReferenceCard'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../lib/routes'
 import { Avatar } from '../../../components/ui/Avatar'
 import { VotersModal } from './VotersModal'
+
 
 // Mirrors the APP's formatStat: 1000+ → "1.0k"
 function formatStat(value: number): string {
@@ -115,6 +117,7 @@ export function PostCard({ post }: PostCardProps) {
   const titleText = post.title?.trim() || null
   const bodyText = post.content || ''
   const isShare = post.postType === 'SHARE'
+  const isPlanShare = post.postType === 'PLAN_SHARE'
 
   return (
     <div className="bg-white rounded-[2rem] border border-slate-100/50 shadow-sm mb-6 last:mb-0 overflow-hidden">
@@ -184,6 +187,14 @@ export function PostCard({ post }: PostCardProps) {
           <SharedPostEmbed post={post.sharedPost} />
         </div>
       )}
+
+      {/* ── Plan Reference Embed ──────────────────────────────────────────── */}
+      {isPlanShare && post.planId && (
+        <div className="px-6 pb-3">
+          <PlanReferenceCard planId={post.planId} planInfo={post.planInfo} />
+        </div>
+      )}
+
 
       {/* ── Media (own image — only if not a reshare) ─────────────────────── */}
       {!isShare && post.images && post.images.length > 0 && (

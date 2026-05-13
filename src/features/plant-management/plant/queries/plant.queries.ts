@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { plantApi } from "../api/plant.api";
-import type { PlantCreateRequest, PlantUpdateRequest } from '../../shared/types';
+import type {
+  BulkPlantDeleteRequest,
+  BulkPlantStatusUpdateRequest,
+  PlantCreateRequest,
+  PlantUpdateRequest,
+} from '../../shared/types';
 import { plantManagementKeys } from '../../shared/queries/keys';
 
 export const usePlants = () =>
@@ -91,6 +96,40 @@ export const useDeletePlant = () => {
     },
     meta: {
       successMessage: "Đã xóa cây trồng.",
+    },
+  });
+};
+
+export const useBulkUpdatePlantStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: BulkPlantStatusUpdateRequest) =>
+      plantApi.bulkUpdateStatus(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: plantManagementKeys.plantsRoot(),
+      });
+    },
+    meta: {
+      successMessage: "Đã cập nhật trạng thái các cây trồng.",
+    },
+  });
+};
+
+export const useBulkDeletePlants = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: BulkPlantDeleteRequest) =>
+      plantApi.bulkDeletePlants(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: plantManagementKeys.plantsRoot(),
+      });
+    },
+    meta: {
+      successMessage: "Đã xóa các cây trồng đã chọn.",
     },
   });
 };

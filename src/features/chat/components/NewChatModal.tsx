@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
 import { chatApi } from '../api/chatApi';
+import { ModalShell } from '../../../components/ui/ModalShell';
 
 // ─── Profile type for DM search ───────────────────────────────────────────────
 interface Profile {
@@ -107,21 +108,12 @@ export function NewChatModal({ isOpen, onClose, onStartChat, onGroupCreated }: N
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[88vh] animate-in zoom-in-95 duration-200 overflow-hidden">
-
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-md shrink-0">
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            {tab === 'dm' ? 'Tin nhắn mới' : 'Tạo nhóm mới'}
-
-          </h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <ModalShell
+      onClose={handleClose}
+      title={tab === 'dm' ? 'Tin nhắn mới' : 'Tạo nhóm mới'}
+      maxWidth="max-w-md"
+      headerClassName="bg-white/80 backdrop-blur-md"
+    >
 
         {/* Tab switcher */}
         <div className="flex border-b border-gray-100 shrink-0">
@@ -344,9 +336,6 @@ export function NewChatModal({ isOpen, onClose, onStartChat, onGroupCreated }: N
           </>
         )}
 
-
-
-      </div>
-    </div>
+    </ModalShell>
   );
 }

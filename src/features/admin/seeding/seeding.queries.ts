@@ -38,15 +38,17 @@ export const useSeedPlants = () =>
       speciesCount,
       plantCount,
       eventsPerPlant,
+      planCount,
     }: {
       speciesCount?: number;
       plantCount?: number;
       eventsPerPlant?: number;
-    }) => seedingApi.seedPlants(speciesCount, plantCount, eventsPerPlant),
+      planCount?: number;
+    }) => seedingApi.seedPlants(speciesCount, plantCount, eventsPerPlant, planCount),
     onSuccess: (res) => {
       const d = res.data.data;
       toast.success(
-        `Cây trồng: ${d?.seededPlantCount ?? 0} cây, ${d?.seededEventCount ?? 0} sự kiện`,
+        `Cây trồng: ${d?.seededPlantCount ?? 0} cây, ${d?.seededEventCount ?? 0} sự kiện, ${d?.seededPlanCount ?? 0} kế hoạch`,
       );
     },
     onError: () => toast.error("Seeder cây trồng thất bại"),
@@ -131,3 +133,4 @@ export const useSeedExperts = () =>
     },
     onError: () => toast.error("Seeder chuyên gia thất bại"),
   });
+

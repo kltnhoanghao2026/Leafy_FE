@@ -97,7 +97,8 @@ export interface PlanDto {
   safetyWarnings: string[] | null;
   successIndicators: string | null;
   estimatedCost: string | null;
-  plantEventIds: string[] | null;
+  /** Number of embedded template events. */
+  eventCount: number | null;
   status: TreatmentStatus;
   createdAt: string;
   lastModifiedAt: string | null;

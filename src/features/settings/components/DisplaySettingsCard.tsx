@@ -8,6 +8,7 @@ import {
 import { useSettingsStore, type ThemeMode } from "../store/useSettingsStore";
 import type { Locale } from "../../../i18n/types";
 import { useTranslation } from "../../../i18n/useTranslation";
+import apiClient from "../../../lib/apiClient";
 
 // ── Converters (backend ↔ frontend) ─────────────────────────────────────────
 
@@ -71,6 +72,12 @@ export function DisplaySettingsCard() {
     try {
       await updateGeneralMutation.mutateAsync({ languageEn: nextLocale === "en" });
       setLocale(nextLocale);
+      // Silently sync locale preference to notification-service so future
+      // push and in-app notifications are rendered in the selected language.
+      apiClient.patch('/notifications/locale', { locale: nextLocale }).catch(() => {
+        // Non-critical — log and swallow; the in-app locale is still updated.
+        console.warn('[i18n] Failed to sync notification locale to backend');
+      });
       setMessage(t("settings.display.languageSavedPrefs"));
     } catch (updateError) {
       setMutationError(

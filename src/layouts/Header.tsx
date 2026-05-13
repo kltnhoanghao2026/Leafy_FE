@@ -1,8 +1,13 @@
-import { useRef, useState } from 'react'
-import { MapPin, Menu, Search, Sun, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronDown, LogOut, MapPin, Menu, Search, Settings, User, X } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'
 import { NotificationPopover } from '../features/notifications/components/NotificationPopover'
+import { useMyProfile, useFilePreviewUrl } from '../features/settings/queries'
+import { isFileServiceReference } from '../lib/api/fileApi'
+import { useLogout } from '../features/auth/hooks/useLogout'
+import { ROLE_LABELS } from '../features/settings/types'
+import { Avatar } from '../components/ui/Avatar'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -13,7 +18,31 @@ export function Header({ onMenuClick }: HeaderProps) {
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const { data: profile } = useMyProfile()
+  const logout = useLogout()
+  const { data: avatarUrl } = useFilePreviewUrl(profile?.avatar)
+  const displayName = profile?.fullName ?? ''
+  const displayRole = profile?.role ? ROLE_LABELS[profile.role] || profile.role : ''
+  const avatarSrc =
+    avatarUrl ||
+    (profile?.avatar && !isFileServiceReference(profile.avatar) ? profile.avatar : null) ||
+    profile?.profilePicture ||
+    undefined
 
   const tabs = [
     { name: 'Khu vực', path: ROUTES.DASHBOARD.ROOT },
@@ -123,12 +152,55 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             <div className="w-px h-6 bg-slate-200" />
 
-            {/* Weather Widget */}
-            <div className="flex items-center px-4 py-2 bg-[#F1F9F3] rounded-full">
-              <Sun className="w-4 h-4 text-[#245A34] mr-2" strokeWidth={3} />
-              <span className="text-[13px] font-bold text-[#245A34]">
-                28°C | Nắng nhẹ
-              </span>
+            {/* Profile Dropdown */}
+            <div ref={profileRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((o) => !o)}
+                className="flex items-center gap-2.5 pl-1 pr-3 py-1 rounded-full hover:bg-slate-50 transition-colors group"
+              >
+                <Avatar src={avatarSrc} name={displayName} size="sm" className="border border-slate-200" />
+                <div className="flex flex-col leading-none text-left">
+                  <span className="text-[13px] font-bold text-slate-800 group-hover:text-[#245A34] transition-colors max-w-[120px] truncate">{displayName}</span>
+                  <span className="text-[10px] font-semibold text-slate-400 max-w-[120px] truncate">{displayRole}</span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} strokeWidth={2.5} />
+              </button>
+
+              {profileOpen && (
+                <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-slate-100 rounded-2xl shadow-lg py-1.5 z-50">
+                  <div className="px-4 py-2.5 border-b border-slate-100 mb-1">
+                    <p className="text-[13px] font-bold text-slate-800 truncate">{displayName}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{displayRole}</p>
+                  </div>
+                  <Link
+                    to={ROUTES.DASHBOARD.SETTINGS}
+                    onClick={() => setProfileOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#245A34] transition-colors"
+                  >
+                    <User className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                    Hồ sơ của tôi
+                  </Link>
+                  <Link
+                    to={ROUTES.DASHBOARD.SETTINGS}
+                    onClick={() => setProfileOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 hover:text-[#245A34] transition-colors"
+                  >
+                    <Settings className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                    Cài đặt
+                  </Link>
+                  <div className="border-t border-slate-100 mt-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setProfileOpen(false); void logout() }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-[13px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" strokeWidth={2.5} />
+                      Đăng xuất
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -21,3 +21,16 @@ export const unwrapPageContent = <T>(payload: PageResponse<T> | T[]): T[] => {
 
   return payload.content ?? [];
 };
+
+export const toPageResponse = <T>(payload: PageResponse<T> | T[]): PageResponse<T> => {
+  if (Array.isArray(payload)) {
+    return {
+      content: payload,
+      number: 0,
+      size: payload.length,
+      totalElements: payload.length,
+      totalPages: 1,
+    };
+  }
+  return payload;
+};

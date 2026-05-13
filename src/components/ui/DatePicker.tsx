@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, ChevronDown } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Select } from "./Select";
 
 export interface DatePickerProps {
   value?: string;
@@ -8,6 +10,7 @@ export interface DatePickerProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  minDate?: string; // ISO date string "YYYY-MM-DD" — days before this are disabled
 }
 
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
@@ -34,9 +37,13 @@ export function DatePicker({
   placeholder = "Chọn ngày...",
   disabled = false,
   className = "",
+  minDate,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   // Parse current value
   const parsedValue = useMemo(() => {
@@ -55,6 +62,25 @@ export function DatePicker({
 
   const [tempTime, setTempTime] = useState(parsedValue?.time || "00:00");
 
+  const minDay = useMemo(() => {
+    if (!minDate) return null;
+    const [y, m, d] = minDate.split("-").map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }, [minDate]);
+
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => ({ value: i, label: `Tháng ${i + 1}` })),
+    [],
+  );
+  const yearOptions = useMemo(
+    () => {
+      const base = new Date().getFullYear();
+      return Array.from({ length: 100 }, (_, i) => { const y = base - 50 + i; return { value: y, label: String(y) }; });
+    },
+    [],
+  );
+
   useEffect(() => {
     if (parsedValue) {
       setViewDate(parsedValue.date);
@@ -66,12 +92,28 @@ export function DatePicker({
     const handleOutsideClick = (event: MouseEvent) => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current.contains(event.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
       ) {
         setIsOpen(false);
       }
     };
     if (isOpen) {
+      // Compute portal position from the button
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const dropdownH = 360; // approximate max height
+        const top = spaceBelow >= dropdownH ? rect.bottom + 8 : rect.top - dropdownH - 8;
+        setDropdownStyle({
+          position: 'fixed',
+          top,
+          left: rect.left,
+          width: 288, // w-72
+          zIndex: 9999,
+        });
+      }
       document.addEventListener("mousedown", handleOutsideClick);
     }
     return () => {
@@ -158,6 +200,7 @@ export function DatePicker({
   return (
     <div className={`relative w-full ${className}`} ref={containerRef}>
       <button
+        ref={buttonRef}
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen((prev) => !prev)}
@@ -169,42 +212,30 @@ export function DatePicker({
         <CalendarIcon className="h-4 w-4 text-slate-400" />
       </button>
 
-      {isOpen && (
-        <div className="absolute z-50 mt-2 w-72 overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-4 shadow-xl">
+      {isOpen && createPortal(
+        <div ref={dropdownRef} style={dropdownStyle} className="overflow-hidden rounded-4xl border border-slate-100 bg-white p-4 shadow-xl">
           <div className="flex items-center justify-between mb-4">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors"
+              disabled={!!minDay && viewDate.getFullYear() === minDay.getFullYear() && viewDate.getMonth() <= minDay.getMonth()}
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2">
-              <div className="relative flex items-center">
-                <select
-                  value={viewDate.getMonth()}
-                  onChange={(e) => setViewDate(new Date(viewDate.getFullYear(), parseInt(e.target.value), 1))}
-                  className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm rounded-lg pl-3 pr-8 py-1.5 outline-none cursor-pointer hover:bg-emerald-50 hover:text-[#245A34] hover:border-emerald-200 focus:border-[#245A34] focus:ring-1 focus:ring-[#245A34] transition-colors shadow-sm"
-                >
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <option key={i} value={i}>Tháng {i + 1}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              </div>
-              <div className="relative flex items-center">
-                <select
-                  value={viewDate.getFullYear()}
-                  onChange={(e) => setViewDate(new Date(parseInt(e.target.value), viewDate.getMonth(), 1))}
-                  className="appearance-none bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm rounded-lg pl-3 pr-8 py-1.5 outline-none cursor-pointer hover:bg-emerald-50 hover:text-[#245A34] hover:border-emerald-200 focus:border-[#245A34] focus:ring-1 focus:ring-[#245A34] transition-colors shadow-sm"
-                >
-                  {Array.from({ length: 100 }).map((_, i) => {
-                    const y = new Date().getFullYear() - 50 + i;
-                    return <option key={y} value={y}>{y}</option>;
-                  })}
-                </select>
-                <ChevronDown className="absolute right-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={viewDate.getMonth()}
+                options={monthOptions}
+                onChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
+                className="w-28"
+              />
+              <Select
+                value={viewDate.getFullYear()}
+                options={yearOptions}
+                onChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth(), 1))}
+                className="w-24"
+              />
             </div>
             <button
               type="button"
@@ -236,18 +267,20 @@ export function DatePicker({
                 new Date().getMonth() === day.date.getMonth() &&
                 new Date().getDate() === day.date.getDate();
 
+              const isBeforeMin = !!minDay && day.date < minDay;
               return (
                 <button
                   key={idx}
                   type="button"
+                  disabled={isBeforeMin}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDateSelect(day.date);
                   }}
                   className={`
                     flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-colors
-                    ${!day.isCurrentMonth ? "text-slate-300" : "text-slate-700"}
-                    ${isSelected ? "bg-[#245A34] text-white" : "hover:bg-emerald-50 hover:text-[#245A34]"}
+                    ${isBeforeMin ? "text-slate-200 cursor-not-allowed" : (!day.isCurrentMonth ? "text-slate-300" : "text-slate-700")}
+                    ${isSelected ? "bg-[#245A34] text-white" : (!isBeforeMin ? "hover:bg-emerald-50 hover:text-[#245A34]" : "")}
                     ${isToday && !isSelected ? "ring-1 ring-[#245A34] text-[#245A34]" : ""}
                   `}
                 >
@@ -272,7 +305,7 @@ export function DatePicker({
             </div>
           )}
         </div>
-      )}
+      , document.body)}
     </div>
   );
 }

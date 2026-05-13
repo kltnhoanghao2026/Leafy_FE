@@ -91,11 +91,13 @@ export const seedingApi = {
     speciesCount?: number,
     plantCount?: number,
     eventsPerPlant?: number,
+    planCount?: number,
   ) =>
     postWithParams<PlantSeedResult>(API_ENDPOINTS.ADMIN.SEED.PLANTS, {
       speciesCount,
       plantCount,
       eventsPerPlant,
+      planCount,
     }),
 
   seedSpeciesPerenual: (startPage: number, pages: number, perPage: number) =>

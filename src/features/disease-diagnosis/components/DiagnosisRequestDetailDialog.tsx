@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
 import type { DiagnoseRequest, DiagnoseResult } from "../types";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import {
   formatConfidence,
   getDiseaseLabel,
@@ -34,34 +34,19 @@ export function DiagnosisRequestDetailDialog({
   onClose,
 }: DiagnosisRequestDetailDialogProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="diagnosis-detail-title"
+    <ModalShell
+      onClose={onClose}
+      title="Chi tiết chẩn đoán"
+      titleId="diagnosis-detail-title"
+      subtitle={
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          {request.imageFileName} · {formatDateTime(request.timeStamp)}
+        </p>
+      }
+      maxWidth="sm:max-w-2xl"
     >
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
-          <div>
-            <h2 id="diagnosis-detail-title" className="text-xl font-black text-slate-900">
-              Chi tiết chẩn đoán
-            </h2>
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              {request.imageFileName} · {formatDateTime(request.timeStamp)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng"
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="max-h-[70vh] overflow-y-auto p-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="p-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InfoTile label="Request ID" value={request.diagnoseRequestId} />
             <InfoTile label="Loại file" value={request.imageContentType} />
           </div>
@@ -104,7 +89,7 @@ export function DiagnosisRequestDetailDialog({
           ) : null}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 

@@ -253,6 +253,7 @@ export function DataSeedingPage() {
   const [speciesCount, setSpeciesCount] = useState("");
   const [plantCount, setPlantCount] = useState("");
   const [eventsPerPlant, setEventsPerPlant] = useState("");
+  const [planCount, setPlanCount] = useState("");
   const seedPlants = useSeedPlants();
   const plantResult = seedPlants.data?.data?.data;
 
@@ -456,16 +457,17 @@ export function DataSeedingPage() {
         <SeederCard
           step={3}
           icon={<Leaf className="w-4 h-4" />}
-          title="Cây trồng & Sự kiện"
-          description="Xoá toàn bộ cây trồng & sự kiện, tái tạo dựa trên nông trại thực."
+          title="Cây trồng, Sự kiện & Kế hoạch"
+          description="Xóa toàn bộ cây trồng, sự kiện & kế hoạch, tái tạo dựa trên nông trại thực."
           destructive
-          confirmMessage="Thao tác này sẽ XOÁ toàn bộ cây trồng và sự kiện hiện tại, sau đó tạo lại từ đầu. Tiếp tục?"
+          confirmMessage="Thao tác này sẽ XÓÁ toàn bộ cây trồng, sự kiện và kế hoạch hiện tại, sau đó tạo lại từ đầu. Tiếp tục?"
           isPending={seedPlants.isPending}
           onRun={() =>
             seedPlants.mutate({
               speciesCount: toOptInt(speciesCount),
               plantCount: toOptInt(plantCount),
               eventsPerPlant: toOptInt(eventsPerPlant),
+              planCount: toOptInt(planCount),
             })
           }
           result={
@@ -499,11 +501,19 @@ export function DataSeedingPage() {
                   label="Sự kiện tạo mới"
                   value={plantResult.seededEventCount}
                 />
+                <StatRow
+                  label="Kế hoạch đã xoá"
+                  value={plantResult.deletedPlanCount}
+                />
+                <StatRow
+                  label="Kế hoạch tạo mới"
+                  value={plantResult.seededPlanCount}
+                />
               </ResultPanel>
             )
           }
         >
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <NumInput
               label="Số loài"
               value={speciesCount}
@@ -524,6 +534,13 @@ export function DataSeedingPage() {
               onChange={setEventsPerPlant}
               min={1}
               placeholder="Mặc định: 5"
+            />
+            <NumInput
+              label="Số kế hoạch"
+              value={planCount}
+              onChange={setPlanCount}
+              min={1}
+              placeholder="Mặc định: 20"
             />
           </div>
         </SeederCard>
@@ -692,7 +709,7 @@ export function DataSeedingPage() {
           </div>
         </SeederCard>
 
-        {/* 7. Species / Perenual — full width */}
+        {/* 8. Species / Perenual — full width */}
         <div className="lg:col-span-2">
           <SeederCard
             icon={<FlaskConical className="w-4 h-4" />}

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { AlertCircle, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
+import { AlertCircle, ClipboardList, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
 import { useCreateCommunityPost } from "../queries";
 import { useUploadFileMutation } from "../../settings/queries";
 import { Avatar } from '../../../components/ui/Avatar'
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
+import { useMyPlans } from "../../plant-management/plan/queries/plan.queries";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -29,7 +30,11 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [postType, setPostType] = useState<"FEED" | "PLAN_SHARE">("FEED");
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const myPlansQuery = useMyPlans();
 
   useEffect(() => {
     return () => {
@@ -62,6 +67,8 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
     if (previewImage) URL.revokeObjectURL(previewImage);
     setPreviewImage(null);
     setMediaError(null);
+    setPostType("FEED");
+    setSelectedPlanId(null);
     uploadFile.reset();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -83,6 +90,11 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
         ? await uploadFile.mutateAsync(selectedFile)
         : null;
 
+      if (postType === "PLAN_SHARE" && !selectedPlanId) {
+        setMediaError("Vui lòng chọn một kế hoạch điều trị để chia sẻ.");
+        return;
+      }
+
       await createPost.mutateAsync({
         content: {
           caption: content.trim(),
@@ -96,10 +108,11 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
               },
             ]
           : [],
-        postType: "FEED",
+        postType,
         location:
           location && location !== "PICKING" ? { name: location } : null,
         visibility: "ALL",
+        planId: postType === "PLAN_SHARE" ? selectedPlanId : null,
       });
 
       resetForm();
@@ -182,8 +195,43 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
               </div>
             ) : null}
 
-            {location === "PICKING" ? (
-              <div className="mt-3 bg-slate-50 rounded-2xl p-3 border border-slate-200 animate-in slide-in-from-top-2 duration-150">
+            {postType === "PLAN_SHARE" ? (
+              <div className="mt-3 bg-green-50 rounded-2xl p-3 border border-green-200 animate-in slide-in-from-top-2 duration-150">
+                <p className="text-[12px] font-bold text-[#245A34] mb-2 uppercase tracking-wider flex items-center gap-1">
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  Chọn kế hoạch điều trị
+                </p>
+                {myPlansQuery.isLoading ? (
+                  <p className="text-[13px] text-slate-500">Đang tải...</p>
+                ) : (myPlansQuery.data?.content ?? []).filter((p) => p.isPublic).length === 0 ? (
+                  <p className="text-[13px] text-slate-500">
+                    Bạn chưa có kế hoạch công khai nào. Hãy bật chế độ công khai cho kế hoạch trước.
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-1.5 max-h-40 overflow-y-auto">
+                    {(myPlansQuery.data?.content ?? []).filter((p) => p.isPublic).map((plan) => (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() => setSelectedPlanId(plan.id)}
+                        className={`text-left px-3 py-2 rounded-xl text-[13px] font-semibold transition-colors border ${
+                          selectedPlanId === plan.id
+                            ? "bg-[#245A34] text-white border-[#245A34]"
+                            : "bg-white border-slate-200 text-slate-700 hover:border-[#245A34] hover:text-[#245A34]"
+                        }`}
+                      >
+                        {plan.diseaseName ?? plan.planName ?? `Kế hoạch ${plan.id.slice(0, 8)}`}
+                        {plan.severityLevel ? (
+                          <span className="ml-2 opacity-70">· {plan.severityLevel}</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {location === "PICKING" ? (              <div className="mt-3 bg-slate-50 rounded-2xl p-3 border border-slate-200 animate-in slide-in-from-top-2 duration-150">
                 <p className="text-[12px] font-bold text-slate-500 mb-2 uppercase tracking-wider">
                   Choose location
                 </p>
@@ -264,6 +312,20 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                 >
                   <MapPin className="w-5 h-5" strokeWidth={2.5} />
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = postType === "PLAN_SHARE" ? "FEED" : "PLAN_SHARE";
+                    setPostType(next);
+                    if (next !== "PLAN_SHARE") setSelectedPlanId(null);
+                  }}
+                  className={`transition-opacity ${
+                    postType === "PLAN_SHARE" ? "text-[#245A34]" : "text-slate-400"
+                  } hover:opacity-70`}
+                  title="Chia sẻ kế hoạch điều trị"
+                >
+                  <ClipboardList className="w-5 h-5" strokeWidth={2.5} />
+                </button>
               </div>
             </div>
 
@@ -278,7 +340,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
 
             <button
               type="submit"
-              disabled={!content.trim() || createPost.isPending || uploadFile.isPending}
+              disabled={!content.trim() || (postType === "PLAN_SHARE" && !selectedPlanId) || createPost.isPending || uploadFile.isPending}
               className="w-full py-3 bg-[#245A34] text-white text-[15px] font-bold rounded-full hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {createPost.isPending || uploadFile.isPending ? (

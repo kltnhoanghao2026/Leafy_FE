@@ -1,94 +1,225 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { CalendarDays, ClipboardList, RefreshCw, Search, Trash2, Sprout, MapPin, BarChart2, Clock } from "lucide-react";
+import { useMemo, useState, useEffect, type ComponentType } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  CalendarDays, Check, CheckCircle2, CircleDashed, ClipboardList,
+  Globe, Layers, Loader2, Lock, Minus, Play, Plus, RefreshCw, Search,
+  Trash2, Users, X, XCircle,
+} from "lucide-react";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
-import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
+import { useFarmPlots } from "../../../farm-management/queries";
 import { useMyProfile } from "../../../settings/queries";
 import { ROUTES } from "../../../../lib/routes";
+import { PagedGrid } from "../../../../components/ui/PagedGrid";
+import { FilterCard } from "../../../../components/ui/FilterCard";
+import { PlanCard } from "../components/PlanCard";
+import { PlanApplyCard } from "../components/PlanApplyCard";
 import {
+  useBulkApplyPlansMutation,
+  useBulkDeletePlansMutation,
+  useBulkUpdateApplyStatusMutation,
   useDeletePlanMutation,
+  useMyApplies,
   useMyPlans,
   usePlants,
-  useUpdatePlanStatusMutation,
+  usePublicPlans,
+  useUpdateApplyStatusMutation,
 } from "../..";
-import type { PlanResponse, TreatmentStatus } from "../../shared/types";
-import { formatDate, TREATMENT_STATUS_LABELS } from "../../shared/components/displayUtils";
+import { useBulkApplyCustomMutation } from "../queries/plan.queries";
+import { useSearchPlans } from "../../../search/queries";
+import type { PlanApplyRequest, PlanResponse, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
+import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
+import { BulkApplyCustomDialog } from "../components/BulkApplyCustomDialog";
+import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+type ViewTab = "my" | "public" | "applied";
+
+const STATUS_TABS: Array<{
+  value: TreatmentStatus | "";
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  activeClass: string;
+}> = [
+  { value: "",          label: "Tất cả",          icon: ClipboardList, activeClass: "bg-slate-800 text-white" },
+  { value: "PENDING",   label: "Chờ áp dụng",    icon: CircleDashed,  activeClass: "bg-amber-500 text-white" },
+  { value: "APPLYING",  label: "Đang xử lý",     icon: CircleDashed,  activeClass: "bg-purple-600 text-white" },
+  { value: "ACTIVE",    label: "Đang thực hiện", icon: Play,          activeClass: "bg-blue-600 text-white" },
+  { value: "COMPLETED", label: "Hoàn thành",     icon: CheckCircle2,  activeClass: "bg-emerald-600 text-white" },
+  { value: "CANCELLED", label: "Đã hủy",         icon: XCircle,       activeClass: "bg-slate-500 text-white" },
+];
 
 const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "", label: "Tất cả trạng thái" },
-  { value: "PENDING", label: "Chờ xử lý" },
-  { value: "ACTIVE", label: "Đang thực hiện" },
+  { value: "PENDING",   label: "Chờ áp dụng" },
+  { value: "APPLYING",  label: "Đang xử lý" },
+  { value: "ACTIVE",    label: "Đang thực hiện" },
   { value: "COMPLETED", label: "Hoàn thành" },
   { value: "CANCELLED", label: "Đã hủy" },
 ];
 
-const STATUS_STYLE: Record<string, string> = {
-  PENDING:   "bg-amber-50 text-amber-700 ring-amber-200",
-  ACTIVE:    "bg-blue-50 text-blue-700 ring-blue-200",
-  COMPLETED: "bg-emerald-50 text-[#245A34] ring-emerald-200",
-  CANCELLED: "bg-slate-100 text-slate-500 ring-slate-200",
-};
-
-const SEVERITY_LABEL: Record<string, string> = {
-  LOW: "Nhẹ",
-  MEDIUM: "Trung bình",
-  HIGH: "Nghiêm trọng",
-  CRITICAL: "Rất nghiêm trọng",
-};
-
-const SEVERITY_STYLE: Record<string, string> = {
-  LOW: "text-emerald-600",
-  MEDIUM: "text-amber-600",
-  HIGH: "text-orange-600",
-  CRITICAL: "text-red-600",
-};
-
+// ── Component ─────────────────────────────────────────────────────────────────
 export function PlansPage() {
-  const [status, setStatus] = useState<TreatmentStatus | "">("");
-  const [plantId, setPlantId] = useState("");
+  const navigate = useNavigate();
+
+  // ── shared filter state ──────────────────────────────────────────────────
+  const [viewTab, setViewTab] = useState<ViewTab>("my");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [applyStatusFilter, setApplyStatusFilter] = useState<TreatmentStatus | "">("")
+
+  // ── my-plans-only state ──────────────────────────────────────────────────
+  const [plantId, setPlantId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PlanResponse | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkApplyOpen, setBulkApplyOpen] = useState(false);
+  const [bulkApplyCustomOpen, setBulkApplyCustomOpen] = useState(false);
+  const [bulkStatusChip, setBulkStatusChip] = useState<TreatmentStatus | "">("");
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
-  const plansQuery = useMyPlans({ status });
-  const plantsQuery = usePlants();
-  const profileQuery = useMyProfile();
+  // ── public-plans-only state ──────────────────────────────────────────────
+  const [applyTarget, setApplyTarget] = useState<PlanResponse | null>(null);
+
+  // ── data ─────────────────────────────────────────────────────────────────
+  const myPlansQuery  = useMyPlans({ plantId: plantId || undefined, search: search || undefined, page, size: pageSize });
+  const pubPlansQuery = usePublicPlans({ search: search || undefined, page, size: pageSize } satisfies PublicPlanListParams);
+  const myAppliesQuery = useMyApplies({ status: applyStatusFilter || undefined, page, size: pageSize });
+  const plantsQuery   = usePlants();
+  const profileQuery  = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
-  const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
-  const updateStatus = useUpdatePlanStatusMutation();
-  const deletePlan = useDeletePlanMutation();
+  const plotsQuery    = useFarmPlots(ownerProfileId, !!ownerProfileId);
 
-  const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
-  const plantById = useMemo(
-    () => new Map(plants.map((plant) => [plant.id, plant])),
-    [plants],
-  );
-  const plotById = useMemo(
-    () => new Map((plotsQuery.data ?? []).map((plot) => [plot.id, plot])),
-    [plotsQuery.data],
+  // ES-powered search for public plans (when search term has >= 2 chars)
+  const hasEsSearch = viewTab === "public" && search.trim().length >= 2;
+  const esPublicPlansQuery = useSearchPlans(
+    { searchTerm: search, isPublic: true, page, size: pageSize },
+    hasEsSearch,
   );
 
-  const filteredPlans = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    return (plansQuery.data ?? []).filter((plan: PlanResponse) => {
-      const matchesPlant = !plantId || plan.plantId === plantId;
-      const matchesSearch =
-        !normalizedSearch ||
-        [plan.diseaseName, plan.question, plan.ragPlanId]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(normalizedSearch));
-      return matchesPlant && matchesSearch;
-    });
-  }, [plansQuery.data, plantId, search]);
+  // Map ES search results to PlanResponse shape for PlanCard compatibility
+  const esPublicPlans = useMemo(() => {
+    if (!hasEsSearch || !esPublicPlansQuery.data) return null;
+    const springPage = {
+      content: esPublicPlansQuery.data.items.map((item): PlanResponse => ({
+        id: item.id,
+        planName: item.planName ?? "",
+        diseaseName: item.diseaseName ?? "",
+        creatorId: item.creatorId ?? "",
+        ownerId: item.ownerId ?? "",
+        ragPlanId: "",
+        question: "",
+        source: item.source ?? "",
+        confidenceScore: item.confidenceScore ?? 0,
+        severityLevel: item.severityLevel ?? "",
+        urgency: item.urgency ?? "",
+        requiredInputs: item.requiredInputs ?? [],
+        safetyWarnings: item.safetyWarnings ?? [],
+        successIndicators: item.successIndicators ?? "",
+        estimatedCost: item.estimatedCost ?? "",
+        events: [],
+        applyCount: item.applyCount ?? 0,
+        applies: [],
+        isPublic: item.isPublic ?? true,
+        isConsulted: item.isConsulted ?? false,
+        ownerInfo: null,
+        creatorInfo: item.creatorInfo ? {
+          id: item.creatorInfo.id ?? "",
+          fullName: item.creatorInfo.fullName ?? "",
+          avatar: item.creatorInfo.avatar ?? "",
+          role: item.creatorInfo.role ?? "",
+          specialty: null,
+          isVerified: item.creatorInfo.isVerified ?? false,
+        } : null,
+        createdAt: item.createdAt ?? "",
+        lastModifiedAt: "",
+        createdBy: "",
+        lastModifiedBy: "",
+        active: true,
+      })),
+      totalPages: esPublicPlansQuery.data.totalPages,
+      totalElements: esPublicPlansQuery.data.totalItems,
+      number: esPublicPlansQuery.data.page,
+      size: esPublicPlansQuery.data.size,
+    };
+    return springPage;
+  }, [hasEsSearch, esPublicPlansQuery.data]);
 
+  // Use ES results for public tab when searching, otherwise fall back to MongoDB query
+  const effectivePubQuery = hasEsSearch
+    ? { ...esPublicPlansQuery, data: esPublicPlans }
+    : pubPlansQuery;
+
+  const deletePlan      = useDeletePlanMutation();
+  const bulkUpdateApplyStatus = useBulkUpdateApplyStatusMutation();
+  const bulkDeletePlans  = useBulkDeletePlansMutation();
+  const bulkApplyPlans   = useBulkApplyPlansMutation();
+  const bulkApplyCustom  = useBulkApplyCustomMutation();
+  const updateApplyStatus = useUpdateApplyStatusMutation();
+
+  const plants    = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+  const plantById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
+  const plotById  = useMemo(() => new Map((plotsQuery.data ?? []).map((p) => [p.id, p])), [plotsQuery.data]);
+
+  // Build planId → planName map from myPlans data for applies tab
+  const planNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of myPlansQuery.data?.content ?? []) {
+      m.set(p.id, p.planName || p.diseaseName || p.id);
+    }
+    return m;
+  }, [myPlansQuery.data]);
+
+  const activeQuery = viewTab === "my" ? myPlansQuery : viewTab === "public" ? effectivePubQuery : myAppliesQuery;
+  const paginatedPlans = viewTab !== "applied" ? (activeQuery.data?.content ?? []) : [];
+  const paginatedApplies = viewTab === "applied" ? (myAppliesQuery.data?.content ?? []) : [];
+  const totalPages = activeQuery.data?.totalPages ?? 0;
+
+  // Reset page & selection when tab / filters change
+  useEffect(() => { setPage(0); setSelectedIds(new Set()); }, [viewTab, search, plantId, pageSize, applyStatusFilter]);
+
+  // ── my-plans helpers ─────────────────────────────────────────────────────
   const handleDelete = async () => {
     if (!deleteTarget) return;
     await deletePlan.mutateAsync(deleteTarget.id);
     setDeleteTarget(null);
   };
 
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const allPageSelected  = paginatedPlans.length > 0 && paginatedPlans.every((p) => selectedIds.has(p.id));
+  const somePageSelected = paginatedPlans.some((p) => selectedIds.has(p.id)) && !allPageSelected;
+
+  const handleSelectAll = () => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => { const n = new Set(prev); paginatedPlans.forEach((p) => n.delete(p.id)); return n; });
+    } else {
+      setSelectedIds((prev) => new Set([...prev, ...paginatedPlans.map((p) => p.id)]));
+    }
+  };
+
+  const clearSelection = () => { setSelectedIds(new Set()); setBulkStatusChip(""); };
+
+  // ── Empty state messages ─────────────────────────────────────────────────
+  const emptyTitle = viewTab === "public"
+    ? (search ? "Không tìm thấy kế hoạch cộng đồng phù hợp" : "Chưa có kế hoạch cộng đồng")
+    : viewTab === "applied"
+      ? "Chưa có kế hoạch đã áp dụng"
+      : "Chưa có kế hoạch điều trị";
+
+  const emptyDesc = viewTab === "public"
+    ? "Các kế hoạch được chia sẻ công khai sẽ xuất hiện tại đây để bạn tham khảo và áp dụng."
+    : viewTab === "applied"
+      ? "Khi bạn áp dụng kế hoạch vào vườn hoặc cây trồng, danh sách sẽ hiển thị tại đây."
+      : "Khi tạo kế hoạch từ AI hoặc chuyên gia tư vấn, danh sách sẽ hiển thị tại đây.";
+
+  // ── render ───────────────────────────────────────────────────────────────
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
+
+      {/* ── Header ── */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.24em] text-[#245A34]">
@@ -98,222 +229,338 @@ export function PlansPage() {
             Kế hoạch điều trị
           </h2>
           <p className="mt-2 max-w-3xl text-[15px] font-semibold text-slate-500">
-            Quản lý các kế hoạch điều trị thật đã tạo từ AI hoặc plant-management-service.
+            Quản lý kế hoạch cá nhân hoặc khám phá kế hoạch cộng đồng từ các nông dân khác.
           </p>
         </div>
-        <Link
-          to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
-          className="inline-flex items-center justify-center rounded-2xl border border-[#245A34] bg-white px-5 py-3 text-sm font-bold text-[#245A34] hover:bg-green-50"
-        >
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Xem lịch chăm sóc
-        </Link>
+        {viewTab === "my" && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.DASHBOARD.PLANS_CREATE)}
+              className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white hover:bg-[#1a4226]"
+            >
+              <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
+              Tạo kế hoạch mới
+            </button>
+            <Link
+              to={ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR}
+              className="inline-flex items-center justify-center rounded-2xl border border-[#245A34] bg-white px-5 py-3 text-sm font-bold text-[#245A34] hover:bg-green-50"
+            >
+              <CalendarDays className="mr-2 h-4 w-4" />
+              Xem lịch chăm sóc
+            </Link>
+          </div>
+        )}
       </header>
 
-      <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
+      {/* ── View Tab Switcher ── */}
+      <div className="flex gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 w-fit">
+        {([
+          { key: "my" as const, icon: Lock, label: "Kế hoạch của tôi" },
+          { key: "applied" as const, icon: Play, label: "Đã áp dụng" },
+          { key: "public" as const, icon: Globe, label: "Cộng đồng" },
+        ] as const).map(({ key, icon: Icon, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setViewTab(key)}
+            className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-all ${
+              viewTab === key
+                ? "bg-white text-slate-900 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Community Plans info banner ── */}
+      {viewTab === "public" && (
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4">
+          <Users className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+          <p className="text-sm font-semibold text-blue-700">
+            Đây là các kế hoạch điều trị được chia sẻ công khai bởi cộng đồng nông dân.
+            Bạn có thể áp dụng chúng trực tiếp vào cây trồng hoặc lô đất của mình.
+          </p>
+        </div>
+      )}
+      {/* ── Applied Plans: status filter + info banner ── */}
+      {viewTab === "applied" && (
+        <>
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+            <Play className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+            <p className="text-sm font-semibold text-emerald-700">
+              Danh sách các kế hoạch bạn đã áp dụng vào vườn hoặc cây trồng. Theo dõi trạng thái từng lần áp dụng tại đây.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: "" as const, label: "Tất cả" },
+              { value: "PENDING" as const, label: "Chờ xử lý" },
+              { value: "APPLYING" as const, label: "Đang áp dụng" },
+              { value: "ACTIVE" as const, label: "Đang thực hiện" },
+              { value: "COMPLETED" as const, label: "Hoàn thành" },
+              { value: "CANCELLED" as const, label: "Đã hủy" },
+            ].map(({ value, label }) => (
+              <button
+                key={value || "all"}
+                type="button"
+                onClick={() => setApplyStatusFilter(value)}
+                className={`rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
+                  applyStatusFilter === value
+                    ? "border-[#245A34] bg-[#245A34] text-white shadow-md"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+
+      {/* ── Filter card ── */}
+      <FilterCard viewMode={viewMode} onViewModeChange={setViewMode}>
+        <div className={`grid grid-cols-1 gap-4 ${viewTab === "my" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
           <label htmlFor="plan-search" className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Tìm kiếm
-            </span>
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500">Tìm kiếm</span>
             <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4">
               <Search className="mr-2 h-4 w-4 text-slate-400" />
               <input
                 id="plan-search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tên bệnh, câu hỏi, RAG ID..."
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={viewTab === "my" ? "Tên bệnh, câu hỏi, RAG ID..." : "Tên bệnh, tên kế hoạch..."}
                 className="h-12 w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
               />
             </div>
           </label>
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Trạng thái
-            </span>
-            <Select
-              className="mt-2"
-              value={status}
-              onChange={(v) => setStatus(v as TreatmentStatus | "")}
-              options={STATUS_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-            />
+
+          {viewTab === "my" && (
+            <div className="block">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500">Cây trồng</span>
+              <Select
+                className="mt-2"
+                value={plantId}
+                onChange={(v) => setPlantId(String(v))}
+                options={[
+                  { value: "", label: "Tất cả cây" },
+                  ...plants.map((p) => ({ value: p.id, label: p.nickName || p.plantNumber || p.id })),
+                ]}
+                placeholder="Tất cả cây"
+              />
+            </div>
+          )}
+        </div>
+      </FilterCard>
+
+      {/* ── My Plans: selection + bulk actions ── */}
+      {viewTab === "my" && paginatedPlans.length > 0 && !myPlansQuery.isLoading && (
+        <div className="sticky top-4 z-10 flex flex-col gap-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2.5">
+              <span
+                role="checkbox"
+                aria-checked={allPageSelected ? true : somePageSelected || selectedIds.size > 0 ? "mixed" : false}
+                onClick={handleSelectAll}
+                className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border-2 transition-all ${
+                  allPageSelected || somePageSelected || selectedIds.size > 0
+                    ? "border-[#245A34] bg-[#245A34]"
+                    : "border-slate-300 bg-white hover:border-[#245A34]"
+                }`}
+              >
+                {allPageSelected
+                  ? <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                  : somePageSelected || selectedIds.size > 0
+                    ? <Minus className="h-3 w-3 text-white" strokeWidth={3} />
+                    : null}
+              </span>
+              <span className="text-sm font-semibold text-slate-600">
+                {selectedIds.size > 0
+                  ? `${selectedIds.size} / ${paginatedPlans.length} kế hoạch đã chọn`
+                  : `${paginatedPlans.length} kế hoạch`}
+              </span>
+              {selectedIds.size > 0 && !allPageSelected && (
+                <button type="button" onClick={handleSelectAll} className="text-xs font-semibold text-[#245A34] hover:underline">
+                  Chọn trang này
+                </button>
+              )}
+            </div>
+            {selectedIds.size > 0 && (
+              <button type="button" onClick={clearSelection} className="text-xs font-semibold text-slate-400 hover:text-slate-600">
+                Bỏ chọn
+              </button>
+            )}
           </div>
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Cây trồng
-            </span>
-            <Select
-              className="mt-2"
-              value={plantId}
-              onChange={(v) => setPlantId(String(v))}
-              options={[
-                { value: "", label: "Tất cả cây" },
-                ...plants.map((plant) => ({
-                  value: plant.id,
-                  label: plant.nickName || plant.plantNumber || plant.id,
-                })),
-              ]}
-              placeholder="Tất cả cây"
-            />
-          </div>
-        </div>
-      </section>
 
-      {plansQuery.isLoading ? (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2" aria-label="Đang tải kế hoạch điều trị">
-          {[0, 1, 2, 3].map((item) => (
-            <div key={item} className="h-56 animate-pulse rounded-[1.75rem] bg-slate-100" />
-          ))}
-        </div>
-      ) : null}
-
-      {plansQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold text-red-700">
-              Không tải được danh sách kế hoạch điều trị.
-            </p>
-            <button
-              type="button"
-              onClick={() => void plansQuery.refetch()}
-              className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tải lại
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {!plansQuery.isLoading && !plansQuery.isError && filteredPlans.length === 0 ? (
-        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
-          <ClipboardList className="mx-auto h-10 w-10 text-slate-300" />
-          <h3 className="mt-4 text-xl font-black text-slate-900">
-            Chưa có kế hoạch điều trị
-          </h3>
-          <p className="mt-2 text-sm font-semibold text-slate-500">
-            Khi tạo kế hoạch từ AI hoặc plant-management, danh sách sẽ hiển thị tại đây.
-          </p>
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {filteredPlans.map((plan: PlanResponse) => {
-          const plant = plan.plantId ? plantById.get(plan.plantId) : null;
-          const plot = plan.farmPlotId ? plotById.get(plan.farmPlotId) : null;
-          return (
-            <article key={plan.id} className="flex flex-col rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-              {/* Card header */}
-              <div className="flex items-start justify-between gap-3 p-5 pb-3">
-                <div className="min-w-0">
-                  <h3 className="truncate text-base font-black text-slate-900">
-                    {plan.diseaseName || "Kế hoạch điều trị"}
-                  </h3>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-400">
-                    {plan.question || plan.successIndicators || "Kế hoạch AI chỉ mang tính hỗ trợ"}
-                  </p>
-                </div>
-                <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-black ring-1 ${
-                  STATUS_STYLE[plan.status] ?? "bg-slate-100 text-slate-500 ring-slate-200"
-                }`}>
-                  {(TREATMENT_STATUS_LABELS as Record<string, string>)[plan.status] ?? plan.status}
-                </span>
-              </div>
-
-              {/* Divider */}
-              <div className="mx-5 border-t border-slate-100" />
-
-              {/* Meta grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-5 text-xs sm:grid-cols-3">
+          {selectedIds.size > 0 && (
+            <div className="rounded-2xl bg-[#245A34] px-4 py-3 shadow-xl shadow-[#245A34]/20">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <Sprout className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Cây</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plant?.nickName || plant?.plantNumber || "—"}
-                    </p>
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                    <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                   </div>
+                  <span className="text-sm font-bold text-white">{selectedIds.size} kế hoạch đã chọn</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Vườn</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plot?.name || "—"}
-                    </p>
-                  </div>
-                </div>
-                <ZoneTile farmPlotId={plan.farmPlotId} farmZoneId={plan.farmZoneId} />
-                <div className="flex items-center gap-2">
-                  <BarChart2 className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Mức độ</p>
-                    <p className={`truncate font-bold ${
-                      SEVERITY_STYLE[plan.severityLevel ?? ""] ?? "text-slate-800"
-                    }`}>
-                      {SEVERITY_LABEL[plan.severityLevel ?? ""] || plan.severityLevel || "—"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Số lịch</p>
-                    <p className="truncate font-bold text-slate-800">
-                      {plan.plantEventIds?.length ?? 0}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                  <div className="min-w-0">
-                    <p className="font-black uppercase tracking-wide text-slate-400">Tạo lúc</p>
-                    <p className="truncate font-bold text-slate-800">{formatDate(plan.createdAt)}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action bar */}
-              <div className="mt-auto flex items-center gap-2 border-t border-slate-100 bg-slate-50 px-4 py-3">
-                <Link
-                  to={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
-                  className="inline-flex items-center justify-center rounded-xl bg-[#245A34] px-4 py-2 text-xs font-bold text-white hover:bg-[#1b432a]"
-                >
-                  Xem chi tiết
-                </Link>
-                <div className="flex-1">
-                  <Select
-                    value={plan.status}
-                    onChange={(v) =>
-                      void updateStatus.mutateAsync({
-                        planId: plan.id,
-                        status: v as TreatmentStatus,
-                      })
-                    }
-                    options={STATUS_OPTIONS.filter((option) => option.value).map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                    }))}
-                  />
+                <div className="h-5 w-px bg-white/20" />
+                <span className="text-xs font-semibold text-white/60">Đổi trạng thái:</span>
+                <div className="flex items-center gap-1 rounded-xl bg-white/10 p-1">
+                  {STATUS_OPTIONS.filter((o) => o.value).map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      onClick={() => setBulkStatusChip(bulkStatusChip === o.value ? "" : o.value as TreatmentStatus)}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+                        bulkStatusChip === o.value ? "bg-white text-[#245A34] shadow-sm" : "text-white/80 hover:bg-white/20 hover:text-white"
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDeleteTarget(plan)}
-                  className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-2 text-red-600 hover:bg-red-100"
-                  aria-label="Xóa kế hoạch"
+                  disabled={!bulkStatusChip || bulkUpdateApplyStatus.isPending}
+                  onClick={() => void bulkUpdateApplyStatus.mutateAsync({ planIds: [...selectedIds], status: bulkStatusChip as TreatmentStatus }).then(clearSelection)}
+                  className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#245A34] hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  {bulkUpdateApplyStatus.isPending ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} /> : <Check className="h-3 w-3" strokeWidth={3} />}
+                  Áp dụng
+                </button>
+                <div className="h-5 w-px bg-white/20" />
+                <button
+                  type="button"
+                  onClick={() => setBulkApplyOpen(true)}
+                  className="flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/25"
+                >
+                  <Play className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  Áp dụng cùng lúc
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkApplyCustomOpen(true)}
+                  className="flex items-center gap-1.5 rounded-xl bg-white/15 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/25"
+                >
+                  <Layers className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  Áp dụng riêng biệt
+                </button>
+                <div className="h-5 w-px bg-white/20" />
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  disabled={bulkDeletePlans.isPending}
+                  className="flex items-center gap-1.5 rounded-xl bg-red-500/25 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500/40 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  Xóa đã chọn
+                </button>
+                <div className="flex-1" />
+                <button type="button" onClick={clearSelection} className="rounded-xl p-1.5 text-white/70 transition hover:bg-white/20 hover:text-white">
+                  <X className="h-4 w-4" strokeWidth={2.5} />
                 </button>
               </div>
-            </article>
-          );
-        })}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
-      {deleteTarget ? (
+      {/* ── Loading skeleton ── */}
+      {activeQuery.isLoading && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-56 animate-pulse rounded-[1.75rem] bg-slate-100" />)}
+        </div>
+      )}
+
+      {/* ── Error state ── */}
+      {activeQuery.isError && (
+        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-bold text-red-700">Không tải được danh sách.</p>
+            <button type="button" onClick={() => void activeQuery.refetch()} className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white">
+              <RefreshCw className="mr-2 h-4 w-4" />Tải lại
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Empty state ── */}
+      {!activeQuery.isLoading && !activeQuery.isError && viewTab !== "applied" && paginatedPlans.length === 0 && (
+        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+          {viewTab === "public" ? <Globe className="mx-auto h-10 w-10 text-slate-300" /> : <ClipboardList className="mx-auto h-10 w-10 text-slate-300" />}
+          <h3 className="mt-4 text-xl font-black text-slate-900">{emptyTitle}</h3>
+          <p className="mt-2 text-sm font-semibold text-slate-500">{emptyDesc}</p>
+        </div>
+      )}
+      {!activeQuery.isLoading && !activeQuery.isError && viewTab === "applied" && paginatedApplies.length === 0 && (
+        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+          <Play className="mx-auto h-10 w-10 text-slate-300" />
+          <h3 className="mt-4 text-xl font-black text-slate-900">{emptyTitle}</h3>
+          <p className="mt-2 text-sm font-semibold text-slate-500">{emptyDesc}</p>
+        </div>
+      )}
+
+      {/* ── Plan grid (my / public) ── */}
+      {viewTab !== "applied" && (
+        <PagedGrid
+          viewMode={viewMode}
+          page={page}
+          totalPages={totalPages}
+          totalElements={paginatedPlans.length}
+          itemLabel="kế hoạch"
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+        >
+          {paginatedPlans.map((plan: PlanResponse) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              plotName={null}
+              selected={viewTab === "my" ? selectedIds.has(plan.id) : false}
+              onToggleSelect={viewTab === "my" ? toggleSelect : undefined}
+              onDelete={viewTab === "my" ? setDeleteTarget : undefined}
+              onApply={viewTab === "public" ? () => setApplyTarget(plan) : undefined}
+              detailUrl={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
+              variant={viewMode}
+              isPublicView={viewTab === "public"}
+            />
+          ))}
+        </PagedGrid>
+      )}
+
+      {/* ── Applied plans grid ── */}
+      {viewTab === "applied" && paginatedApplies.length > 0 && (
+        <PagedGrid
+          viewMode={viewMode}
+          page={page}
+          totalPages={totalPages}
+          totalElements={paginatedApplies.length}
+          itemLabel="áp dụng"
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+        >
+          {paginatedApplies.map((apply) => (
+            <PlanApplyCard
+              key={apply.id}
+              apply={apply}
+              planName={planNameById.get(apply.planId)}
+              variant={viewMode}
+              onStatusChange={(applyId, newStatus) =>
+                void updateApplyStatus.mutateAsync({ applyId, status: newStatus })
+              }
+            />
+          ))}
+        </PagedGrid>
+      )}
+
+      {/* ── My Plans dialogs ── */}
+      {deleteTarget && (
         <ConfirmDeleteDialog
           title="Xóa kế hoạch điều trị"
           description={`Bạn có chắc muốn xóa kế hoạch "${deleteTarget.diseaseName || deleteTarget.id}"?`}
@@ -321,33 +568,50 @@ export function PlansPage() {
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => void handleDelete()}
         />
-      ) : null}
+      )}
+      {showBulkDeleteConfirm && (
+        <ConfirmDeleteDialog
+          title="Xóa kế hoạch đã chọn"
+          description={`Bạn có chắc muốn xóa ${selectedIds.size} kế hoạch đã chọn?`}
+          isDeleting={bulkDeletePlans.isPending}
+          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={() => void bulkDeletePlans.mutateAsync([...selectedIds]).then(() => { clearSelection(); setShowBulkDeleteConfirm(false); })}
+        />
+      )}
+      {bulkApplyOpen && (
+        <BulkApplyPlanDialog
+          planIds={[...selectedIds]}
+          isSubmitting={bulkApplyPlans.isPending}
+          onClose={() => setBulkApplyOpen(false)}
+          onSubmit={(payload: PlanApplyRequest) =>
+            void bulkApplyPlans.mutateAsync({ planIds: [...selectedIds], payload }).then(() => { setBulkApplyOpen(false); clearSelection(); })
+          }
+        />
+      )}
+      {bulkApplyCustomOpen && (
+        <BulkApplyCustomDialog
+          plans={paginatedPlans.filter((p) => selectedIds.has(p.id))}
+          isSubmitting={bulkApplyCustom.isPending}
+          onClose={() => setBulkApplyCustomOpen(false)}
+          onSubmit={(payload) =>
+            void bulkApplyCustom.mutateAsync(payload).then(() => { setBulkApplyCustomOpen(false); clearSelection(); })
+          }
+        />
+      )}
+
+      {/* ── Public Plans: apply dialog ── */}
+      {applyTarget && (
+        <ApplyPlanDialog
+          plan={applyTarget}
+          isSubmitting={bulkApplyPlans.isPending}
+          onClose={() => setApplyTarget(null)}
+          onSubmit={(payload) =>
+            void bulkApplyPlans.mutateAsync({ planIds: [applyTarget.id], payload }).then(() => setApplyTarget(null))
+          }
+        />
+      )}
     </div>
   );
 }
 
 export default PlansPage;
-
-function ZoneTile({
-  farmPlotId,
-  farmZoneId,
-}: {
-  farmPlotId?: string | null;
-  farmZoneId?: string | null;
-}) {
-  const zonesQuery = useFarmZones(farmPlotId ?? "", Boolean(farmPlotId));
-  const zoneName = farmZoneId
-    ? (zonesQuery.data ?? []).find((zone) => zone.id === farmZoneId)?.zoneName ||
-      farmZoneId
-    : "Chưa gắn khu";
-
-  return (
-    <div className="flex items-center gap-2">
-      <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-      <div className="min-w-0">
-        <p className="font-black uppercase tracking-wide text-slate-400">Khu v\u1ef1c</p>
-        <p className="truncate font-bold text-slate-800">{zoneName}</p>
-      </div>
-    </div>
-  );
-}

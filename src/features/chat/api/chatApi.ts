@@ -815,10 +815,5 @@ export const chatApi = {
     );
   },
 
-  // ── Group join link ──
 
-  /**
-   * Fetch the group preview info before joining via invite link.
-   * Backend: GET /conversations/join/{token}/preview
-   */
 };
