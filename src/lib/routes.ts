@@ -37,21 +37,28 @@ export const ROUTES = {
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
     PLANS: "/dashboard/plans",
+    PLANS_CREATE: "/dashboard/plans/create",
     PLAN_DETAIL: (planId: string) =>
       `/dashboard/plans/${planId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
-    RAG_PANEL: "/dashboard/rag-panel",
     RAG_PLAN: (planId: string) =>
-      `/dashboard/rag-panel/plans/${planId}`,
+      `/dashboard/plans/${planId}`,
     COMMUNITY: "/dashboard/community",
+    COMMUNITY_PLAN_VIEW: (planId: string) => `/dashboard/community/plans/${planId}`,
     EXPERTS: "/dashboard/experts",
     CHAT: "/dashboard/chat",
     NOTIFICATIONS: "/dashboard/notifications",
     SETTINGS: "/dashboard/settings",
     MY_PROFILE: "/dashboard/profile",
     PROFILE_VIEW: (profileId: string) => `/dashboard/profile/${profileId}`,
+    CONSULTING: "/dashboard/consulting",
+    CONSULTING_FARMER: (farmerProfileId: string) => `/dashboard/consulting/${farmerProfileId}`,
+    CONSULTING_CREATE_PLAN: (farmerProfileId: string) => `/dashboard/consulting/${farmerProfileId}/plans/create`,
+    CONSULTING_FARM_PLOT: (farmerProfileId: string, farmPlotId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}`,
+    CONSULTING_FARM_ZONE: (farmerProfileId: string, farmPlotId: string, farmZoneId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}/zones/${farmZoneId}`,
+    CONSULTING_PLANT: (farmerProfileId: string, plantId: string) => `/dashboard/consulting/${farmerProfileId}/plants/${plantId}`,
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -239,11 +246,24 @@ export const API_ENDPOINTS = {
     ADMIN_ZONES: "/farms/admin/zones",
   },
 
+  CONSULTING: {
+    FARM_PLOTS: "/farms/plots/consulting",
+    FARM_PLOT: (id: string) => `/farms/plots/consulting/${id}`,
+    FARM_ZONES: (plotId: string) => `/farms/plots/${plotId}/zones/consulting`,
+    FARMER_SUMMARY_BULK: "/farms/plots/consulting/summary/bulk",
+    PLANTS: "/plants/consulting",
+    PLANT: (id: string) => `/plants/consulting/${id}`,
+    PLANT_EVENTS: "/plant-events/consulting",
+    PLANS: "/plans/consulting",
+  },
+
   PLANTS: {
     LIST: "/plants",
     ITEM: (id: string) => `/plants/${id}`,
     BY_FARM_PLOT: (farmPlotId: string) => `/plants/farm-plot/${farmPlotId}`,
     BY_SPECIES: (speciesId: string) => `/plants/species/${speciesId}`,
+    BULK_STATUS: "/plants/bulk/status",
+    BULK_DELETE: "/plants/bulk",
   },
 
   SPECIES: {
@@ -271,14 +291,26 @@ export const API_ENDPOINTS = {
     BY_FARM_ZONE: (farmZoneId: string) =>
       `/plant-events/farm-zone/${farmZoneId}`,
     CALENDAR: "/plant-events/calendar",
+    PROGRESS: (eventId: string) => `/plant-events/${eventId}/progress`,
+    PROGRESS_ITEM: (eventId: string, progressId: string) =>
+      `/plant-events/${eventId}/progress/${progressId}`,
+    PROGRESS_GENERATE: (eventId: string) =>
+      `/plant-events/${eventId}/progress/generate`,
   },
 
   PLANS: {
     LIST: "/plans",
     CREATE: "/plans",
     ITEM: (planId: string) => `/plans/${planId}`,
-    UPDATE_STATUS: (planId: string) => `/plans/${planId}/status`,
+    APPLY: (planId: string) => `/plans/${planId}/apply`,
+    APPLIES: (planId: string) => `/plans/${planId}/applies`,
+    APPLY_STATUS: (applyId: string) => `/plans/applies/${applyId}/status`,
+    BULK_APPLY_STATUS: "/plans/applies/bulk/status",
+    BULK_DELETE: "/plans/bulk",
+    BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",
     MY: "/plans/me",
+    MY_APPLIES: "/plans/applies/me",
+    PUBLIC: "/plans/public",
     BY_PLANT: (plantId: string) => `/plans/plant/${plantId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
       `/plans/farm-plot/${farmPlotId}`,
@@ -286,9 +318,14 @@ export const API_ENDPOINTS = {
       `/plans/farm-zone/${farmZoneId}`,
   },
 
+  STATS: {
+    AGRICULTURE: "/stats/agriculture",
+  },
+
   SEARCH: {
     POSTS: "/search/posts/search",
     PROFILES: "/search/profiles/search",
+    PLANS: "/search/plans/search",
     UNIFIED: "/search/search",
   },
 
@@ -398,6 +435,9 @@ export const API_ENDPOINTS = {
       // Post sync — search-service /sync/posts/* (via /api/search/sync/**)
       POSTS_REINDEX: "/search/sync/posts",
       POSTS_RESET: "/search/sync/posts/reset",
+      // Plan sync — search-service /sync/plans/* (via /api/search/sync/**)
+      PLANS_REINDEX: "/search/sync/plans",
+      PLANS_RESET: "/search/sync/plans/reset",
       // Failed events DLQ — search-service /failed-events/* (via /api/search/failed-events/**)
       FAILED_EVENTS_LIST: "/search/failed-events",
       FAILED_EVENTS_COUNT: "/search/failed-events/count",
@@ -414,6 +454,7 @@ export const API_ENDPOINTS = {
       ACCOUNTS: "/admin/seed/accounts",
       FARMS: "/admin/seed/farms",
       PLANTS: "/admin/seed/plants",
+      PLANS: "/admin/seed/plans",
       SPECIES_PERENUAL: "/admin/seed/species/perenual",
       COMMUNITY: "/admin/seed/community",
       COMMUNITY_PROFILES: "/admin/seed/profiles",

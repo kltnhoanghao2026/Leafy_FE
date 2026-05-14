@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
+import { ModalShell } from '../../../components/ui/ModalShell';
 
 interface Profile {
   id: string;
@@ -40,18 +41,12 @@ export function NewDMModal({ isOpen, onClose, onStartChat }: NewDMModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
-
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-md shrink-0">
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Tin nhắn mới</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <ModalShell
+      onClose={handleClose}
+      title="Tin nhắn mới"
+      maxWidth="max-w-md"
+      headerClassName="bg-white/80 backdrop-blur-md"
+    >
 
         {/* Search */}
         <div className="p-4 border-b border-gray-50 bg-gray-50/30 shrink-0">
@@ -116,7 +111,6 @@ export function NewDMModal({ isOpen, onClose, onStartChat }: NewDMModalProps) {
           )}
         </div>
 
-      </div>
-    </div>
+    </ModalShell>
   );
 }

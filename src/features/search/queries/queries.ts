@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { searchApi } from "../../../lib/api/searchApi";
-import type { SearchPostsParams, SearchProfilesParams, UnifiedSearchParams } from "../types";
+import type { SearchPlansParams, SearchPostsParams, SearchProfilesParams, UnifiedSearchParams } from "../types";
 import { normalizeSearchPage } from "../utils";
 import { searchKeys } from "./keys";
 
@@ -24,6 +24,17 @@ export const useSearchProfiles = (
   useQuery({
     queryKey: searchKeys.profiles(params),
     queryFn: () => searchApi.searchProfiles(params),
+    select: normalizeSearchPage,
+    enabled: enabled && hasSearchTerm(params.searchTerm),
+  });
+
+export const useSearchPlans = (
+  params: SearchPlansParams,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: searchKeys.plans(params),
+    queryFn: () => searchApi.searchPlans(params),
     select: normalizeSearchPage,
     enabled: enabled && hasSearchTerm(params.searchTerm),
   });

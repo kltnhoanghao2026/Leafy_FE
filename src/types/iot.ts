@@ -152,8 +152,8 @@ export interface DeviceDetailResponse {
 }
 
 export interface SensorChartPointResponse {
-  bucketStart: string;
-  bucketEnd: string;
+  bucketStart: string | number;
+  bucketEnd: string | number;
   avgValue: number | null;
   minValue: number | null;
   maxValue: number | null;

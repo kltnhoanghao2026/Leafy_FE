@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, User, ShieldCheck, Loader2 } from "lucide-react";
+import { ChevronRight, User, ShieldCheck } from "lucide-react";
 import { Avatar } from "../../../components/ui/Avatar";
 import { ROUTES } from "../../../lib/routes";
 import { useMyProfile, useFilePreviewUrl } from "../queries";

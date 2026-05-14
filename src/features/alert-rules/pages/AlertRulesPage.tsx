@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -25,11 +26,14 @@ import type {
   AlertSeverity,
   CreateAlertRuleRequest,
 } from "../../../types/iot";
+import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
+import { Select } from "../../../components/ui/Select";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
+import { formatSeverityLabel } from "../../iot/utils/iotTranslation";
 import {
-  compactId,
-  formatDateTime,
-  formatNumber,
-} from "../../metrics-view/utils/format";
+  alertSeverityClasses,
+} from "../../alerts/utils/alertLabels";
 
 type EnabledFilter = "all" | "true" | "false";
 
@@ -59,13 +63,6 @@ const emptyRuleForm: RuleFormState = {
   notifyWeb: true,
   notifyMobile: false,
   enabled: true,
-};
-
-const severityClasses: Record<AlertSeverity, string> = {
-  LOW: "bg-blue-50 text-blue-600 border-blue-100",
-  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  HIGH: "bg-orange-50 text-orange-700 border-orange-100",
-  CRITICAL: "bg-red-50 text-red-600 border-red-100",
 };
 
 const enabledClasses = {
@@ -120,30 +117,56 @@ const buildPayload = (form: RuleFormState): CreateAlertRuleRequest => ({
   enabled: form.enabled,
 });
 
-const validatePayload = (payload: CreateAlertRuleRequest): string | null => {
-  if (!payload.sensorTypeId) return "Sensor type ID is required.";
+const validatePayload = (
+  payload: CreateAlertRuleRequest,
+  t: TFunction,
+): string | null => {
+  if (!payload.sensorTypeId) return t("iot.alertRules.validation.sensorTypeRequired");
   if (payload.minThreshold == null && payload.maxThreshold == null) {
-    return "At least one threshold is required.";
+    return t("iot.alertRules.validation.thresholdRequired");
   }
   if (
     payload.minThreshold != null &&
     payload.maxThreshold != null &&
     payload.minThreshold >= payload.maxThreshold
   ) {
-    return "Minimum threshold must be lower than maximum threshold.";
+    return t("iot.alertRules.validation.minLessThanMax");
   }
   if (!payload.deviceId && !payload.zoneId && !payload.farmPlotId) {
-    return "Select at least one scope: farm plot, zone, or device.";
+    return t("iot.alertRules.validation.scopeRequired");
   }
   if (
     payload.cooldownMinutes !== null &&
     payload.cooldownMinutes !== undefined &&
     payload.cooldownMinutes < 0
   ) {
-    return "Cooldown must be greater than or equal to 0.";
+    return t("iot.alertRules.validation.cooldownInvalid");
   }
 
   return null;
+};
+
+const readableRuleThreshold = (
+  t: TFunction,
+  minThreshold?: number | null,
+  maxThreshold?: number | null,
+) => {
+  if (minThreshold !== null && minThreshold !== undefined && maxThreshold !== null && maxThreshold !== undefined) {
+    return t("iot.alertRules.threshold.outsideRange")(
+      formatNumber(minThreshold),
+      formatNumber(maxThreshold),
+    );
+  }
+
+  if (maxThreshold !== null && maxThreshold !== undefined) {
+    return t("iot.alertRules.threshold.higherThan")(formatNumber(maxThreshold));
+  }
+
+  if (minThreshold !== null && minThreshold !== undefined) {
+    return t("iot.alertRules.threshold.lowerThan")(formatNumber(minThreshold));
+  }
+
+  return t("iot.alertRules.threshold.unset");
 };
 
 interface RuleFormDialogProps {
@@ -167,6 +190,7 @@ function RuleFormDialog({
   onSubmit,
   onFormChange,
 }: RuleFormDialogProps) {
+  const { t } = useTranslation();
   const {
     farmPlots,
     zones,
@@ -196,47 +220,53 @@ function RuleFormDialog({
   }, [devices, form.deviceId, onFormChange]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <ModalShell
+      onClose={onClose}
+      title={editingRule ? "Edit alert rule" : "Create alert rule"}
+      subtitle={
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          Pick farm, zone, and device where possible. Sensor type requires a real backend UUID.
+        </p>
+      }
+      maxWidth="sm:max-w-5xl"
+      backdropColor="bg-slate-950/40"
     >
       <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-[22px] font-black text-slate-900">
-              {editingRule ? "Edit alert rule" : "Create alert rule"}
+              {editingRule
+                ? t("iot.alertRules.form.editTitle")
+                : t("iot.alertRules.form.createTitle")}
             </h3>
             <p className="mt-1 text-sm font-semibold text-slate-500">
-              Pick farm, zone, and device where possible. Sensor type requires
-              a real backend UUID.
+              {t("iot.alertRules.form.description")}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-            aria-label="Close alert rule dialog"
+            aria-label={t("iot.alertRules.form.closeDialog")}
           >
             <X className="h-4 w-4" strokeWidth={3} />
           </button>
         </div>
-
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
-              Scope
+              {t("iot.alertRules.form.scopeSection")}
             </h4>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Farm plot
+                  {t("iot.alertRules.form.farmPlot")}
                 </span>
-                <select
-                  aria-label="Rule farm plot"
+                <Select
+                  ariaLabel="Rule farm plot"
                   value={form.farmPlotId}
-                  onChange={(event) => {
-                    const farmPlotId = event.target.value;
+                  onChange={(value) => {
+                    const farmPlotId = String(value);
                     onFormChange((current) => ({
                       ...current,
                       farmPlotId,
@@ -244,128 +274,127 @@ function RuleFormDialog({
                       deviceId: "",
                     }));
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: plotsQuery.isLoading
+                        ? t("iot.alertRules.filters.loadingFarmPlots")
+                        : t("iot.alertRules.form.noFarmLimit"),
+                    },
+                    ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+                  ]}
+                  className="mt-2"
                   disabled={plotsQuery.isLoading}
-                >
-                  <option value="">
-                    {plotsQuery.isLoading ? "Loading farms..." : "No farm scope"}
-                  </option>
-                  {farmPlots.map((plot) => (
-                    <option key={plot.id} value={plot.id}>
-                      {plot.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Zone
+                  {t("iot.alertRules.form.zone")}
                 </span>
-                <select
-                  aria-label="Rule zone"
+                <Select
+                  ariaLabel="Rule zone"
                   value={form.zoneId}
-                  onChange={(event) => {
-                    const zoneId = event.target.value;
+                  onChange={(value) => {
+                    const zoneId = String(value);
                     onFormChange((current) => ({
                       ...current,
                       zoneId,
                       deviceId: "",
                     }));
                   }}
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: !form.farmPlotId
+                        ? t("iot.alertRules.filters.selectFarmFirst")
+                        : zonesQuery.isLoading
+                          ? t("iot.alertRules.filters.loadingZones")
+                          : t("iot.alertRules.form.noZoneLimit"),
+                    },
+                    ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+                  ]}
+                  className="mt-2"
                   disabled={!form.farmPlotId || zonesQuery.isLoading}
-                >
-                  <option value="">
-                    {!form.farmPlotId
-                      ? "Select farm first"
-                      : zonesQuery.isLoading
-                        ? "Loading zones..."
-                        : "No zone scope"}
-                  </option>
-                  {zones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.zoneName}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
 
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Device
+                  {t("iot.alertRules.form.device")}
                 </span>
-                <select
-                  aria-label="Rule device"
+                <Select
+                  ariaLabel="Rule device"
                   value={form.deviceId}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     onFormChange((current) => ({
                       ...current,
-                      deviceId: event.target.value,
+                      deviceId: String(value),
                     }))
                   }
-                  className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+                  options={[
+                    {
+                      value: "",
+                      label: devicesQuery.isLoading
+                        ? t("iot.alertRules.filters.loadingDevices")
+                        : t("iot.alertRules.form.noDeviceLimit"),
+                    },
+                    ...devices.map((device) => ({
+                      value: device.id,
+                      label: device.deviceName || device.deviceCode || t("iot.alertRules.scope.unnamedDevice"),
+                    })),
+                  ]}
+                  className="mt-2"
                   disabled={devicesQuery.isLoading}
-                >
-                  <option value="">
-                    {devicesQuery.isLoading
-                      ? "Loading devices..."
-                      : "No device scope"}
-                  </option>
-                  {devices.map((device) => (
-                    <option key={device.id} value={device.id}>
-                      {device.deviceName || device.deviceCode || compactId(device.id)}
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
             </div>
           </section>
 
           <section className="rounded-[1.5rem] border border-amber-100 bg-amber-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-amber-700">
-              Sensor type
+              {t("iot.alertRules.form.sensorSection")}
             </h4>
             <p className="mt-2 text-sm font-semibold text-amber-700">
-              Alert rules require a real sensorTypeId UUID. The app can infer
-              options only from existing readings. A complete picker requires a
-              backend sensor type list endpoint.
+              {t("iot.alertRules.form.sensorHelp")}
             </p>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Inferred sensor type
+                  {t("iot.alertRules.form.inferredSensorType")}
                 </span>
-                <select
-                  aria-label="Inferred sensor type"
+                <Select
+                  ariaLabel="Inferred sensor type"
                   value={hasSelectedSensorOption ? form.sensorTypeId : ""}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     onFormChange((current) => ({
                       ...current,
-                      sensorTypeId: event.target.value,
+                      sensorTypeId: String(value),
                     }))
                   }
-                  className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
+                  options={[
+                    {
+                      value: "",
+                      label: sensorOptionsLoading
+                        ? t("iot.alertRules.form.loadingReadings")
+                        : sensorOptions.length === 0
+                          ? t("iot.alertRules.form.noInferredSensors")
+                          : t("iot.alertRules.form.chooseSensorType"),
+                    },
+                    ...sensorOptions.map((option) => ({
+                      value: option.id,
+                      label: `${option.name} (${option.code}${
+                        option.unit ? `, ${option.unit}` : ""
+                      })`,
+                    })),
+                  ]}
+                  className="mt-2"
                   disabled={sensorOptionsLoading || sensorOptions.length === 0}
-                >
-                  <option value="">
-                    {sensorOptionsLoading
-                      ? "Loading readings..."
-                      : sensorOptions.length === 0
-                        ? "No inferred sensor types"
-                        : "Select sensor type"}
-                  </option>
-                  {sensorOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.name} ({option.code}
-                      {option.unit ? `, ${option.unit}` : ""})
-                    </option>
-                  ))}
-                </select>
+                />
               </label>
               <label className="block">
                 <span className="text-xs font-black uppercase tracking-widest text-amber-700">
-                  Advanced sensorTypeId
+                  {t("iot.alertRules.form.advancedSensorTypeId")}
                 </span>
                 <input
                   aria-label="Advanced sensorTypeId"
@@ -376,7 +405,7 @@ function RuleFormDialog({
                       sensorTypeId: event.target.value,
                     }))
                   }
-                  placeholder="Paste sensorTypeId UUID"
+                  placeholder={t("iot.alertRules.form.sensorTypePlaceholder")}
                   className="mt-2 w-full rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-500"
                 />
               </label>
@@ -386,7 +415,7 @@ function RuleFormDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Min threshold
+                {t("iot.alertRules.form.minThreshold")}
               </span>
               <input
                 aria-label="Min threshold"
@@ -403,7 +432,7 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Max threshold
+                {t("iot.alertRules.form.maxThreshold")}
               </span>
               <input
                 aria-label="Max threshold"
@@ -420,31 +449,26 @@ function RuleFormDialog({
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Severity
+                {t("iot.alertRules.form.severity")}
               </span>
-              <select
-                aria-label="Severity"
+              <Select
+                ariaLabel="Severity"
                 value={form.severity}
-                onChange={(event) =>
+                onChange={(value) =>
                   onFormChange((current) => ({
                     ...current,
-                    severity: event.target.value as AlertSeverity,
+                    severity: value as AlertSeverity,
                   }))
                 }
-                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-              >
-                {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
-                  (severity) => (
-                    <option key={severity} value={severity}>
-                      {severity}
-                    </option>
-                  ),
+                options={(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as AlertSeverity[]).map(
+                  (severity) => ({ value: severity, label: formatSeverityLabel(t, severity) }),
                 )}
-              </select>
+                className="mt-2"
+              />
             </label>
             <label className="block">
               <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Cooldown minutes
+                {t("iot.alertRules.form.cooldownMinutes")}
               </span>
               <input
                 aria-label="Cooldown minutes"
@@ -464,9 +488,9 @@ function RuleFormDialog({
 
           <div className="flex flex-wrap gap-3">
             {[
-              ["notifyWeb", "Notify web"],
-              ["notifyMobile", "Notify mobile"],
-              ["enabled", "Enabled"],
+              ["notifyWeb", t("iot.alertRules.form.notifyWeb")],
+              ["notifyMobile", t("iot.alertRules.form.notifyMobile")],
+              ["enabled", t("iot.alertRules.form.enabled")],
             ].map(([key, label]) => (
               <label
                 key={key}
@@ -495,7 +519,7 @@ function RuleFormDialog({
           ) : null}
           {requestFailed ? (
             <p role="alert" className="text-sm font-bold text-red-600">
-              Alert rule request failed. Please check the values and try again.
+              {t("iot.alertRules.form.requestFailed")}
             </p>
           ) : null}
 
@@ -505,7 +529,7 @@ function RuleFormDialog({
               onClick={onClose}
               className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
             >
-              Cancel
+              {t("iot.alertRules.actions.cancel")}
             </button>
             <button
               type="submit"
@@ -513,19 +537,20 @@ function RuleFormDialog({
               className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting
-                ? "Saving..."
+                ? t("iot.alertRules.actions.saving")
                 : editingRule
-                  ? "Save rule"
-                  : "Create rule"}
+                  ? t("iot.alertRules.actions.save")
+                  : t("iot.alertRules.actions.create")}
             </button>
           </div>
         </form>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
 export function AlertRulesPage() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
   const [enabledFilter, setEnabledFilter] = useState<EnabledFilter>("all");
@@ -633,7 +658,7 @@ export function AlertRulesPage() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const payload = buildPayload(form);
-    const validationError = validatePayload(payload);
+    const validationError = validatePayload(payload, t);
     setValidationMessage(validationError);
     if (validationError) return;
 
@@ -675,26 +700,26 @@ export function AlertRulesPage() {
   };
 
   const resolveFarmLabel = (farmPlotId: string | null) => {
-    if (!farmPlotId) return "No farm";
-    return farmPlotMap.get(farmPlotId)?.name || `Farm ${compactId(farmPlotId)}`;
+    if (!farmPlotId) return t("iot.alertRules.form.noFarmLimit");
+    return farmPlotMap.get(farmPlotId)?.name || t("iot.alertRules.scope.missingFarm");
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return "No zone";
+    if (!zoneId) return t("iot.alertRules.form.noZoneLimit");
     return (
       ruleZoneMap.get(zoneId)?.zoneName ||
       zoneMap.get(zoneId)?.zoneName ||
-      `Zone ${compactId(zoneId)}`
+      t("iot.alertRules.scope.missingZone")
     );
   };
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return "No device";
+    if (!deviceId) return t("iot.alertRules.form.noDeviceLimit");
     const device = deviceMap.get(deviceId);
     return (
       device?.deviceName ||
       device?.deviceCode ||
-      `Device ${compactId(deviceId)}`
+      t("iot.alertRules.scope.missingDevice")
     );
   };
 
@@ -703,11 +728,10 @@ export function AlertRulesPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Alert rules
+            {t("iot.alertRules.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Manage collector alert rules with farm, zone, device, and sensor
-            type context.
+            {t("iot.alertRules.description")}
           </p>
         </div>
         <button
@@ -716,78 +740,76 @@ export function AlertRulesPage() {
           className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a]"
         >
           <Plus className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          New rule
+          {t("iot.alertRules.actions.create")}
         </button>
       </div>
 
       <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
-          <select
-            aria-label="Filter farm plot"
+          <Select
+            ariaLabel="Filter farm plot"
             value={filterFarmPlotId}
-            onChange={(event) => {
-              setFilterFarmPlotId(event.target.value);
+            onChange={(value) => {
+              setFilterFarmPlotId(String(value));
               setFilterZoneId("");
               setFilterDeviceId("");
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: plotsQuery.isLoading
+                  ? t("iot.alertRules.filters.loadingFarmPlots")
+                  : t("iot.alertRules.filters.allFarmPlots"),
+              },
+              ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+            ]}
             disabled={plotsQuery.isLoading}
-          >
-            <option value="">
-              {plotsQuery.isLoading ? "Loading farms..." : "All farm plots"}
-            </option>
-            {farmPlots.map((plot) => (
-              <option key={plot.id} value={plot.id}>
-                {plot.name}
-              </option>
-            ))}
-          </select>
+          />
 
-          <select
-            aria-label="Filter zone"
+          <Select
+            ariaLabel="Filter zone"
             value={filterZoneId}
-            onChange={(event) => {
-              setFilterZoneId(event.target.value);
+            onChange={(value) => {
+              setFilterZoneId(String(value));
               setFilterDeviceId("");
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: !filterFarmPlotId
+                  ? t("iot.alertRules.filters.selectFarmFirst")
+                  : zonesQuery.isLoading
+                    ? t("iot.alertRules.filters.loadingZones")
+                    : t("iot.alertRules.filters.allZones"),
+              },
+              ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+            ]}
             disabled={!filterFarmPlotId || zonesQuery.isLoading}
-          >
-            <option value="">
-              {!filterFarmPlotId
-                ? "Select farm first"
-                : zonesQuery.isLoading
-                  ? "Loading zones..."
-                  : "All zones"}
-            </option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.zoneName}
-              </option>
-            ))}
-          </select>
+          />
 
-          <select
-            aria-label="Filter device"
+          <Select
+            ariaLabel="Filter device"
             value={effectiveFilterDeviceId}
-            onChange={(event) => {
-              setFilterDeviceId(event.target.value);
+            onChange={(value) => {
+              setFilterDeviceId(String(value));
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+            options={[
+              {
+                value: "",
+                label: devicesQuery.isLoading
+                  ? t("iot.alertRules.filters.loadingDevices")
+                  : t("iot.alertRules.filters.allDevices"),
+              },
+              ...devices.map((device) => ({
+                value: device.id,
+                label: device.deviceName || device.deviceCode || t("iot.alertRules.scope.unnamedDevice"),
+              })),
+            ]}
             disabled={devicesQuery.isLoading}
-          >
-            <option value="">
-              {devicesQuery.isLoading ? "Loading devices..." : "All devices"}
-            </option>
-            {devices.map((device) => (
-              <option key={device.id} value={device.id}>
-                {device.deviceName || device.deviceCode || compactId(device.id)}
-              </option>
-            ))}
-          </select>
+          />
 
           <input
             aria-label="Advanced filter sensorTypeId"
@@ -796,44 +818,41 @@ export function AlertRulesPage() {
               setFilterSensorTypeId(event.target.value);
               resetToFirstPage();
             }}
-            placeholder="Advanced sensorTypeId"
+            placeholder={t("iot.alertRules.filters.sensorTypePlaceholder")}
             className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
           />
 
-          <select
-            aria-label="Filter enabled"
+          <Select
+            ariaLabel="Filter enabled"
             value={enabledFilter}
-            onChange={(event) => {
-              setEnabledFilter(event.target.value as EnabledFilter);
+            onChange={(value) => {
+              setEnabledFilter(value as EnabledFilter);
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          >
-            <option value="all">All states</option>
-            <option value="true">Enabled</option>
-            <option value="false">Disabled</option>
-          </select>
-          <select
-            aria-label="Rule page size"
+            options={[
+              { value: "all", label: t("iot.alertRules.filters.allStatuses") },
+              { value: "true", label: t("iot.alertRules.filters.enabledOnly") },
+              { value: "false", label: t("iot.alertRules.filters.disabledOnly") },
+            ]}
+          />
+          <Select
+            ariaLabel="Rule page size"
             value={size}
-            onChange={(event) => {
-              setSize(Number(event.target.value));
+            onChange={(value) => {
+              setSize(Number(value));
               resetToFirstPage();
             }}
-            className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-          >
-            {[10, 20, 50].map((option) => (
-              <option key={option} value={option}>
-                {option} / page
-              </option>
-            ))}
-          </select>
+            options={[10, 20, 50].map((option) => ({
+              value: option,
+              label: `${option} / page`,
+            }))}
+          />
         </div>
       </section>
 
       {rulesQuery.isLoading ? (
         <div
-          aria-label="Loading alert rules"
+          aria-label={t("iot.alertRules.states.loading")}
           className="rounded-[2rem] bg-white border border-slate-100 p-5 shadow-sm"
         >
           {[0, 1, 2].map((item) => (
@@ -850,10 +869,10 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Alert rules could not be loaded
+                {t("iot.alertRules.states.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                The collector returned an error for the current filters.
+                {t("iot.alertRules.states.errorDescription")}
               </p>
             </div>
             <button
@@ -862,7 +881,7 @@ export function AlertRulesPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.common.retry")}
             </button>
           </div>
         </div>
@@ -870,7 +889,7 @@ export function AlertRulesPage() {
 
       {deleteRule.isError ? (
         <p role="alert" className="text-sm font-bold text-red-600">
-          Alert rule delete failed. Please try again.
+          {t("iot.alertRules.states.deleteError")}
         </p>
       ) : null}
 
@@ -879,11 +898,13 @@ export function AlertRulesPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedRules.totalItems)} alert rules
+                {t("iot.alertRules.count")(pagedRules.totalItems)}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Page {formatNumber(pagedRules.page + 1)} of{" "}
-                {formatNumber(Math.max(pagedRules.totalPages, 1))}
+                {t("iot.alertRules.page")(
+                  pagedRules.page + 1,
+                  Math.max(pagedRules.totalPages, 1),
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -911,10 +932,10 @@ export function AlertRulesPage() {
           {rules.length === 0 ? (
             <div className="p-10 text-center">
               <h3 className="text-lg font-black text-slate-800">
-                No alert rules
+                {t("iot.alertRules.states.empty")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                The backend returned an empty rule page for these filters.
+                {t("iot.alertRules.states.emptyDescription")}
               </p>
             </div>
           ) : (
@@ -923,22 +944,22 @@ export function AlertRulesPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Rule
+                      {t("iot.alertRules.table.rule")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Threshold
+                      {t("iot.alertRules.table.condition")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Severity
+                      {t("iot.alertRules.table.severity")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      State
+                      {t("iot.alertRules.table.status")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Updated
+                      {t("iot.alertRules.table.updatedAt")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Actions
+                      {t("iot.alertRules.table.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -947,7 +968,7 @@ export function AlertRulesPage() {
                     <tr key={rule.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-4 align-top">
                         <p className="text-sm font-black text-slate-800">
-                          Sensor {compactId(rule.sensorTypeId)}
+                          {t("iot.alertRules.table.configuredSensor")}
                         </p>
                         <p className="mt-1 text-xs font-semibold text-slate-500">
                           {resolveDeviceLabel(rule.deviceId)} -{" "}
@@ -956,18 +977,20 @@ export function AlertRulesPage() {
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
-                        {rule.minThreshold ?? "-"} to {rule.maxThreshold ?? "-"}
+                        {readableRuleThreshold(t, rule.minThreshold, rule.maxThreshold)}
                         <p className="mt-1 text-xs font-semibold text-slate-400">
-                          Cooldown {formatNumber(rule.cooldownMinutes)} min
+                          {t("iot.alertRules.table.cooldownAfterAlert")(
+                            formatNumber(rule.cooldownMinutes),
+                          )}
                         </p>
                       </td>
                       <td className="px-5 py-4 align-top">
                         <span
                           className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                            severityClasses[rule.severity]
+                            alertSeverityClasses[rule.severity]
                           }`}
                         >
-                          {rule.severity}
+                          {formatSeverityLabel(t, rule.severity)}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top">
@@ -976,7 +999,9 @@ export function AlertRulesPage() {
                             enabledClasses[String(rule.enabled !== false) as "true" | "false"]
                           }`}
                         >
-                          {rule.enabled === false ? "DISABLED" : "ENABLED"}
+                          {rule.enabled === false
+                            ? t("iot.alertRules.filters.disabledOnly")
+                            : t("iot.alertRules.filters.enabledOnly")}
                         </span>
                       </td>
                       <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
@@ -997,7 +1022,9 @@ export function AlertRulesPage() {
                             onClick={() => void handleToggleEnabled(rule)}
                             className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50"
                           >
-                            {rule.enabled === false ? "Enable" : "Disable"}
+                            {rule.enabled === false
+                              ? t("iot.alertRules.actions.enable")
+                              : t("iot.alertRules.actions.disable")}
                           </button>
                           <button
                             type="button"
@@ -1032,6 +1059,12 @@ export function AlertRulesPage() {
       ) : null}
 
       {deleteTarget ? (
+<<<<<<< HEAD
+        <ModalShell
+          onClose={() => setDeleteTarget(null)}
+          title="Delete alert rule?"
+          subtitle={
+=======
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
           role="dialog"
@@ -1039,20 +1072,23 @@ export function AlertRulesPage() {
         >
           <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
             <h3 className="text-xl font-black text-slate-900">
-              Delete alert rule?
+              {t("iot.alertRules.deleteDialog.title")}
             </h3>
+>>>>>>> fb4fe6f67d668c78e6d98d5f490b055a14e52a1c
             <p className="mt-2 text-sm font-semibold text-slate-600">
-              This will delete the rule for sensor{" "}
-              {compactId(deleteTarget.sensorTypeId)}. Existing alert events may
-              remain for history.
+              {t("iot.alertRules.deleteDialog.description")}
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+          }
+          maxWidth="max-w-md"
+          backdropColor="bg-slate-950/40"
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50"
               >
-                Cancel
+                {t("iot.alertRules.deleteDialog.cancel")}
               </button>
               <button
                 type="button"
@@ -1060,11 +1096,13 @@ export function AlertRulesPage() {
                 disabled={deleteRule.isPending}
                 className="rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {deleteRule.isPending ? "Deleting..." : "Confirm delete"}
+                {deleteRule.isPending
+                  ? t("iot.alertRules.actions.deleting")
+                  : t("iot.alertRules.deleteDialog.confirm")}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        />
       ) : null}
     </div>
   );

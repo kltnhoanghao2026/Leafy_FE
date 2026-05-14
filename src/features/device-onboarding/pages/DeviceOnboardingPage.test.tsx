@@ -132,7 +132,7 @@ const pagedDevices = (
 
 const bootstrapAuth = () => {
   useAuthStore.setState({
-    user: { id: "user-1", name: "Tester" },
+    user: { id: "user-1", profileId: "profile-1", name: "Tester" },
     accessToken: "token",
     isLoading: false,
     rememberMe: true,
@@ -313,7 +313,7 @@ describe("DeviceOnboardingPage", () => {
       await screen.findByText("Kết nối thiết bị thành công"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Thiết bị đã liên kết nhưng vẫn offline"),
+      screen.getByText("Thiết bị đã liên kết nhưng chưa online"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Đi tới chi tiết thiết bị" }),

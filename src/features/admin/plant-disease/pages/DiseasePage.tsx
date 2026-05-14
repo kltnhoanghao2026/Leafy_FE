@@ -193,13 +193,12 @@ function TreatmentPlansPanel() {
       />
 
       <AdminTable
-        gridCols="grid-cols-[1.5fr_80px_100px_1fr_140px_110px_120px]"
+        gridCols="grid-cols-[1.5fr_80px_100px_100px_110px_120px]"
         columns={[
           { label: "Bệnh" },
           { label: "Mức độ" },
           { label: "Khẩn cấp" },
-          { label: "Farm Plot" },
-          { label: "Trạng thái" },
+          { label: "Áp dụng" },
           { label: "Ngày tạo" },
           { label: "Hành động" },
         ]}
@@ -208,13 +207,13 @@ function TreatmentPlansPanel() {
         errorMessage="Không thể tải dữ liệu kế hoạch điều trị"
         isEmpty={plans.length === 0}
         emptyMessage="Không có kế hoạch điều trị nào"
-        renderSkeleton={() => <SkeletonRow cols={7} />}
+        renderSkeleton={() => <SkeletonRow cols={6} />}
         skeletonCount={8}
       >
         {plans.map((plan: any) => (
           <div
             key={plan.id}
-            className="grid grid-cols-[1.5fr_80px_100px_1fr_140px_110px_120px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors"
+            className="grid grid-cols-[1.5fr_80px_100px_100px_110px_120px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors"
           >
             <p className="text-sm font-semibold text-slate-800 truncate">
               {plan.diseaseName}
@@ -223,35 +222,13 @@ function TreatmentPlansPanel() {
               {plan.severityLevel ?? "—"}
             </p>
             <p className="text-xs text-slate-500">{plan.urgency ?? "—"}</p>
-            <p className="text-xs text-slate-500 truncate">
-              {plan.farmPlotId ?? "—"}
+            <p className="text-xs text-slate-500">
+              {plan.applyCount ?? 0} lần
             </p>
-            <TreatmentStatusBadge status={plan.status} />
             <p className="text-xs text-slate-500">
               {formatDate(plan.createdAt)}
             </p>
             <div className="flex items-center gap-1.5">
-              <select
-                value={plan.status}
-                onChange={(e) =>
-                  handleUpdateStatus(plan.id, e.target.value as TreatmentStatus)
-                }
-                disabled={updateStatusMutation.isPending}
-                className="text-xs rounded-lg border border-slate-200 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 bg-white text-slate-700 cursor-pointer disabled:opacity-50"
-              >
-                {(
-                  [
-                    "PENDING",
-                    "ACTIVE",
-                    "COMPLETED",
-                    "CANCELLED",
-                  ] as TreatmentStatus[]
-                ).map((s) => (
-                  <option key={s} value={s}>
-                    {TREATMENT_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
               <button
                 onClick={() => handleDelete(plan.id, plan.diseaseName)}
                 className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"

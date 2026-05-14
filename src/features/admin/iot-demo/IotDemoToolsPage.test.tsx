@@ -6,7 +6,7 @@ import { IotDemoToolsPage } from "./IotDemoToolsPage";
 import { renderWithClient } from "../../../test/render";
 import { server } from "../../../test/server";
 
-const BASE_URL = "http://localhost:8099";
+const BASE_URL = "*/iot-test-data";
 
 function statusHandler(response = { running: false, status: "STOPPED" }) {
   return http.get(`${BASE_URL}/seed/simulation/status`, () =>
@@ -32,11 +32,11 @@ describe("IotDemoToolsPage", () => {
   it("renders the warning banner", async () => {
     renderPage();
 
-    expect(screen.getByText("Dev/admin-only tool")).toBeInTheDocument();
+    expect(screen.getByText("Công cụ chỉ dành cho dev/admin")).toBeInTheDocument();
     expect(
-      screen.getByText(/Actions mutate IoT demo data/i),
+      screen.getByText(/thay đổi dữ liệu demo IoT/i),
     ).toBeInTheDocument();
-    await screen.findByText("Stopped");
+    await screen.findByText("Đã dừng");
   });
 
   it("requests simulation status from the test-data service URL", async () => {
@@ -52,7 +52,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await screen.findByText("Running");
+    await screen.findByText("Đang chạy");
     expect(requested).toBe(true);
   });
 
@@ -71,7 +71,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: "Bootstrap minimal" }));
+    await user.click(screen.getByRole("button", { name: "Bootstrap tối thiểu" }));
 
     await waitFor(() => expect(called).toBe(true));
     expect(await screen.findByText(/minimal complete/)).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: "Bootstrap full" }));
+    await user.click(screen.getByRole("button", { name: "Bootstrap đầy đủ" }));
 
     await waitFor(() => expect(called).toBe(true));
   });
@@ -112,7 +112,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: "Seed last 7 days" }));
+    await user.click(screen.getByRole("button", { name: "Seed 7 ngày gần nhất" }));
 
     await waitFor(() => expect(called).toBe(true));
   });
@@ -132,7 +132,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: /Start simulation/ }));
+    await user.click(screen.getByRole("button", { name: /Bắt đầu mô phỏng/ }));
 
     await waitFor(() => expect(called).toBe(true));
   });
@@ -152,7 +152,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: /Stop simulation/ }));
+    await user.click(screen.getByRole("button", { name: /Dừng mô phỏng/ }));
 
     await waitFor(() => expect(called).toBe(true));
   });
@@ -170,7 +170,7 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    await user.click(screen.getByRole("button", { name: "Bootstrap minimal" }));
+    await user.click(screen.getByRole("button", { name: "Bootstrap tối thiểu" }));
 
     expect(await screen.findByText(/collector unavailable/)).toBeInTheDocument();
   });
@@ -183,33 +183,33 @@ describe("IotDemoToolsPage", () => {
       "/dashboard",
     );
     expect(
-      screen.getByRole("link", { name: "Device onboarding" }),
+      screen.getByRole("link", { name: "Onboarding thiết bị" }),
     ).toHaveAttribute("href", "/dashboard/devices/onboarding");
-    expect(screen.getByRole("link", { name: "Alert Center" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Trung tâm cảnh báo" })).toHaveAttribute(
       "href",
       "/dashboard/alerts",
     );
-    expect(screen.getByRole("link", { name: "Alert Rules" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Quy tắc cảnh báo" })).toHaveAttribute(
       "href",
       "/dashboard/alert-rules",
     );
-    await screen.findByText("Stopped");
+    await screen.findByText("Đã dừng");
   });
 
   it("renders anomaly form defaults", async () => {
     renderPage();
 
-    const card = section("Alert anomaly scenarios");
+    const card = section("Kịch bản bất thường cảnh báo");
     expect(card.getByLabelText("Device UID")).toHaveValue(
       "prod-minimal-device-1",
     );
-    expect(card.getByLabelText("Count")).toHaveValue(5);
-    expect(card.getByLabelText("High temperature target")).toHaveValue(44);
-    expect(card.getByLabelText("Low soil moisture target")).toHaveValue(8);
+    expect(card.getByLabelText("Số lần")).toHaveValue(5);
+    expect(card.getByLabelText("Mục tiêu nhiệt độ cao")).toHaveValue(44);
+    expect(card.getByLabelText("Mục tiêu độ ẩm đất thấp")).toHaveValue(8);
     expect(
-      card.getByText(/Default device UID works for minimal seed/i),
+      card.getByText(/Device UID mặc định hoạt động với minimal seed/i),
     ).toBeInTheDocument();
-    await screen.findByText("Stopped");
+    await screen.findByText("Đã dừng");
   });
 
   it("calls high temperature scenario with expected JSON", async () => {
@@ -227,15 +227,15 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Alert anomaly scenarios");
+    const card = section("Kịch bản bất thường cảnh báo");
     await user.clear(card.getByLabelText("Device UID"));
     await user.type(card.getByLabelText("Device UID"), "demo-device-1");
-    await user.clear(card.getByLabelText("Count"));
-    await user.type(card.getByLabelText("Count"), "3");
-    await user.clear(card.getByLabelText("High temperature target"));
-    await user.type(card.getByLabelText("High temperature target"), "45.5");
+    await user.clear(card.getByLabelText("Số lần"));
+    await user.type(card.getByLabelText("Số lần"), "3");
+    await user.clear(card.getByLabelText("Mục tiêu nhiệt độ cao"));
+    await user.type(card.getByLabelText("Mục tiêu nhiệt độ cao"), "45.5");
     await user.click(
-      card.getByRole("button", { name: "Trigger high temperature" }),
+      card.getByRole("button", { name: "Kích hoạt nhiệt độ cao" }),
     );
 
     await waitFor(() =>
@@ -263,15 +263,15 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Alert anomaly scenarios");
+    const card = section("Kịch bản bất thường cảnh báo");
     await user.clear(card.getByLabelText("Device UID"));
     await user.type(card.getByLabelText("Device UID"), "demo-device-2");
-    await user.clear(card.getByLabelText("Count"));
-    await user.type(card.getByLabelText("Count"), "4");
-    await user.clear(card.getByLabelText("Low soil moisture target"));
-    await user.type(card.getByLabelText("Low soil moisture target"), "16");
+    await user.clear(card.getByLabelText("Số lần"));
+    await user.type(card.getByLabelText("Số lần"), "4");
+    await user.clear(card.getByLabelText("Mục tiêu độ ẩm đất thấp"));
+    await user.type(card.getByLabelText("Mục tiêu độ ẩm đất thấp"), "16");
     await user.click(
-      card.getByRole("button", { name: "Trigger low soil moisture" }),
+      card.getByRole("button", { name: "Kích hoạt độ ẩm đất thấp" }),
     );
 
     await waitFor(() =>
@@ -298,10 +298,10 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Config ACK scenarios");
+    const card = section("Kịch bản ACK cấu hình");
     await user.clear(card.getByLabelText("Device UID"));
     await user.type(card.getByLabelText("Device UID"), "demo-device-3");
-    await user.click(card.getByRole("button", { name: "Send ACK success" }));
+    await user.click(card.getByRole("button", { name: "Gửi ACK thành công" }));
 
     await waitFor(() =>
       expect(body).toEqual({
@@ -328,13 +328,13 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Config ACK scenarios");
+    const card = section("Kịch bản ACK cấu hình");
     await user.clear(card.getByLabelText("Device UID"));
     await user.type(card.getByLabelText("Device UID"), "demo-device-4");
-    await user.type(card.getByLabelText("Config version"), "8");
-    await user.clear(card.getByLabelText("Error"));
-    await user.type(card.getByLabelText("Error"), "bad config");
-    await user.click(card.getByRole("button", { name: "Send ACK failure" }));
+    await user.type(card.getByLabelText("Phiên bản cấu hình"), "8");
+    await user.clear(card.getByLabelText("Lỗi"));
+    await user.type(card.getByLabelText("Lỗi"), "bad config");
+    await user.click(card.getByRole("button", { name: "Gửi ACK thất bại" }));
 
     await waitFor(() =>
       expect(body).toEqual({
@@ -361,13 +361,13 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Alert anomaly scenarios");
+    const card = section("Kịch bản bất thường cảnh báo");
     await user.clear(card.getByLabelText("Device UID"));
     await user.click(
-      card.getByRole("button", { name: "Trigger high temperature" }),
+      card.getByRole("button", { name: "Kích hoạt nhiệt độ cao" }),
     );
 
-    expect(card.getByText("Device UID is required.")).toBeInTheDocument();
+    expect(card.getByText("Cần nhập Device UID.")).toBeInTheDocument();
     expect(called).toBe(false);
   });
 
@@ -384,9 +384,9 @@ describe("IotDemoToolsPage", () => {
       route: "/admin/iot-demo-tools",
     });
 
-    const card = section("Alert anomaly scenarios");
+    const card = section("Kịch bản bất thường cảnh báo");
     await user.click(
-      card.getByRole("button", { name: "Trigger high temperature" }),
+      card.getByRole("button", { name: "Kích hoạt nhiệt độ cao" }),
     );
 
     expect(await screen.findByText(/device not found/)).toBeInTheDocument();

@@ -4,6 +4,8 @@ import { useDeactivatePushTokenMutation } from "../../notifications/queries";
 import { usePushNotificationsStore } from "../../notifications/store/usePushNotificationsStore";
 import { useSettingsStore } from "../../settings/store/useSettingsStore";
 import { useAuthStore } from "../../../store/authStore";
+import { authApi } from "../api/auth.api";
+import { clearPendingEmail } from "../../../store/registerStore";
 
 export function useLogout() {
   const navigate = useNavigate();
@@ -24,9 +26,17 @@ export function useLogout() {
       }
     }
 
+    // Invalidate the refresh token server-side and clear the HttpOnly cookie.
+    try {
+      await authApi.logout();
+    } catch {
+      // Proceed with local cleanup even if the server request fails.
+    }
+
     resetPushState();
     resetProfile();
     logout();
+    clearPendingEmail();
     queryClient.clear();
     navigate("/login", { replace: true });
   };

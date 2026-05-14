@@ -1,6 +1,9 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
+import { useTranslation } from '../../../../i18n';
+
+
 import type { PlantEventResponse } from '../../shared/types';
 
 const VI_WEEKDAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, Wrench, Loader2, RefreshCcw, BarChart, Smile } from "lucide-react";
+import { Wrench, Loader2, RefreshCcw, BarChart, Smile } from "lucide-react";
 import {
   useMyPreferences,
   useUpdateSyncPreferencesMutation,

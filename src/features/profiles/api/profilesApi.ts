@@ -61,6 +61,16 @@ export interface ConsultationRequestResponse {
   status: string;
 }
 
+export interface UserConnectionResponse {
+  id: string;
+  followerId: string;
+  followingId: string;
+  isFollowing: boolean;
+  consultationStatus: "NONE" | "PENDING" | "ACCEPTED" | "REJECTED";
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export const profilesApi = {
   getPublicExperts: (params: { page?: number; size?: number; searchTerm?: string } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(
@@ -101,16 +111,16 @@ export const profilesApi = {
     ),
 
   followUser: (followingId: string) =>
-    apiClient.post<ApiEnvelope<any>>(`/profiles/users/${followingId}/follow`),
+    apiClient.post<ApiEnvelope<UserConnectionResponse>>(`/profiles/users/${followingId}/follow`),
 
   unfollowUser: (followingId: string) =>
-    apiClient.post<ApiEnvelope<any>>(`/profiles/users/${followingId}/unfollow`),
+    apiClient.post<ApiEnvelope<void>>(`/profiles/users/${followingId}/unfollow`),
 
   requestConsultation: (expertId: string) =>
-    apiClient.post<ApiEnvelope<any>>(`/profiles/experts/${expertId}/consult/request`),
+    apiClient.post<ApiEnvelope<UserConnectionResponse>>(`/profiles/experts/${expertId}/consult/request`),
 
   cancelConsultation: (expertId: string) =>
-    apiClient.post<ApiEnvelope<any>>(`/profiles/experts/${expertId}/consult/cancel`),
+    apiClient.post<ApiEnvelope<void>>(`/profiles/experts/${expertId}/consult/cancel`),
 
   getPendingConsultations: (params: { page?: number; size?: number } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ConsultationRequestResponse>>>(`/profiles/experts/consult/pending`, {
@@ -129,7 +139,7 @@ export const profilesApi = {
     }),
 
   respondToConsultation: (farmerId: string, accept: boolean) =>
-    apiClient.post<ApiEnvelope<any>>(`/profiles/experts/consult/respond`, null, {
+    apiClient.post<ApiEnvelope<UserConnectionResponse>>(`/profiles/experts/consult/respond`, null, {
       params: { farmerId, accept },
     }),
 

@@ -1,31 +1,41 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
+  AlertTriangle,
   ArrowBigUp,
   BadgeCheck,
   ChevronLeft,
   ChevronRight,
   Clock,
+  ClipboardList,
+  Globe,
   Layers,
   Loader2,
+  Lock,
   MapPin,
   MessageCircle,
+  Play,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   User,
   Users,
   X,
+  Zap,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../lib/routes'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { formatDateTime } from '../../metrics-view/utils/format'
 import { Avatar } from '../../../components/ui/Avatar'
-import { useUnifiedSearch, useSearchPosts, useSearchProfiles } from '../queries'
+import { Select } from '../../../components/ui/Select'
+import { useUnifiedSearch, useSearchPosts, useSearchProfiles, useSearchPlans } from '../queries'
 import type {
   SearchMode,
+  SearchPlanItem,
   SearchPostItem,
   SearchProfileItem,
+  SearchPlansParams,
   SearchPostsParams,
   SearchProfilesParams,
   UnifiedSearchParams,
@@ -52,14 +62,27 @@ export function SearchPage() {
   const urlTab  = (searchParams.get('tab') as TabMode) ?? 'all'
   const urlPage = parseInt(searchParams.get('page') ?? '0', 10)
 
+  const urlPostType = searchParams.get('postType') ?? undefined
+  const urlRole = searchParams.get('role') ?? undefined
+  const urlSeverity = searchParams.get('severityLevel') ?? undefined
+  const urlUrgency = searchParams.get('urgency') ?? undefined
+  const urlIsPublicStr = searchParams.get('isPublic')
+  const urlIsPublic = urlIsPublicStr === 'true' ? true : urlIsPublicStr === 'false' ? false : undefined
+  const urlIsVerifiedStr = searchParams.get('isVerified')
+  const urlIsVerified = urlIsVerifiedStr === 'true' ? true : urlIsVerifiedStr === 'false' ? false : undefined
+  const urlSortDir = (searchParams.get('sortDir') as 'ASC' | 'DESC') ?? undefined
+
   const [inputValue, setInputValue] = useState(urlQ)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const composingRef = useRef(false)
   const debouncedInput = useDebouncedValue(inputValue, 350)
 
   // Sync input when navigating from Header
   useEffect(() => { setInputValue(urlQ) }, [urlQ])
 
-  // Push debounced term to URL
+  // Push debounced term to URL (skip during IME composition)
   useEffect(() => {
+    if (composingRef.current) return
     const term = debouncedInput.trim()
     if (term === urlQ || term.length < MIN_LENGTH) return
     setSearchParams(p => {
@@ -86,6 +109,16 @@ export function SearchPage() {
     })
   }, [setSearchParams])
 
+  const setFilter = useCallback((key: string, value: string | undefined) => {
+    setSearchParams(p => {
+      const n = new URLSearchParams(p)
+      if (value) n.set(key, value)
+      else n.delete(key)
+      n.set('page', '0')
+      return n
+    })
+  }, [setSearchParams])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const term = inputValue.trim()
@@ -100,86 +133,311 @@ export function SearchPage() {
     searchTerm: urlQ,
     postSize: UNIFIED_SIZE,
     profileSize: UNIFIED_SIZE,
+    planSize: UNIFIED_SIZE,
   }), [urlQ])
 
   const postParams = useMemo<SearchPostsParams>(() => ({
-    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE,
-  }), [urlQ, urlPage])
+    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE, postType: urlPostType, sortBy: 'createdAt', sortDir: urlSortDir
+  }), [urlQ, urlPage, urlPostType, urlSortDir])
 
   const profileParams = useMemo<SearchProfilesParams>(() => ({
-    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE,
-  }), [urlQ, urlPage])
+    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE, role: urlRole, isVerified: urlIsVerified, sortBy: 'createdAt', sortDir: urlSortDir
+  }), [urlQ, urlPage, urlRole, urlIsVerified, urlSortDir])
+
+  const planParams = useMemo<SearchPlansParams>(() => ({
+    searchTerm: urlQ, page: urlPage, size: PAGE_SIZE, severityLevel: urlSeverity, urgency: urlUrgency, isPublic: urlIsPublic, sortBy: 'createdAt', sortDir: urlSortDir
+  }), [urlQ, urlPage, urlSeverity, urlUrgency, urlIsPublic, urlSortDir])
 
   const unifiedQuery  = useUnifiedSearch(unifiedParams,  canSearch && urlTab === 'all')
   const postsQuery    = useSearchPosts(postParams,        canSearch && urlTab === 'posts')
   const profilesQuery = useSearchProfiles(profileParams,  canSearch && urlTab === 'profiles')
+  const plansQuery    = useSearchPlans(planParams,        canSearch && urlTab === 'plans')
 
-  const activeQuery = urlTab === 'all' ? unifiedQuery : urlTab === 'posts' ? postsQuery : profilesQuery
+  const activeQuery = urlTab === 'all' ? unifiedQuery : urlTab === 'posts' ? postsQuery : urlTab === 'profiles' ? profilesQuery : plansQuery
   const isLoading   = activeQuery.isLoading
   const isError     = activeQuery.isError
 
+  // count active filters for badge
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (urlSortDir) count++
+    if (urlTab === 'posts' && urlPostType) count++
+    if (urlTab === 'profiles') {
+      if (urlRole) count++
+      if (urlIsVerifiedStr) count++
+    }
+    if (urlTab === 'plans') {
+      if (urlSeverity) count++
+      if (urlUrgency) count++
+      if (urlIsPublicStr) count++
+    }
+    return count
+  }, [urlTab, urlSortDir, urlPostType, urlRole, urlIsVerifiedStr, urlSeverity, urlUrgency, urlIsPublicStr])
+
+  const clearAllFilters = useCallback(() => {
+    setSearchParams(p => {
+      const n = new URLSearchParams(p)
+      n.delete('sortDir')
+      n.delete('postType')
+      n.delete('role')
+      n.delete('isVerified')
+      n.delete('severityLevel')
+      n.delete('urgency')
+      n.delete('isPublic')
+      n.set('page', '0')
+      return n
+    })
+  }, [setSearchParams])
+
   // ── tabs config ───────────────────────────────────────────────────────────
   const tabs = [
-    { key: 'all'      as TabMode, label: 'Tất cả',      icon: Layers },
-    { key: 'posts'    as TabMode, label: 'Bài viết',    icon: MessageCircle },
-    { key: 'profiles' as TabMode, label: 'Chuyên gia',  icon: Users },
+    { key: 'all'      as TabMode, label: 'Tất cả',        icon: Layers },
+    { key: 'posts'    as TabMode, label: 'Bài viết',      icon: MessageCircle },
+    { key: 'profiles' as TabMode, label: 'Hồ sơ',         icon: Users },
+    { key: 'plans'    as TabMode, label: 'Kế hoạch',      icon: ClipboardList },
   ]
 
   return (
-    <div className="flex-1 w-full max-w-3xl mx-auto space-y-5 pb-12 animate-in fade-in duration-300">
+    <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8 pb-12 animate-in fade-in duration-300">
+      {/* ── Header ── */}
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.24em] text-[#245A34]">
+            Global Search
+          </p>
+          <h2 className="mt-2 text-[32px] font-black tracking-tight text-slate-900">
+            Tìm kiếm
+          </h2>
+          <p className="mt-2 max-w-3xl text-[15px] font-semibold text-slate-500">
+            Tìm bài viết, chuyên gia và kế hoạch điều trị từ một từ khoá duy nhất.
+          </p>
+        </div>
+      </header>
 
-      {/* ── Hero search bar ────────────────────────────────────────────── */}
-      <div className="rounded-[2rem] bg-gradient-to-br from-[#1a4228] to-[#2d7248] p-6 shadow-lg">
-        <h1 className="text-[21px] font-black text-white mb-1 tracking-tight">Tìm kiếm</h1>
-        <p className="text-[13px] text-green-200/70 mb-5">
-          Tìm bài viết và chuyên gia từ một từ khoá duy nhất
-        </p>
-
-        <form onSubmit={handleSubmit} role="search">
-          <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 border transition-all bg-white/10 backdrop-blur-sm ${
-            inputValue ? 'border-white/40' : 'border-white/20'
-          }`}>
-            <Search className="w-4 h-4 text-white/60 shrink-0" strokeWidth={2.5} />
+      {/* ── Search Input & Tabs ── */}
+      <div className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} role="search" className="w-full max-w-2xl">
+          <div className="relative group flex items-center bg-white border-2 border-slate-200 rounded-2xl transition-all focus-within:border-[#245A34] focus-within:shadow-[0_0_0_4px_rgba(36,90,52,0.1)]">
+            <div className="pl-4 pr-3 flex items-center justify-center">
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+              ) : (
+                <Search className="w-5 h-5 text-slate-400 group-focus-within:text-[#245A34] transition-colors" />
+              )}
+            </div>
             <input
               ref={inputRef}
-              type="search"
+              type="text"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
+              onCompositionStart={() => { composingRef.current = true }}
+              onCompositionEnd={e => {
+                composingRef.current = false
+                setInputValue((e.target as HTMLInputElement).value)
+              }}
               placeholder="Nhập ít nhất 2 ký tự..."
               aria-label="Từ khoá tìm kiếm"
-              className="flex-1 bg-transparent text-[15px] font-semibold text-white placeholder:text-white/40 outline-none"
+              className="flex-1 py-3.5 bg-transparent text-[15px] font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none"
               autoFocus
             />
             {inputValue && (
               <button type="button" onClick={() => { setInputValue(''); inputRef.current?.focus() }}
-                className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 shrink-0 transition-colors"
+                className="px-2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                 aria-label="Xoá">
-                <X className="w-3.5 h-3.5" strokeWidth={2.5} />
+                <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             )}
             <button type="submit"
               disabled={inputValue.trim().length < MIN_LENGTH}
-              className="shrink-0 px-5 py-2 bg-white text-[#245A34] text-[13px] font-black rounded-xl hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+              className="mr-2 shrink-0 px-5 py-2 bg-[#245A34] text-white text-[13px] font-bold rounded-xl hover:bg-[#1a4226] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
               Tìm
             </button>
           </div>
         </form>
 
         {/* Tab switcher */}
-        <div className="flex gap-2 mt-4 flex-wrap">
-          {tabs.map(({ key, label, icon: Icon }) => (
-            <button key={key} type="button" onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-bold transition-all ${
-                urlTab === key
-                  ? 'bg-white text-[#245A34] shadow-sm'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}>
-              <Icon className="w-3.5 h-3.5" strokeWidth={2.5} />
-              {label}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex gap-2 flex-wrap">
+            {tabs.map(({ key, label, icon: Icon }) => (
+              <button key={key} type="button" onClick={() => setTab(key)}
+                className={`flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[14px] font-bold transition-all ${
+                  urlTab === key
+                    ? 'bg-green-50 text-[#245A34]'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                }`}>
+                <Icon className="w-4 h-4" strokeWidth={2.5} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {urlTab !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              className="relative flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 text-[13px] font-bold text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all shrink-0"
+            >
+              <SlidersHorizontal className="w-4 h-4" strokeWidth={2} />
+              Bộ lọc
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#245A34] text-white text-[10px] font-black flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          ))}
+          )}
         </div>
       </div>
+
+      {/* ── Filter Modal ──────────────────────────────────────────────── */}
+      {filterOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setFilterOpen(false)} />
+          {/* panel */}
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
+            {/* header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <h3 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
+                <SlidersHorizontal className="w-4 h-4 text-[#245A34]" strokeWidth={2.5} />
+                Bộ lọc tìm kiếm
+              </h3>
+              <button type="button" onClick={() => setFilterOpen(false)}
+                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+                <X className="w-4 h-4" strokeWidth={2.5} />
+              </button>
+            </div>
+
+            {/* body */}
+            <div className="px-6 py-5 space-y-5">
+              {/* Common: Sort by date */}
+              <div>
+                <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Sắp xếp theo ngày tạo</label>
+                <Select
+                  size="sm"
+                  value={urlSortDir ?? ''}
+                  onChange={v => setFilter('sortDir', v as string)}
+                  options={[
+                    { value: '', label: 'Mặc định' },
+                    { value: 'DESC', label: 'Mới nhất' },
+                    { value: 'ASC', label: 'Cũ nhất' },
+                  ]}
+                />
+              </div>
+
+              {/* Posts filters */}
+              {urlTab === 'posts' && (
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Loại bài viết</label>
+                  <Select
+                    size="sm"
+                    value={urlPostType ?? ''}
+                    onChange={v => setFilter('postType', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả loại' },
+                      { value: 'GENERAL', label: 'Bài viết chung' },
+                      { value: 'QUESTION', label: 'Hỏi đáp' },
+                      { value: 'PLAN_SHARE', label: 'Chia sẻ kế hoạch' },
+                    ]}
+                  />
+                </div>
+              )}
+
+              {/* Profiles filters */}
+              {urlTab === 'profiles' && (
+                <>
+                  <div>
+                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Vai trò</label>
+                    <Select
+                      size="sm"
+                      value={urlRole ?? ''}
+                      onChange={v => setFilter('role', v as string)}
+                      options={[
+                        { value: '', label: 'Tất cả vai trò' },
+                        { value: 'FARMER', label: 'Nông dân' },
+                        { value: 'EXPERT', label: 'Chuyên gia' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Xác minh</label>
+                    <Select
+                      size="sm"
+                      value={urlIsVerifiedStr ?? ''}
+                      onChange={v => setFilter('isVerified', v as string)}
+                      options={[
+                        { value: '', label: 'Tất cả' },
+                        { value: 'true', label: 'Đã xác minh' },
+                        { value: 'false', label: 'Chưa xác minh' },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Plans filters */}
+              {urlTab === 'plans' && (
+                <>
+                  <div>
+                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ bệnh</label>
+                    <Select
+                      size="sm"
+                      value={urlSeverity ?? ''}
+                      onChange={v => setFilter('severityLevel', v as string)}
+                      options={[
+                        { value: '', label: 'Tất cả' },
+                        { value: 'LOW', label: 'Nhẹ' },
+                        { value: 'MEDIUM', label: 'Trung bình' },
+                        { value: 'HIGH', label: 'Nặng' },
+                        { value: 'CRITICAL', label: 'Rất nặng' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ ưu tiên</label>
+                    <Select
+                      size="sm"
+                      value={urlUrgency ?? ''}
+                      onChange={v => setFilter('urgency', v as string)}
+                      options={[
+                        { value: '', label: 'Tất cả' },
+                        { value: 'NORMAL', label: 'Bình thường' },
+                        { value: 'HIGH', label: 'Cao' },
+                        { value: 'IMMEDIATE', label: 'Khẩn cấp' },
+                      ]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Quyền riêng tư</label>
+                    <Select
+                      size="sm"
+                      value={urlIsPublicStr ?? ''}
+                      onChange={v => setFilter('isPublic', v as string)}
+                      options={[
+                        { value: '', label: 'Tất cả' },
+                        { value: 'true', label: 'Công khai' },
+                        { value: 'false', label: 'Riêng tư' },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* footer */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/60">
+              <button type="button" onClick={clearAllFilters}
+                className="text-[13px] font-bold text-slate-500 hover:text-red-600 transition-colors">
+                Xóa bộ lọc
+              </button>
+              <button type="button" onClick={() => setFilterOpen(false)}
+                className="px-5 py-2 rounded-xl bg-[#245A34] text-white text-[13px] font-bold hover:bg-[#1a4226] transition-colors">
+                Áp dụng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Empty prompt ──────────────────────────────────────────────── */}
       {!canSearch && (
@@ -221,6 +479,7 @@ export function SearchPage() {
           keyword={urlQ}
           onSeeAllPosts={() => setTab('posts')}
           onSeeAllProfiles={() => setTab('profiles')}
+          onSeeAllPlans={() => setTab('plans')}
         />
       )}
 
@@ -248,7 +507,7 @@ export function SearchPage() {
       {/* ── PROFILES tab ──────────────────────────────────────────────── */}
       {canSearch && urlTab === 'profiles' && profilesQuery.data && !isError && !isLoading && (
         <PaginatedSection
-          title="Chuyên gia"
+          title="Hồ sơ"
           icon={<Users className="w-4 h-4" strokeWidth={2.5} />}
           totalItems={profilesQuery.data.totalItems}
           page={urlPage}
@@ -260,8 +519,29 @@ export function SearchPage() {
           keyword={urlQ}
         >
           {profilesQuery.data.items.length === 0
-            ? <EmptyState message="Không tìm thấy chuyên gia nào" />
+            ? <EmptyState message="Không tìm thấy hồ sơ nào" />
             : <ProfileList profiles={profilesQuery.data.items} />
+          }
+        </PaginatedSection>
+      )}
+
+      {/* ── PLANS tab ──────────────────────────────────────────────────── */}
+      {canSearch && urlTab === 'plans' && plansQuery.data && !isError && !isLoading && (
+        <PaginatedSection
+          title="Kế hoạch điều trị"
+          icon={<ClipboardList className="w-4 h-4" strokeWidth={2.5} />}
+          totalItems={plansQuery.data.totalItems}
+          page={urlPage}
+          totalPages={plansQuery.data.totalPages}
+          hasPrev={plansQuery.data.hasPrevious}
+          hasNext={plansQuery.data.hasNext}
+          onPrev={() => setPage(Math.max(urlPage - 1, 0))}
+          onNext={() => setPage(urlPage + 1)}
+          keyword={urlQ}
+        >
+          {plansQuery.data.items.length === 0
+            ? <EmptyState message="Không tìm thấy kế hoạch nào" />
+            : <PlanList plans={plansQuery.data.items} keyword={urlQ} />
           }
         </PaginatedSection>
       )}
@@ -271,17 +551,19 @@ export function SearchPage() {
 
 // ── All results view ──────────────────────────────────────────────────────────
 function AllResults({
-  data, keyword, onSeeAllPosts, onSeeAllProfiles,
+  data, keyword, onSeeAllPosts, onSeeAllProfiles, onSeeAllPlans,
 }: {
-  data: { posts: SearchPostItem[]; profiles: SearchProfileItem[]; totalPosts: number; totalProfiles: number }
+  data: { posts: SearchPostItem[]; profiles: SearchProfileItem[]; plans?: SearchPlanItem[]; totalPosts: number; totalProfiles: number; totalPlans?: number }
   keyword: string
   onSeeAllPosts: () => void
   onSeeAllProfiles: () => void
+  onSeeAllPlans: () => void
 }) {
   const noPosts    = data.posts.length === 0
   const noProfiles = data.profiles.length === 0
+  const noPlans    = !data.plans || data.plans.length === 0
 
-  if (noPosts && noProfiles) {
+  if (noPosts && noProfiles && noPlans) {
     return (
       <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm p-14 flex flex-col items-center gap-3">
         <Search className="w-10 h-10 text-slate-200" strokeWidth={1.5} />
@@ -311,11 +593,24 @@ function AllResults({
         <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
           <SectionHeader
             icon={<Users className="w-4 h-4" strokeWidth={2.5} />}
-            title="Chuyên gia"
+            title="Hồ sơ"
             total={data.totalProfiles}
             onSeeAll={onSeeAllProfiles}
           />
           <ProfileList profiles={data.profiles} />
+        </div>
+      )}
+
+      {/* Plans section */}
+      {!noPlans && data.plans && (
+        <div className="rounded-[2rem] bg-white border border-slate-100 shadow-sm overflow-hidden">
+          <SectionHeader
+            icon={<ClipboardList className="w-4 h-4" strokeWidth={2.5} />}
+            title="Kế hoạch điều trị"
+            total={data.totalPlans ?? 0}
+            onSeeAll={onSeeAllPlans}
+          />
+          <PlanList plans={data.plans} keyword={keyword} />
         </div>
       )}
     </div>
@@ -346,7 +641,7 @@ function SectionHeader({ icon, title, total, onSeeAll }: {
 }
 
 // ── Paginated section wrapper (Posts/Profiles tabs) ────────────────────────────
-function PaginatedSection({ title, icon, totalItems, page, totalPages, hasPrev, hasNext, onPrev, onNext, keyword, children }: {
+function PaginatedSection({ title, icon, totalItems, page, totalPages, hasPrev, hasNext, onPrev, onNext, children }: {
   title: string; icon: React.ReactNode; totalItems: number
   page: number; totalPages: number; hasPrev: boolean; hasNext: boolean
   onPrev: () => void; onNext: () => void; keyword: string
@@ -500,6 +795,104 @@ function EmptyState({ message }: { message: string }) {
       <Search className="w-10 h-10 text-slate-200" strokeWidth={1.5} />
       <p className="text-[14px] font-bold text-slate-500">{message}</p>
     </div>
+  )
+}
+
+// ── Plan list ─────────────────────────────────────────────────────────────────
+function PlanList({ plans, keyword }: { plans: SearchPlanItem[]; keyword: string }) {
+  const severityColors: Record<string, string> = {
+    LOW: 'bg-green-50 text-green-700',
+    MEDIUM: 'bg-amber-50 text-amber-700',
+    HIGH: 'bg-red-50 text-red-700',
+  }
+  const urgencyColors: Record<string, string> = {
+    NORMAL: 'bg-slate-100 text-slate-600',
+    HIGH: 'bg-orange-50 text-orange-700',
+    IMMEDIATE: 'bg-red-50 text-red-700',
+  }
+
+  return (
+    <ul className="divide-y divide-slate-100">
+      {plans.map(plan => {
+        const name = plan.creatorInfo?.fullName ?? 'Người dùng'
+        const avatar = plan.creatorInfo?.avatar ?? null
+        const title = plan.planName || plan.diseaseName || 'Kế hoạch điều trị'
+        return (
+          <li key={plan.id}>
+            <Link to={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
+              className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50/70 transition-colors group">
+              <div className="shrink-0 mt-0.5 w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5 text-[#245A34]" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                  <span className="text-[14px] font-bold text-gray-900">
+                    <Highlighted text={title} keyword={keyword} />
+                  </span>
+                  {plan.isPublic
+                    ? <Globe className="w-3 h-3 text-blue-400" strokeWidth={2} />
+                    : <Lock className="w-3 h-3 text-slate-400" strokeWidth={2} />
+                  }
+                  {plan.isConsulted && (
+                    <span className="px-2 py-0.5 rounded-full bg-purple-50 text-[10px] font-black uppercase text-purple-600">Tư vấn</span>
+                  )}
+                </div>
+                {plan.diseaseName && plan.planName && (
+                  <p className="text-[13px] text-slate-600 line-clamp-1 leading-relaxed mb-1">
+                    <Highlighted text={plan.diseaseName} keyword={keyword} />
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {plan.severityLevel && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${severityColors[plan.severityLevel] ?? 'bg-slate-100 text-slate-500'}`}>
+                      <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5 -mt-px" strokeWidth={2.5} />
+                      {plan.severityLevel}
+                    </span>
+                  )}
+                  {plan.urgency && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${urgencyColors[plan.urgency] ?? 'bg-slate-100 text-slate-500'}`}>
+                      <Zap className="w-2.5 h-2.5 inline mr-0.5 -mt-px" strokeWidth={2.5} />
+                      {plan.urgency}
+                    </span>
+                  )}
+                  {plan.estimatedCost && (
+                    <span className="px-2 py-0.5 rounded-full bg-slate-50 text-[10px] font-bold text-slate-500">
+                      {plan.estimatedCost}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3 text-[11px] text-slate-400 font-medium">
+                  <span className="flex items-center gap-1">
+                    <Avatar src={avatar} name={name} alt={name} size="xs" className="border border-slate-200" />
+                    {name}
+                    {plan.creatorInfo?.isVerified && <BadgeCheck className="w-3 h-3 text-[#245A34]" strokeWidth={2.5} />}
+                  </span>
+                  {plan.eventCount != null && plan.eventCount > 0 && (
+                    <span className="flex items-center gap-1">
+                      <ClipboardList className="w-3 h-3" strokeWidth={2} />
+                      {plan.eventCount} sự kiện
+                    </span>
+                  )}
+                  {plan.applyCount != null && plan.applyCount > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Play className="w-3 h-3" strokeWidth={2} />
+                      {fmtStat(plan.applyCount)} áp dụng
+                    </span>
+                  )}
+                  {plan.createdAt && (
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" strokeWidth={2} />
+                      {formatDateTime(plan.createdAt)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={2} />
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 

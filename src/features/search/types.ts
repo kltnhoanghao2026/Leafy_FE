@@ -1,4 +1,4 @@
-export type SearchMode = "posts" | "profiles";
+export type SearchMode = "posts" | "profiles" | "plans";
 export type SearchSortDirection = "ASC" | "DESC";
 
 export interface SearchAuthorInfo {
@@ -39,6 +39,28 @@ export interface SearchProfileItem {
   wardCode: string | null;
   latitude: number | null;
   longitude: number | null;
+}
+
+export interface SearchPlanItem {
+  id: string;
+  creatorId: string | null;
+  ownerId: string | null;
+  planName: string | null;
+  diseaseName: string | null;
+  confidenceScore: number | null;
+  severityLevel: string | null;
+  urgency: string | null;
+  requiredInputs: string[] | null;
+  safetyWarnings: string[] | null;
+  successIndicators: string | null;
+  estimatedCost: string | null;
+  source: string | null;
+  isPublic: boolean | null;
+  isConsulted: boolean | null;
+  eventCount: number | null;
+  applyCount: number | null;
+  creatorInfo: SearchAuthorInfo | null;
+  createdAt: string | null;
 }
 
 export interface SearchSpringPage<T> {
@@ -83,18 +105,33 @@ export interface SearchProfilesParams {
   sortDir?: SearchSortDirection;
 }
 
+export interface SearchPlansParams {
+  searchTerm: string;
+  severityLevel?: string;
+  urgency?: string;
+  isPublic?: boolean;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDir?: SearchSortDirection;
+}
+
 export interface UnifiedSearchParams {
   searchTerm: string;
   postSize?: number;
   profileSize?: number;
+  planSize?: number;
 }
 
 export interface UnifiedSearchResult {
   searchTerm: string;
   posts: SearchPostItem[];
   profiles: SearchProfileItem[];
+  plans: SearchPlanItem[];
   totalPosts: number;
   totalProfiles: number;
+  totalPlans: number;
   postSize: number;
   profileSize: number;
+  planSize: number;
 }

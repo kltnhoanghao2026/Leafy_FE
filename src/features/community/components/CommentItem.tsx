@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Heart, RefreshCw, Send } from "lucide-react";
-import type { Comment } from "../types";
+import { ArrowBigDown, ArrowBigUp, RefreshCw, Send } from "lucide-react";
+import type { Comment, CommunityVoteType } from "../types";
 import {
   useCommunityReplies,
   useCreateCommunityComment,
@@ -23,12 +23,28 @@ export function CommentItem({
   comment,
   isReply = false,
 }: CommentItemProps) {
+  // ── Optimistic vote state — mirrors PostCard pattern ──────────────────────
+  const [userVote, setUserVote] = useState<CommunityVoteType | null>(
+    comment.currentUserVoteType ?? null,
+  );
+  const [upvoteCount, setUpvoteCount] = useState(comment.likes ?? 0);
+  const [downvoteCount, setDownvoteCount] = useState(comment.downvotes ?? 0);
+
+  // Sync when the server refreshes the comment (e.g. after query invalidation)
+  useEffect(() => {
+    setUserVote(comment.currentUserVoteType ?? null);
+    setUpvoteCount(comment.likes ?? 0);
+    setDownvoteCount(comment.downvotes ?? 0);
+  }, [comment.id, comment.currentUserVoteType, comment.likes, comment.downvotes]);
+
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [showReplies, setShowReplies] = useState(false);
+
   const voteComment = useVoteComment();
   const createComment = useCreateCommunityComment();
   const currentUser = useCommunityCurrentUser();
+
   const repliesQuery = useCommunityReplies(
     comment.id,
     { page: 0, size: 20 },
@@ -36,8 +52,57 @@ export function CommentItem({
   );
   const replies = repliesQuery.data?.items ?? [];
 
-  const handleLike = () => {
-    voteComment.mutate({ commentId: comment.id, type: "UPVOTE" });
+  const isVoting =
+    voteComment.isPending && voteComment.variables?.commentId === comment.id;
+
+  const upvoteActive = userVote === "UPVOTE";
+  const downvoteActive = userVote === "DOWNVOTE";
+  const score = upvoteCount - downvoteCount;
+
+  // ── Optimistic transition (same logic as PostCard) ────────────────────────
+  const applyVoteTransition = (nextVote: CommunityVoteType) => {
+    const prevVote = userVote;
+    let nextUserVote: CommunityVoteType | null = nextVote;
+    let nextUp = upvoteCount;
+    let nextDown = downvoteCount;
+
+    if (prevVote === nextVote) {
+      // Toggle off
+      nextUserVote = null;
+      if (nextVote === "UPVOTE") nextUp = Math.max(0, nextUp - 1);
+      else nextDown = Math.max(0, nextDown - 1);
+    } else if (nextVote === "UPVOTE") {
+      nextUp += 1;
+      if (prevVote === "DOWNVOTE") nextDown = Math.max(0, nextDown - 1);
+    } else {
+      nextDown += 1;
+      if (prevVote === "UPVOTE") nextUp = Math.max(0, nextUp - 1);
+    }
+
+    return { nextUserVote, nextUp, nextDown };
+  };
+
+  const onVote = (nextVote: CommunityVoteType) => {
+    if (isVoting) return;
+
+    const prevState = { userVote, upvoteCount, downvoteCount };
+    const { nextUserVote, nextUp, nextDown } = applyVoteTransition(nextVote);
+
+    setUserVote(nextUserVote);
+    setUpvoteCount(nextUp);
+    setDownvoteCount(nextDown);
+
+    voteComment.mutate(
+      { commentId: comment.id, type: nextVote },
+      {
+        onError: () => {
+          // Roll back on failure
+          setUserVote(prevState.userVote);
+          setUpvoteCount(prevState.upvoteCount);
+          setDownvoteCount(prevState.downvoteCount);
+        },
+      },
+    );
   };
 
   const handleSubmitReply = async (event: FormEvent<HTMLFormElement>) => {
@@ -66,7 +131,7 @@ export function CommentItem({
           src={comment.author.avatar}
           name={comment.author.name}
           alt={comment.author.name}
-          className={`\${isReply ? "w-8 h-8" : "w-10 h-10"} rounded-full object-cover border border-slate-200`}
+          className={`${isReply ? "w-8 h-8" : "w-10 h-10"} rounded-full object-cover border border-slate-200`}
         />
       </Link>
 
@@ -83,23 +148,64 @@ export function CommentItem({
           </p>
         </div>
 
-        <div className="flex items-center gap-4 mt-2 ml-2">
+        {/* ── Action row ─────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 mt-2 ml-2 flex-wrap">
           <span className="text-[12px] font-medium text-slate-400">
             {comment.timestamp}
           </span>
-          <button
-            type="button"
-            onClick={handleLike}
-            disabled={voteComment.isPending && voteComment.variables?.commentId === comment.id}
-            aria-label={`Upvote comment ${comment.id}`}
-            className={`text-[13px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              comment.isLikedByMe
-                ? "text-[#e41e3f]"
-                : "text-slate-500 hover:text-[#245A34]"
-            }`}
-          >
-            Like
-          </button>
+
+          {/* Vote capsule — [↑  score  ↓]  same style as PostCard */}
+          <div className="flex items-center rounded-full bg-slate-100 px-0.5 py-0.5">
+            <button
+              type="button"
+              onClick={() => onVote("UPVOTE")}
+              disabled={isVoting}
+              aria-label={`Upvote comment ${comment.id}`}
+              className={`h-7 w-9 flex items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-black/5 active:bg-black/5 ${
+                upvoteActive ? "text-[#245A34]" : "text-slate-500"
+              }`}
+            >
+              <ArrowBigUp
+                className={`h-[18px] w-[18px] ${upvoteActive ? "fill-[#245A34]" : "fill-transparent"}`}
+                strokeWidth={2}
+              />
+            </button>
+
+            <span
+              className={`min-w-[24px] text-center text-[12px] font-bold tracking-tight ${
+                score > 0
+                  ? "text-[#245A34]"
+                  : score < 0
+                    ? "text-red-600"
+                    : "text-gray-600"
+              }`}
+            >
+              {score > 0 ? `+${score}` : score}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => onVote("DOWNVOTE")}
+              disabled={isVoting}
+              aria-label={`Downvote comment ${comment.id}`}
+              className={`h-7 w-9 flex items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-black/5 active:bg-black/5 ${
+                downvoteActive ? "text-red-600" : "text-slate-500"
+              }`}
+            >
+              <ArrowBigDown
+                className={`h-[18px] w-[18px] ${downvoteActive ? "fill-red-600" : "fill-transparent"}`}
+                strokeWidth={2}
+              />
+            </button>
+          </div>
+
+          {/* up · down count */}
+          {(upvoteCount > 0 || downvoteCount > 0) && (
+            <span className="text-[11px] font-medium text-slate-400">
+              {upvoteCount} up · {downvoteCount} down
+            </span>
+          )}
+
           {!isReply ? (
             <button
               type="button"
@@ -110,30 +216,17 @@ export function CommentItem({
             </button>
           ) : null}
 
-          {comment.likes > 0 ? (
-            <div className="flex items-center gap-1 text-slate-400 ml-auto mr-2">
-              <span className="text-[13px] font-semibold">
-                {comment.likes}
-              </span>
-              <Heart
-                className={`w-3.5 h-3.5 ${
-                  comment.isLikedByMe ? "fill-[#e41e3f] text-[#e41e3f]" : ""
-                }`}
-                strokeWidth={2.5}
-              />
-            </div>
+          {/* View / Hide replies — same row as Reply */}
+          {!isReply && (comment.replyCount ?? 0) > 0 ? (
+            <button
+              type="button"
+              onClick={() => setShowReplies((current) => !current)}
+              className="text-[13px] font-bold text-[#245A34] hover:underline"
+            >
+              {showReplies ? "Hide replies" : `View ${comment.replyCount} replies`}
+            </button>
           ) : null}
         </div>
-
-        {!isReply && (comment.replyCount ?? 0) > 0 ? (
-          <button
-            type="button"
-            onClick={() => setShowReplies((current) => !current)}
-            className="mt-2 ml-2 text-[13px] font-bold text-[#245A34] hover:underline"
-          >
-            {showReplies ? "Hide replies" : `View ${comment.replyCount} replies`}
-          </button>
-        ) : null}
 
         {isReplying ? (
           <form onSubmit={handleSubmitReply} className="mt-4 flex gap-3 items-end">
@@ -205,4 +298,3 @@ export function CommentItem({
     </div>
   );
 }
-

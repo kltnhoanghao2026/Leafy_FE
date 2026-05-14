@@ -4,6 +4,7 @@ import {
   RefreshCw,
   UserCheck,
   FileText,
+  ClipboardList,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -24,6 +25,8 @@ import {
   useResetProfileIndex,
   useReindexPosts,
   useResetPostIndex,
+  useReindexPlans,
+  useResetPlanIndex,
   useFailedEvents,
   useFailedEventsCount,
   useResolveFailedEvent,
@@ -140,9 +143,6 @@ function ProfileSyncCard() {
   const resumeSync = useResumeProfileSync();
   const reindexProfiles = useReindexProfiles();
   const resetProfileIndex = useResetProfileIndex();
-
-  const syncCommunityProfiles = useSyncCommunityProfiles();
-  const syncCommunityResult = syncCommunityProfiles.data?.data?.data;
 
   const isActive =
     syncStatus?.status === "STARTING" || syncStatus?.status === "RUNNING";
@@ -395,6 +395,96 @@ function PostSyncCard() {
           className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {resetPostIndex.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <TriangleAlert className="w-4 h-4" />
+          )}
+          Xoá &amp; khởi tạo lại
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Plan Sync Card ────────────────────────────────────────────────────────────
+
+function PlanSyncCard() {
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [reindexSize, setReindexSize] = useState(200);
+  const reindexPlans = useReindexPlans();
+  const resetPlanIndex = useResetPlanIndex();
+
+  const handleReset = () => {
+    resetPlanIndex.mutate(undefined, {
+      onSuccess: () => setShowResetConfirm(false),
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 flex flex-col gap-4 h-full">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-50 shrink-0">
+          <ClipboardList className="w-5 h-5 text-green-600" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-slate-800">
+            Đồng bộ Kế hoạch Điều trị
+          </h3>
+          <p className="text-xs text-slate-500">
+            Tái lập hoặc xoá và khởi tạo lại chỉ mục kế hoạch trong
+            Elasticsearch
+          </p>
+        </div>
+      </div>
+
+      {showResetConfirm && (
+        <ConfirmBanner
+          message="Thao tác này sẽ xoá toàn bộ chỉ mục kế hoạch hiện tại và bắt đầu lại từ đầu. Không thể hoàn tác."
+          onConfirm={handleReset}
+          onCancel={() => setShowResetConfirm(false)}
+        />
+      )}
+
+      {/* Batch size control */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-slate-500 shrink-0">Kích thước batch:</label>
+        <input
+          id="plan-reindex-size"
+          type="number"
+          min={50}
+          max={2000}
+          step={50}
+          value={reindexSize}
+          onChange={(e) => setReindexSize(Math.max(50, Number(e.target.value)))}
+          disabled={reindexPlans.isPending || resetPlanIndex.isPending}
+          className="w-24 px-2 py-1 text-xs rounded-md border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-green-400 disabled:opacity-50"
+        />
+      </div>
+
+      <div className="flex gap-2 flex-wrap mt-auto">
+        <button
+          onClick={() => reindexPlans.mutate(reindexSize)}
+          disabled={reindexPlans.isPending || resetPlanIndex.isPending}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {reindexPlans.isPending ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          Tái lập chỉ mục
+        </button>
+
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          disabled={
+            reindexPlans.isPending ||
+            resetPlanIndex.isPending ||
+            showResetConfirm
+          }
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {resetPlanIndex.isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <TriangleAlert className="w-4 h-4" />
@@ -848,6 +938,7 @@ export function DataSyncPage() {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 animate-in fade-in duration-300 slide-in-from-bottom-2">
             <ProfileSyncCard />
             <PostSyncCard />
+            <PlanSyncCard />
           </div>
         )}
 

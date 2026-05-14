@@ -21,6 +21,17 @@ import {
   formatDateTime,
   formatNumber,
 } from "../../metrics-view/utils/format";
+import { Select } from "../../../components/ui/Select";
+import { useTranslation } from "../../../i18n";
+import {
+  formatAlertStatusLabel,
+  formatAlertTypeLabel,
+  formatSeverityLabel,
+} from "../../iot/utils/iotTranslation";
+import {
+  alertSeverityClasses,
+  alertStatusClasses,
+} from "../utils/alertLabels";
 
 type TimeRange = "all" | "24h" | "7d" | "30d";
 
@@ -31,27 +42,6 @@ const statusOptions: AlertStatus[] = [
   "RESOLVED",
   "CLOSED",
 ];
-
-const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
-  { value: "24h", label: "Last 24h" },
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "all", label: "All time" },
-];
-
-const severityClasses: Record<AlertSeverity, string> = {
-  LOW: "bg-blue-50 text-blue-600 border-blue-100",
-  MEDIUM: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  HIGH: "bg-orange-50 text-orange-700 border-orange-100",
-  CRITICAL: "bg-red-50 text-red-600 border-red-100",
-};
-
-const statusClasses: Record<AlertStatus, string> = {
-  OPEN: "bg-red-50 text-red-600 border-red-100",
-  ACKNOWLEDGED: "bg-yellow-50 text-yellow-700 border-yellow-100",
-  RESOLVED: "bg-green-50 text-green-700 border-green-100",
-  CLOSED: "bg-slate-50 text-slate-600 border-slate-100",
-};
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
   if (range === "all") {
@@ -78,6 +68,7 @@ const timeRangeToIsoWindow = (range: TimeRange) => {
 };
 
 export function AlertsPage() {
+  const { t } = useTranslation();
   const [selectedFarmPlotId, setSelectedFarmPlotId] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -143,6 +134,13 @@ export function AlertsPage() {
   const lifecycleActionError =
     acknowledgeAlert.isError || resolveAlert.isError;
 
+  const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
+    { value: "24h", label: t("iot.alerts.timeRanges.last24h") },
+    { value: "7d", label: t("iot.alerts.timeRanges.last7d") },
+    { value: "30d", label: t("iot.alerts.timeRanges.last30d") },
+    { value: "all", label: t("iot.alerts.timeRanges.all") },
+  ];
+
   const isAcknowledging = (alertId: string) =>
     acknowledgeAlert.isPending && acknowledgeAlert.variables === alertId;
 
@@ -150,16 +148,48 @@ export function AlertsPage() {
     resolveAlert.isPending && resolveAlert.variables === alertId;
 
   const resolveDeviceLabel = (deviceId: string | null) => {
-    if (!deviceId) return "No device";
+    if (!deviceId) return t("iot.alerts.scope.noDevice");
     const device = deviceMap.get(deviceId);
-    if (!device) return `Device ${compactId(deviceId)}`;
-    return device.deviceName || device.deviceCode || compactId(deviceId);
+    if (!device) return t("iot.alerts.scope.missingDevice");
+    return device.deviceName || device.deviceCode || t("iot.alerts.scope.unnamedDevice");
   };
 
   const resolveZoneLabel = (zoneId: string | null) => {
-    if (!zoneId) return "No zone";
+    if (!zoneId) return t("iot.alerts.scope.noZone");
     const zone = zoneMap.get(zoneId);
-    return zone?.zoneName || `Zone ${compactId(zoneId)}`;
+    return zone?.zoneName || t("iot.alerts.scope.missingZone");
+  };
+
+  const readableAlertValue = (alert: {
+    triggerValue: number | null;
+    thresholdMin: number | null;
+    thresholdMax: number | null;
+  }) => {
+    const value =
+      alert.triggerValue === null || alert.triggerValue === undefined
+        ? t("iot.alerts.value.noReading")
+        : t("iot.alerts.value.measured")(formatNumber(alert.triggerValue));
+
+    if (alert.thresholdMin !== null && alert.thresholdMax !== null) {
+      return `${value}; ${t("iot.alerts.value.safeRange")(
+        formatNumber(alert.thresholdMin),
+        formatNumber(alert.thresholdMax),
+      )}`;
+    }
+
+    if (alert.thresholdMax !== null && alert.thresholdMax !== undefined) {
+      return `${value}; ${t("iot.alerts.value.maxThreshold")(
+        formatNumber(alert.thresholdMax),
+      )}`;
+    }
+
+    if (alert.thresholdMin !== null && alert.thresholdMin !== undefined) {
+      return `${value}; ${t("iot.alerts.value.minThreshold")(
+        formatNumber(alert.thresholdMin),
+      )}`;
+    }
+
+    return value;
   };
 
   return (
@@ -167,11 +197,10 @@ export function AlertsPage() {
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
         <div>
           <h2 className="text-[28px] font-bold text-[#111827] tracking-tight">
-            Alert center
+            {t("iot.alerts.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium mt-1 max-w-2xl">
-            Filter collector alert events by farm context, zone, device,
-            severity, status, and time window.
+            {t("iot.alerts.description")}
           </p>
         </div>
 
@@ -181,7 +210,7 @@ export function AlertsPage() {
           className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
         >
           <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Refresh
+          {t("iot.common.refresh")}
         </button>
       </div>
 
@@ -189,181 +218,174 @@ export function AlertsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Farm plot
+              {t("iot.alerts.filters.farmPlot")}
             </span>
-            <select
-              aria-label="Farm plot"
+            <Select
+              ariaLabel="Farm plot"
               value={selectedFarmPlotId}
-              onChange={(event) => {
-                setSelectedFarmPlotId(event.target.value);
+              onChange={(value) => {
+                setSelectedFarmPlotId(String(value));
                 setSelectedZoneId("");
                 setSelectedDeviceId("");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: plotsQuery.isLoading
+                    ? t("iot.alerts.filters.loadingFarmPlots")
+                    : t("iot.alerts.filters.allFarmPlots"),
+                },
+                ...farmPlots.map((plot) => ({ value: plot.id, label: plot.name })),
+              ]}
+              className="mt-2"
               disabled={profileQuery.isLoading || plotsQuery.isLoading}
-            >
-              <option value="">
-                {plotsQuery.isLoading ? "Loading farms..." : "All farm plots"}
-              </option>
-              {farmPlots.map((plot) => (
-                <option key={plot.id} value={plot.id}>
-                  {plot.name}
-                </option>
-              ))}
-            </select>
+            />
             <p className="mt-2 text-xs font-semibold text-slate-500">
-              Farm plot narrows zone/device options only. Alert API does not
-              support farmPlotId filtering directly.
+              {t("iot.alerts.filters.farmHint")}
             </p>
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Zone
+              {t("iot.alerts.filters.zone")}
             </span>
-            <select
-              aria-label="Zone"
+            <Select
+              ariaLabel="Zone"
               value={selectedZoneId}
-              onChange={(event) => {
-                setSelectedZoneId(event.target.value);
+              onChange={(value) => {
+                setSelectedZoneId(String(value));
                 setSelectedDeviceId("");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: !selectedFarmPlotId
+                    ? t("iot.alerts.filters.selectFarmFirst")
+                    : zonesQuery.isLoading
+                      ? t("iot.alerts.filters.loadingZones")
+                      : t("iot.alerts.filters.allZones"),
+                },
+                ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+              ]}
+              className="mt-2"
               disabled={!selectedFarmPlotId || zonesQuery.isLoading}
-            >
-              <option value="">
-                {!selectedFarmPlotId
-                  ? "Select farm first"
-                  : zonesQuery.isLoading
-                    ? "Loading zones..."
-                    : "All zones"}
-              </option>
-              {zones.map((zone) => (
-                <option key={zone.id} value={zone.id}>
-                  {zone.zoneName}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Device
+              {t("iot.alerts.filters.device")}
             </span>
-            <select
-              aria-label="Device"
+            <Select
+              ariaLabel="Device"
               value={effectiveSelectedDeviceId}
-              onChange={(event) => {
-                setSelectedDeviceId(event.target.value);
+              onChange={(value) => {
+                setSelectedDeviceId(String(value));
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
+              options={[
+                {
+                  value: "",
+                  label: devicesQuery.isLoading
+                    ? t("iot.alerts.filters.loadingDevices")
+                    : t("iot.alerts.filters.allDevices"),
+                },
+                ...devices.map((device) => ({
+                  value: device.id,
+                  label: device.deviceName || device.deviceCode || t("iot.alerts.scope.unnamedDevice"),
+                })),
+              ]}
+              className="mt-2"
               disabled={devicesQuery.isLoading}
-            >
-              <option value="">
-                {devicesQuery.isLoading ? "Loading devices..." : "All devices"}
-              </option>
-              {devices.map((device) => (
-                <option key={device.id} value={device.id}>
-                  {device.deviceName || device.deviceCode || compactId(device.id)}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Time range
+              {t("iot.alerts.filters.timeRange")}
             </span>
-            <select
-              aria-label="Time range"
+            <Select
+              ariaLabel="Time range"
               value={selectedTimeRange}
-              onChange={(event) => {
-                setSelectedTimeRange(event.target.value as TimeRange);
+              onChange={(value) => {
+                setSelectedTimeRange(value as TimeRange);
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              {timeRangeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              options={timeRangeOptions}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Severity
+              {t("iot.alerts.filters.severity")}
             </span>
-            <select
-              aria-label="Severity"
+            <Select
+              ariaLabel="Severity"
               value={severity}
-              onChange={(event) => {
-                setSeverity(event.target.value as AlertSeverity | "");
+              onChange={(value) => {
+                setSeverity(value as AlertSeverity | "");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              <option value="">All severities</option>
-              {severityOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: t("iot.alerts.filters.allSeverities") },
+                ...severityOptions.map((option) => ({
+                  value: option,
+                  label: formatSeverityLabel(t, option),
+                })),
+              ]}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Status
+              {t("iot.alerts.filters.status")}
             </span>
-            <select
-              aria-label="Status"
+            <Select
+              ariaLabel="Status"
               value={status}
-              onChange={(event) => {
-                setStatus(event.target.value as AlertStatus | "");
+              onChange={(value) => {
+                setStatus(value as AlertStatus | "");
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              <option value="">All statuses</option>
-              {statusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: t("iot.alerts.filters.allStatuses") },
+                ...statusOptions.map((option) => ({
+                  value: option,
+                  label: formatAlertStatusLabel(t, option),
+                })),
+              ]}
+              className="mt-2"
+            />
           </label>
 
           <label className="block">
             <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-              Page size
+              {t("iot.alerts.filters.pageSize")}
             </span>
-            <select
-              aria-label="Page size"
+            <Select
+              ariaLabel="Page size"
               value={size}
-              onChange={(event) => {
-                setSize(Number(event.target.value));
+              onChange={(value) => {
+                setSize(Number(value));
                 resetToFirstPage();
               }}
-              className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#245A34]"
-            >
-              {[10, 20, 50].map((option) => (
-                <option key={option} value={option}>
-                  {option} / page
-                </option>
-              ))}
-            </select>
+              options={[10, 20, 50].map((option) => ({
+                value: option,
+                label: `${option} / page`,
+              }))}
+              className="mt-2"
+            />
           </label>
         </div>
       </section>
 
       {alertEventsQuery.isLoading ? (
         <div
-          aria-label="Loading alert events"
+          aria-label={t("iot.alerts.states.loading")}
           className="rounded-[2rem] bg-white border border-slate-100 p-5 shadow-sm"
         >
           {[0, 1, 2, 3].map((item) => (
@@ -380,10 +402,10 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-black text-red-700">
-                Alert events could not be loaded
+                {t("iot.alerts.states.error")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-red-600">
-                The collector returned an error for the current filters.
+                {t("iot.alerts.states.errorDescription")}
               </p>
             </div>
             <button
@@ -392,7 +414,7 @@ export function AlertsPage() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Retry
+              {t("iot.common.retry")}
             </button>
           </div>
         </div>
@@ -404,11 +426,10 @@ export function AlertsPage() {
           className="rounded-[2rem] border border-red-100 bg-red-50 p-5 shadow-sm"
         >
           <h3 className="text-base font-black text-red-700">
-            Alert lifecycle action failed
+            {t("iot.alerts.states.mutationError")}
           </h3>
           <p className="mt-1 text-sm font-semibold text-red-600">
-            The collector could not update this alert. Check the alert status
-            and try again.
+            {t("iot.alerts.states.mutationErrorDescription")}
           </p>
         </div>
       ) : null}
@@ -418,11 +439,13 @@ export function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
             <div>
               <p className="text-sm font-black text-slate-800">
-                {formatNumber(pagedAlerts.totalItems)} alert events
+                {t("iot.alerts.count")(pagedAlerts.totalItems)}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                Page {formatNumber(pagedAlerts.page + 1)} of{" "}
-                {formatNumber(Math.max(pagedAlerts.totalPages, 1))}
+                {t("iot.alerts.page")(
+                  pagedAlerts.page + 1,
+                  Math.max(pagedAlerts.totalPages, 1),
+                )}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -451,10 +474,10 @@ export function AlertsPage() {
             <div className="p-10 text-center">
               <AlertTriangle className="mx-auto h-8 w-8 text-slate-400" />
               <h3 className="mt-4 text-lg font-black text-slate-800">
-                No alert events
+                {t("iot.alerts.states.empty")}
               </h3>
               <p className="mt-1 text-sm font-semibold text-slate-500">
-                The backend returned an empty page for these filters.
+                {t("iot.alerts.states.emptyDescription")}
               </p>
             </div>
           ) : (
@@ -463,22 +486,22 @@ export function AlertsPage() {
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Alert
+                      {t("iot.alerts.table.alert")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Severity
+                      {t("iot.alerts.table.severity")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Status
+                      {t("iot.alerts.table.status")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Scope
+                      {t("iot.alerts.table.scope")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Opened
+                      {t("iot.alerts.table.openedAt")}
                     </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                      Actions
+                      {t("iot.alerts.table.actions")}
                     </th>
                   </tr>
                 </thead>
@@ -496,29 +519,31 @@ export function AlertsPage() {
                       <tr key={alert.id} className="hover:bg-slate-50/60">
                         <td className="px-5 py-4 align-top">
                           <p className="text-sm font-black text-slate-800">
-                            {alert.message}
+                            {formatAlertTypeLabel(t, alert.alertType)}
                           </p>
                           <p className="mt-1 text-xs font-semibold text-slate-500">
-                            {alert.alertType || "Alert"} - value{" "}
-                            {formatNumber(alert.triggerValue)}
+                            {alert.message}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-slate-400">
+                            {readableAlertValue(alert)}
                           </p>
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                              severityClasses[alert.severity]
+                              alertSeverityClasses[alert.severity]
                             }`}
                           >
-                            {alert.severity}
+                            {formatSeverityLabel(t, alert.severity)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-black ${
-                              statusClasses[alert.status]
+                              alertStatusClasses[alert.status]
                             }`}
                           >
-                            {alert.status}
+                            {formatAlertStatusLabel(t, alert.status)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -544,8 +569,8 @@ export function AlertsPage() {
                               )}`}
                             >
                               {acknowledgePending
-                                ? "Acknowledging..."
-                                : "Acknowledge"}
+                                ? t("iot.alerts.actions.acknowledging")
+                                : t("iot.alerts.actions.acknowledge")}
                             </button>
                             <button
                               type="button"
@@ -554,7 +579,9 @@ export function AlertsPage() {
                               className="rounded-full bg-[#245A34] px-3 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label={`Resolve alert ${compactId(alert.id)}`}
                             >
-                              {resolvePending ? "Resolving..." : "Resolve"}
+                              {resolvePending
+                                ? t("iot.alerts.actions.resolving")
+                                : t("iot.alerts.actions.resolve")}
                             </button>
                           </div>
                         </td>
