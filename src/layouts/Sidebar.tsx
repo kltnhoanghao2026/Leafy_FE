@@ -64,7 +64,7 @@ export function Sidebar() {
     { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
     { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
     { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
-    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
+    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: ScanSearch },
     { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
   ];
 

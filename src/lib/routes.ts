@@ -26,7 +26,6 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
-    DISEASE_PREDICTION: "/dashboard/disease-prediction",
     RAG_PANEL: "/dashboard/rag-panel",
     RAG_TREATMENT_PLAN: (planId: string) =>
       `/dashboard/rag-panel/treatment-plans/${planId}`,

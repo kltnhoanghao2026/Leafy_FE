@@ -67,3 +67,9 @@ export const useDeleteDiagnoseRequestMutation = () => {
     },
   });
 };
+
+export const useDetectLeafMutation = () => {
+  return useMutation({
+    mutationFn: (file: File) => diseaseApi.detectLeaf(file),
+  });
+};

@@ -15,9 +15,6 @@ import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
 import { I18nProvider } from "./i18n";
 import { WebSocketProvider } from "./providers/WebSocketProvider";
-
-import { AdminOverviewPage } from "./features/admin/overview";
-import { UserManagementPage } from "./features/admin/users";
 import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
 import { ContentModerationPage } from "./features/admin/content-moderation";
 import { SystemHealthPage } from "./features/admin/health";
@@ -33,7 +30,6 @@ import { UserManagementPage } from "./features/admin/users";
 import { AdminOverviewPage } from "./features/admin/overview";
 import { AdminLayout } from "./layouts/AdminLayout";
 
-import { DiseasePredictionPage } from "./features/disease-detection";
 import { DocumentIngestionPage } from "./features/admin/knowledge-base";
 
 const AgricultureOverviewPage = lazy(() =>
@@ -251,7 +247,6 @@ function App() {
                   </Suspense>
                 }
               />
-              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
               <Route
                 path="rag-panel/treatment-plans/:planId"
                 element={

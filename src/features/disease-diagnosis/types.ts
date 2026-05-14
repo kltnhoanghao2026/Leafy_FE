@@ -41,3 +41,25 @@ export interface DiagnoseResult {
   result: DiagnoseResultItem[];
   timeStamp: string;
 }
+
+export interface BoundingBox {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface LeafDetection {
+  className: string;
+  confidenceScore: number;
+  boundingBox: BoundingBox;
+}
+
+export interface LeafDetectionResponse {
+  detections: LeafDetection[];
+  modelName: string;
+  imageWidth: number;
+  imageHeight: number;
+  processingTimeMs: number | null;
+  detectionCount: number;
+}
