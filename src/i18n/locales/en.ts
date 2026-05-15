@@ -6,6 +6,8 @@ import type { TranslationDict } from "../types";
  * Any key missing here will be a TypeScript error.
  */
 import { settingsEn } from "../../features/settings/locales/en";
+import { plantManagementEn } from "../../features/plant-management/locales/en";
+import { notificationsEn } from "../../features/notifications/locales/en";
 
 export const en: TranslationDict = {
   common: {
@@ -843,6 +845,10 @@ export const en: TranslationDict = {
   },
 
   settings: settingsEn,
+
+  plantManagement: plantManagementEn,
+
+  notifications: notificationsEn,
 
   chat: {
     emptyStateTitle: "Leafy Chat",

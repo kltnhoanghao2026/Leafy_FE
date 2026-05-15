@@ -13,9 +13,21 @@ export interface UserNotificationResponse {
   id: string
   type: string
   referenceId: string | null
+  /** Most-recent actor (alias for `actorIds[0]`). */
   actorId: string | null
   actorName: string | null
   actorAvatar: string | null
+  /**
+   * Distinct profile IDs of all actors merged into this notification —
+   * most-recent first. Always contains at least `actorId` for non-batched rows.
+   */
+  actorIds: string[]
+  /** `actorIds.length` — denormalized for fast read access. */
+  actorCount: number
+  /** `max(0, actorCount - 1)` — used for "X and N others" rendering. */
+  othersCount: number
+  /** Total number of raw events merged into this notification. */
+  totalEventCount: number
   title: string
   body: string
   isRead: boolean
@@ -34,6 +46,10 @@ export interface InAppNotificationPayload {
   actorId: string | null
   actorName: string | null
   actorAvatar: string | null
+  actorIds: string[]
+  actorCount: number
+  othersCount: number
+  totalEventCount: number
   title: string
   body: string
   occurredAt: string

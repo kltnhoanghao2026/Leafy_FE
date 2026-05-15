@@ -4,6 +4,7 @@ import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
 import { fileApi } from '../../../lib/api/fileApi';
 import { chatApi } from '../api/chatApi';
+import { ModalShell } from '../../../components/ui/ModalShell';
 
 interface Profile {
   id: string;
@@ -91,18 +92,30 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200 overflow-hidden">
-
-        {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-md shrink-0">
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Tạo nhóm mới</h2>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <ModalShell
+      onClose={handleClose}
+      title="Tạo nhóm mới"
+      maxWidth="max-w-md"
+      headerClassName="bg-white/80 backdrop-blur-md"
+      footer={
+        <button
+          disabled={!canCreate || createGroupMutation.isPending || isUploadingAvatar}
+          onClick={() => createGroupMutation.mutate()}
+          className="w-full py-3 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:hover:bg-green-600 transition-all flex items-center justify-center gap-2"
+        >
+          {createGroupMutation.isPending || isUploadingAvatar ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Tạo nhóm {selectedMembers.length >= 2 && `(${selectedMembers.length + 1} thành viên)`}
+            </>
+          )}
+        </button>
+      }
+    >
 
         {/* Group name and Avatar */}
         <div className="px-5 pt-4 pb-3 border-b border-gray-100 shrink-0">
@@ -239,26 +252,6 @@ export function CreateGroupModal({ isOpen, onClose, onGroupCreated }: CreateGrou
         </div>
 
         {/* Create button */}
-        <div className="p-4 border-t border-gray-100 shrink-0">
-          <button
-            disabled={!canCreate || createGroupMutation.isPending || isUploadingAvatar}
-            onClick={() => createGroupMutation.mutate()}
-            className="w-full py-3 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:hover:bg-green-600 transition-all flex items-center justify-center gap-2"
-          >
-            {createGroupMutation.isPending || isUploadingAvatar ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Tạo nhóm {selectedMembers.length >= 2 && `(${selectedMembers.length + 1} thành viên)`}
-              </>
-            )}
-          </button>
-        </div>
-
-      </div>
-    </div>
+      </ModalShell>
   );
 }

@@ -1,7 +1,27 @@
-export type CommunityPostType = "FEED" | "SHARE";
+export type CommunityPostType = "FEED" | "SHARE" | "PLAN_SHARE";
 export type CommunityVisibility = "FRIEND" | "ALL" | "ONLY_ME";
 export type CommunityVoteType = "UPVOTE" | "DOWNVOTE";
 export type CommunityVoteTargetType = "POST" | "COMMENT";
+export type CommunityTreatmentStatus = "PENDING" | "APPLYING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
+
+/** Embedded plan snapshot returned by the backend on PLAN_SHARE posts */
+export interface CommunityPlanInfo {
+  id: string;
+  planName: string | null;
+  diseaseName: string | null;
+  severityLevel: string | null;
+  urgency: string | null;
+  status: CommunityTreatmentStatus;
+  estimatedCost: string | null;
+  confidenceScore: number | null;
+  requiredInputs: string[] | null;
+  safetyWarnings: string[] | null;
+  successIndicators: string | null;
+  applyCount: number | null;
+  eventCount?: number | null;
+  isPublic: boolean;
+  createdAt: string | null;
+}
 
 export interface AuthorSummary {
   id: string;
@@ -33,7 +53,7 @@ export interface Post {
   title?: string | null;
   /** Hashtag list from post content */
   hashtags?: string[] | null;
-  /** Post type — FEED or SHARE */
+  /** Post type — FEED, SHARE, or PLAN_SHARE */
   postType: CommunityPostType;
   images?: string[];
   isUrgent?: boolean;
@@ -46,6 +66,10 @@ export interface Post {
   commentsList?: Comment[];
   shares: number;
   sharedPost?: SharedPostSnapshot;
+  /** ID of a treatment plan attached to this post (PLAN_SHARE posts) */
+  planId?: string | null;
+  /** Embedded plan snapshot — present when the backend hydrates it */
+  planInfo?: CommunityPlanInfo | null;
 }
 
 export interface SharedPostSnapshot {
@@ -116,6 +140,10 @@ export interface CommunityPostResponse {
   rootPostId: string | null;
   location: CommunityLocationInfo | null;
   visibility: CommunityVisibility;
+  /** ID of the treatment plan attached to this post (PLAN_SHARE posts only) */
+  planId: string | null;
+  /** Embedded plan snapshot hydrated by the backend on PLAN_SHARE posts */
+  planInfo: CommunityPlanInfo | null;
   stats: CommunityPostStats | null;
   currentUserVoteType: CommunityVoteType | null;
   uploadedAt: string | null;
@@ -136,6 +164,8 @@ export interface CommunityCommentResponse {
   replyCount: number;
   upvoteCount: number;
   downvoteCount: number;
+  /** The authenticated caller's current vote — null if they haven't voted */
+  currentUserVoteType: CommunityVoteType | null;
   edited?: boolean;
   isEdited?: boolean;
   active: boolean;
@@ -175,6 +205,8 @@ export interface CreateCommunityPostRequest {
   rootPostId?: string | null;
   location?: CommunityLocationInfo | null;
   visibility: CommunityVisibility;
+  /** ID of a treatment plan to attach. Required when postType is PLAN_SHARE. */
+  planId?: string | null;
 }
 
 export interface CreateCommunityCommentRequest {

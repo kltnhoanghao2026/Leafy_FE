@@ -1,2 +1,2 @@
 export { searchKeys } from "./keys";
-export { useSearchPosts, useSearchProfiles, useUnifiedSearch } from "./queries";
+export { useSearchPosts, useSearchProfiles, useSearchPlans, useUnifiedSearch } from "./queries";

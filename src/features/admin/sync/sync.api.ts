@@ -35,6 +35,11 @@ export interface ProfileSyncResult {
   indexedCount: number;
 }
 
+/** Result type for plan reindex / reset operations. */
+export interface PlanSyncResult {
+  indexedCount: number;
+}
+
 export interface FailedEventDto {
   id: string;
   eventId: string | null;
@@ -113,6 +118,18 @@ export const syncApi = {
   resetProfileIndex: () =>
     apiClient.post<ApiEnvelope<ProfileSyncResult>>(
       API_ENDPOINTS.ADMIN.SYNC.PROFILES_RESET,
+    ),
+
+  reindexPlans: (size?: number) =>
+    apiClient.post<ApiEnvelope<PlanSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PLANS_REINDEX,
+      null,
+      { params: size != null ? { size } : undefined },
+    ),
+
+  resetPlanIndex: () =>
+    apiClient.post<ApiEnvelope<PlanSyncResult>>(
+      API_ENDPOINTS.ADMIN.SYNC.PLANS_RESET,
     ),
 
   listFailedEvents: (params: FailedEventsListParams = {}) =>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { ModalShell } from '../../../components/ui/ModalShell'
 
 interface EditDeviceModalProps {
   isOpen: boolean
@@ -24,25 +24,12 @@ export function EditDeviceModal({ isOpen, onClose, onEdit, device, zones }: Edit
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="bg-white rounded-[2rem] p-6 lg:p-8 w-full max-w-md relative z-10 shadow-2xl">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-[20px] font-bold text-gray-900 tracking-tight">Cập nhật Module</h2>
-          <button 
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-50 text-slate-500 hover:bg-slate-200 flex flex-col items-center justify-center transition-colors shadow-sm"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
+    <ModalShell
+      onClose={onClose}
+      title="Cập nhật Module"
+      maxWidth="max-w-md"
+    >
+      <div className="p-6 lg:p-8">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col gap-2">
             <label className="text-[13px] font-bold text-slate-700 ml-1">ID Thiết bị</label>
@@ -91,6 +78,6 @@ export function EditDeviceModal({ isOpen, onClose, onEdit, device, zones }: Edit
           </div>
         </form>
       </div>
-    </div>
+    </ModalShell>
   )
 }

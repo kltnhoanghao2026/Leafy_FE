@@ -9,6 +9,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -219,10 +220,16 @@ function RuleFormDialog({
   }, [devices, form.deviceId, onFormChange]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-      role="dialog"
-      aria-modal="true"
+    <ModalShell
+      onClose={onClose}
+      title={editingRule ? "Edit alert rule" : "Create alert rule"}
+      subtitle={
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          Pick farm, zone, and device where possible. Sensor type requires a real backend UUID.
+        </p>
+      }
+      maxWidth="sm:max-w-5xl"
+      backdropColor="bg-slate-950/40"
     >
       <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
         <div className="mb-6 flex items-start justify-between gap-4">
@@ -245,7 +252,6 @@ function RuleFormDialog({
             <X className="h-4 w-4" strokeWidth={3} />
           </button>
         </div>
-
         <form onSubmit={onSubmit} className="space-y-5">
           <section className="rounded-[1.5rem] border border-slate-100 bg-slate-50 p-4">
             <h4 className="text-sm font-black uppercase tracking-widest text-slate-500">
@@ -539,7 +545,7 @@ function RuleFormDialog({
           </div>
         </form>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
@@ -1053,6 +1059,12 @@ export function AlertRulesPage() {
       ) : null}
 
       {deleteTarget ? (
+<<<<<<< HEAD
+        <ModalShell
+          onClose={() => setDeleteTarget(null)}
+          title="Delete alert rule?"
+          subtitle={
+=======
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
           role="dialog"
@@ -1062,10 +1074,15 @@ export function AlertRulesPage() {
             <h3 className="text-xl font-black text-slate-900">
               {t("iot.alertRules.deleteDialog.title")}
             </h3>
+>>>>>>> fb4fe6f67d668c78e6d98d5f490b055a14e52a1c
             <p className="mt-2 text-sm font-semibold text-slate-600">
               {t("iot.alertRules.deleteDialog.description")}
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+          }
+          maxWidth="max-w-md"
+          backdropColor="bg-slate-950/40"
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setDeleteTarget(null)}
@@ -1084,8 +1101,8 @@ export function AlertRulesPage() {
                   : t("iot.alertRules.deleteDialog.confirm")}
               </button>
             </div>
-          </div>
-        </div>
+          }
+        />
       ) : null}
     </div>
   );

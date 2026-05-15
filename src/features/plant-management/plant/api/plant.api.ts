@@ -2,12 +2,15 @@ import apiClient from '../../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../../lib/routes';
 import type { ApiEnvelope } from '../../../../shared/types/api';
 import type {
+  BulkOperationResult,
+  BulkPlantDeleteRequest,
+  BulkPlantStatusUpdateRequest,
   PageResponse,
   PlantCreateRequest,
   PlantResponse,
   PlantUpdateRequest,
 } from '../../shared/types';
-import { unwrapApiData, unwrapPageContent } from '../../shared/api/apiUtils';
+import { unwrapApiData, unwrapPageContent, toPageResponse } from '../../shared/api/apiUtils';
 
 const defaultPageParams = {
   page: 0,
@@ -38,7 +41,7 @@ export const plantApi = {
         search: params.search || undefined,
       },
     });
-    return unwrapPageContent(unwrapApiData(response.data));
+    return toPageResponse(unwrapApiData(response.data));
   },
 
   getPlantById: async (plantId: string) => {
@@ -84,5 +87,19 @@ export const plantApi = {
     await apiClient.delete<ApiEnvelope<void> | void>(
       API_ENDPOINTS.PLANTS.ITEM(plantId),
     );
+  },
+
+  bulkUpdateStatus: async (payload: BulkPlantStatusUpdateRequest): Promise<BulkOperationResult> => {
+    const response = await apiClient.patch<
+      ApiEnvelope<BulkOperationResult> | BulkOperationResult
+    >(API_ENDPOINTS.PLANTS.BULK_STATUS, payload);
+    return unwrapApiData(response.data) as BulkOperationResult;
+  },
+
+  bulkDeletePlants: async (payload: BulkPlantDeleteRequest): Promise<BulkOperationResult> => {
+    const response = await apiClient.delete<
+      ApiEnvelope<BulkOperationResult> | BulkOperationResult
+    >(API_ENDPOINTS.PLANTS.BULK_DELETE, { data: payload });
+    return unwrapApiData(response.data) as BulkOperationResult;
   },
 };

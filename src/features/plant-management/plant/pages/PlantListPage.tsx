@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Search, Sprout } from "lucide-react";
+import { Check, Loader2, Minus, RefreshCw, Search, Sprout, Trash2, X } from "lucide-react";
 import { ConfirmDeleteDialog } from '../../../farm-management/components/ConfirmDeleteDialog';
 import { useFarmPlots, useFarmZones } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
 import { PlantCard } from "../components/PlantCard";
 import { PlantFormDialog } from "../components/PlantFormDialog";
+import { ROUTES } from '../../../../lib/routes';
+import { PagedGrid } from '../../../../components/ui/PagedGrid';
+import { FilterCard } from '../../../../components/ui/FilterCard';
 import {
+  useBulkDeletePlants,
+  useBulkUpdatePlantStatus,
   useCreatePlant,
   useDeletePlant,
   useMyPlants,
@@ -36,6 +41,12 @@ export function PlantListPage() {
   const [farmZoneFilter, setFarmZoneFilter] = useState("");
   const [speciesFilter, setSpeciesFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<PlantStatus | "">("");
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState<PlantStatus | "">("");
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [formTarget, setFormTarget] = useState<
     { mode: "create"; plant?: null } | { mode: "edit"; plant: PlantResponse } | null
   >(null);
@@ -47,6 +58,12 @@ export function PlantListPage() {
     return () => clearTimeout(handler);
   }, [search]);
 
+  // Clear selections and reset page when filters change to avoid invisible selections
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setPage(0);
+  }, [debouncedSearch, farmPlotFilter, farmZoneFilter, speciesFilter, statusFilter]);
+
   // Server-side filtering via the fixed /plants/me endpoint
   const plantsQuery = useMyPlants({
     search: debouncedSearch || undefined,
@@ -54,19 +71,25 @@ export function PlantListPage() {
     farmZoneId: farmZoneFilter || undefined,
     speciesId: speciesFilter || undefined,
     status: statusFilter || undefined,
+    page,
+    size: pageSize,
   });
 
   const speciesQuery = useSpecies();
   const species = useMemo(() => speciesQuery.data ?? [], [speciesQuery.data]);
 
-  const filteredPlants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
+  const filteredPlants = useMemo(() => plantsQuery.data?.content ?? [], [plantsQuery.data]);
   const isPlantsLoading = plantsQuery.isLoading;
   const isPlantsError = plantsQuery.isError;
   const refetchPlants = plantsQuery.refetch;
+  const totalPages = plantsQuery.data?.totalPages ?? 0;
+  const totalElements = plantsQuery.data?.totalElements;
 
   const createPlant = useCreatePlant();
   const updatePlant = useUpdatePlant();
   const deletePlant = useDeletePlant();
+  const bulkUpdateStatus = useBulkUpdatePlantStatus();
+  const bulkDeletePlants = useBulkDeletePlants();
 
   const speciesById = useMemo(
     () => new Map(species.map((item) => [item.id, item])),
@@ -129,6 +152,47 @@ export function PlantListPage() {
     setDeleteTarget(null);
   };
 
+  // ── Bulk helpers ──────────────────────────────────────────────────────────
+
+  const toggleSelect = (plant: PlantResponse) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(plant.id)) {
+        next.delete(plant.id);
+      } else {
+        next.add(plant.id);
+      }
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredPlants.map((p) => p.id)));
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkStatusUpdate = async () => {
+    if (!bulkStatus || selectedIds.size === 0) return;
+    await bulkUpdateStatus.mutateAsync({
+      plantIds: Array.from(selectedIds),
+      status: bulkStatus as PlantStatus,
+    });
+    clearSelection();
+    setBulkStatus("");
+  };
+
+  const handleBulkDelete = async () => {
+    await bulkDeletePlants.mutateAsync({ plantIds: Array.from(selectedIds) });
+    clearSelection();
+    setShowBulkDeleteConfirm(false);
+  };
+
+  const allSelected = filteredPlants.length > 0 && selectedIds.size === filteredPlants.length;
+  const someSelected = selectedIds.size > 0;
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -154,48 +218,36 @@ export function PlantListPage() {
         </button>
       </header>
 
-      <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
-          {/* Search input */}
-          <label htmlFor="plant-search" className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Tìm kiếm
-            </span>
-            <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4">
-              <Search className="mr-2 h-4 w-4 text-slate-400" />
-              <input
-                id="plant-search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Tên cây, mã cây, tag..."
-                className="h-12 w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
-              />
-            </div>
-          </label>
+      <FilterCard viewMode={viewMode} onViewModeChange={setViewMode}>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search */}
+          <div className="flex h-9 min-w-45 flex-1 items-center rounded-xl border border-slate-200 bg-slate-50 px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 text-slate-400" />
+            <input
+              id="plant-search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tên cây, mã cây, tag..."
+              className="flex-1 bg-transparent text-sm font-semibold text-slate-700 outline-none"
+            />
+          </div>
 
-          {/* Farm plot filter */}
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Vườn
-            </span>
+          {/* Farm plot */}
+          <div className="h-9 min-w-35 flex-1">
             <Select
-              className="mt-2"
               value={farmPlotFilter}
               onChange={(val) => {
                 setFarmPlotFilter(val as string);
-                setFarmZoneFilter(""); // Reset zone when plot changes
+                setFarmZoneFilter("");
               }}
               options={farmPlotOptions}
               placeholder="Tất cả vườn"
             />
           </div>
 
-          {/* Zone filter – only visible when a plot is selected */}
+          {/* Zone – only when plot selected */}
           {farmPlotFilter && (
-            <div className="block">
-              <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Khu vực
-              </span>
+            <div className="h-9 min-w-35 flex-1">
               <ZoneFilterSelect
                 farmPlotId={farmPlotFilter}
                 value={farmZoneFilter}
@@ -204,13 +256,9 @@ export function PlantListPage() {
             </div>
           )}
 
-          {/* Status filter */}
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Trạng thái
-            </span>
+          {/* Status */}
+          <div className="h-9 min-w-35 flex-1">
             <Select
-              className="mt-2"
               value={statusFilter}
               onChange={(val) => setStatusFilter(val as PlantStatus | "")}
               options={statusOptions}
@@ -218,13 +266,9 @@ export function PlantListPage() {
             />
           </div>
 
-          {/* Species filter */}
-          <div className="block">
-            <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Giống/Loài cây
-            </span>
+          {/* Species */}
+          <div className="h-9 min-w-40 flex-1">
             <Select
-              className="mt-2"
               value={speciesFilter}
               onChange={(val) => setSpeciesFilter(val as string)}
               options={speciesOptions}
@@ -232,10 +276,132 @@ export function PlantListPage() {
             />
           </div>
         </div>
-      </section>
+      </FilterCard>
+
+      {/* Selection info bar */}
+      {!isPlantsLoading && filteredPlants.length > 0 && (
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2.5">
+            <span
+              role="checkbox"
+              aria-checked={allSelected ? true : someSelected ? 'mixed' : false}
+              onClick={allSelected ? clearSelection : selectAll}
+              className={`inline-flex h-5 w-5 cursor-pointer items-center justify-center rounded-md border-2 transition-all
+                ${allSelected || someSelected
+                  ? 'border-[#245A34] bg-[#245A34]'
+                  : 'border-slate-300 bg-white hover:border-[#245A34]'
+                }`}
+            >
+              {allSelected
+                ? <Check className="h-3 w-3 text-white" strokeWidth={3} />
+                : someSelected
+                  ? <Minus className="h-3 w-3 text-white" strokeWidth={3} />
+                  : null
+              }
+            </span>
+            <span className="text-sm font-semibold text-slate-600">
+              {someSelected
+                ? `${selectedIds.size} / ${filteredPlants.length} cây đã chọn`
+                : `${filteredPlants.length} cây trồng`
+              }
+            </span>
+            {someSelected && !allSelected && (
+              <button
+                type="button"
+                onClick={selectAll}
+                className="text-xs font-semibold text-[#245A34] hover:underline"
+              >
+                Chọn tất cả
+              </button>
+            )}
+          </div>
+          {someSelected && (
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-xs font-semibold text-slate-400 hover:text-slate-600"
+            >
+              Bỏ chọn
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bulk action toolbar — slides in when items are selected */}
+      {someSelected && (
+        <div className="sticky top-4 z-10 rounded-2xl bg-[#245A34] px-4 py-3 shadow-xl shadow-[#245A34]/20">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Count */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
+              </div>
+              <span className="text-sm font-bold text-white">{selectedIds.size} cây đã chọn</span>
+            </div>
+
+            <div className="h-5 w-px bg-white/20" />
+
+            {/* Status chips */}
+            <span className="text-xs font-semibold text-white/60">Đổi trạng thái:</span>
+            <div className="flex items-center gap-1 rounded-xl bg-white/10 p-1">
+              {(Object.entries(PLANT_STATUS_LABELS) as [PlantStatus, string][]).map(([status, label]) => (
+                <button
+                  key={status}
+                  type="button"
+                  onClick={() => setBulkStatus(bulkStatus === status ? "" : status)}
+                  className={`rounded-lg px-3 py-1 text-xs font-bold transition-all
+                    ${bulkStatus === status
+                      ? 'bg-white text-[#245A34] shadow-sm'
+                      : 'text-white/80 hover:bg-white/20 hover:text-white'
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={!bulkStatus || bulkUpdateStatus.isPending}
+              onClick={() => void handleBulkStatusUpdate()}
+              className="flex items-center gap-1.5 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-[#245A34] hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {bulkUpdateStatus.isPending
+                ? <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2.5} />
+                : <Check className="h-3 w-3" strokeWidth={3} />
+              }
+              Áp dụng
+            </button>
+
+            <div className="h-5 w-px bg-white/20" />
+
+            {/* Delete */}
+            <button
+              type="button"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              disabled={bulkDeletePlants.isPending}
+              className="flex items-center gap-1.5 rounded-xl bg-red-500/25 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-500/40 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+              Xóa đã chọn
+            </button>
+
+            <div className="flex-1" />
+
+            {/* Dismiss */}
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="rounded-xl p-1.5 text-white/70 transition hover:bg-white/20 hover:text-white"
+              title="Bỏ chọn tất cả"
+            >
+              <X className="h-4 w-4" strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {isPlantsError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 shadow-sm">
+        <div className="rounded-4xl border border-red-100 bg-red-50 p-6 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-lg font-black text-red-700">
@@ -272,7 +438,7 @@ export function PlantListPage() {
       ) : null}
 
       {!isPlantsLoading && !isPlantsError && filteredPlants.length === 0 ? (
-        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+        <div className="rounded-4xl border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
           <Sprout className="mx-auto h-10 w-10 text-slate-300" />
           <h3 className="mt-4 text-xl font-black text-slate-900">
             Chưa có cây trồng nào
@@ -290,18 +456,32 @@ export function PlantListPage() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <PagedGrid
+        viewMode={viewMode}
+        page={page}
+        totalPages={totalPages}
+        totalElements={totalElements}
+        itemLabel="cây trồng"
+        onPageChange={setPage}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 20, 50, 100]}
+        onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+      >
         {filteredPlants.map((plant) => (
           <PlantCard
             key={plant.id}
             plant={plant}
             species={speciesById.get(plant.speciesId)}
             farmPlot={farmPlotById.get(plant.farmPlotId)}
+            detailUrl={ROUTES.DASHBOARD.PLANT_DETAIL(plant.id)}
             onEdit={(item) => setFormTarget({ mode: "edit", plant: item })}
             onDelete={setDeleteTarget}
+            variant={viewMode}
+            selected={selectedIds.has(plant.id)}
+            onToggleSelect={toggleSelect}
           />
         ))}
-      </div>
+      </PagedGrid>
 
       {formTarget ? (
         <PlantFormDialog
@@ -334,6 +514,16 @@ export function PlantListPage() {
           onConfirm={() => void handleDeletePlant()}
         />
       ) : null}
+
+      {showBulkDeleteConfirm ? (
+        <ConfirmDeleteDialog
+          title="Xóa nhiều cây trồng"
+          description={`Bạn có chắc muốn xóa ${selectedIds.size} cây trồng đã chọn? Hành động này không thể hoàn tác.`}
+          isDeleting={bulkDeletePlants.isPending}
+          onCancel={() => setShowBulkDeleteConfirm(false)}
+          onConfirm={() => void handleBulkDelete()}
+        />
+      ) : null}
     </div>
   );
 }
@@ -359,7 +549,6 @@ function ZoneFilterSelect({
 
   return (
     <Select
-      className="mt-2"
       value={value}
       onChange={(val) => onChange(val as string)}
       options={zoneOptions}

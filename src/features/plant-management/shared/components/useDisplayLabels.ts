@@ -1,0 +1,37 @@
+/**
+ * useDisplayLabels — locale-aware label getters for plant-management enums.
+ *
+ * Replaces the static maps in displayUtils.ts for React components.
+ * Pure utility functions (formatDate, optionalString, etc.) in displayUtils.ts
+ * are unchanged and should still be imported directly.
+ */
+import { useTranslation } from '../../../../i18n';
+import type { PlantEventType, PlantStatus, TreatmentStatus } from '../types';
+import type { EventCategory } from './displayUtils';
+
+export function usePlantManagementLabels() {
+  const { t } = useTranslation();
+
+  return {
+    plantStatusLabel: (status: PlantStatus): string =>
+      t(`plantManagement.status.${status}` as any),
+
+    treatmentStatusLabel: (status: TreatmentStatus | string): string =>
+      t(`plantManagement.treatmentStatus.${status}` as any) ?? status,
+
+    eventTypeLabel: (eventType: PlantEventType | string): string =>
+      t(`plantManagement.eventType.${eventType}` as any) ?? eventType,
+
+    categoryLabel: (category: EventCategory): string =>
+      t(`plantManagement.category.${category}` as any),
+
+    categoryShortLabel: (category: EventCategory): string =>
+      t(`plantManagement.categoryShort.${category}` as any),
+
+    severityLabel: (severity: string | null | undefined): string =>
+      severity ? (t(`plantManagement.severity.${severity}` as any) ?? severity) : '—',
+
+    urgencyLabel: (urgency: string | null | undefined): string =>
+      urgency ? (t(`plantManagement.urgency.${urgency}` as any) ?? urgency) : '—',
+  };
+}

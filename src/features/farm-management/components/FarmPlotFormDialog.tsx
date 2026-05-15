@@ -1,6 +1,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
-import { MapPin, Save, X } from "lucide-react";
+import { MapPin, Save } from "lucide-react";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import type {
   CreateFarmPlotRequest,
   FarmPlotResponse,
@@ -139,39 +140,20 @@ export function FarmPlotFormDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={dialogId}
+    <ModalShell
+      onClose={onClose}
+      icon={<MapPin className="h-5 w-5 text-[#245A34]" strokeWidth={2.5} />}
+      iconBg="bg-[#EAF3EA]"
+      title={title}
+      titleId={dialogId}
+      subtitle={
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          Chọn địa chỉ theo tỉnh/huyện/xã, chỉ nhập thêm phần địa chỉ chi tiết khi cần.
+        </p>
+      }
+      maxWidth="sm:max-w-3xl"
     >
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-6">
-          <div className="flex items-start gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EAF3EA] text-[#245A34]">
-              <MapPin className="h-5 w-5" strokeWidth={2.5} />
-            </span>
-            <div>
-              <h2 id={dialogId} className="text-xl font-black text-slate-900">
-                {title}
-              </h2>
-              <p className="mt-1 text-sm font-semibold text-slate-500">
-                Chọn địa chỉ theo tỉnh/huyện/xã, chỉ nhập thêm phần địa chỉ chi
-                tiết khi cần.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            aria-label="Đóng"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-6">
+      <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Field label="Tên vườn" htmlFor="plot-name">
@@ -315,7 +297,6 @@ export function FarmPlotFormDialog({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -169,6 +169,8 @@ export async function askRagQuestion(
       question: request.question,
       thread_id: request.threadId ?? null,
       language: request.language ?? "Vietnamese",
+      farm_plot_id: request.farmPlotId ?? null,
+      farm_zone_id: request.farmZoneId ?? null,
     },
     {
       timeout: 120000,
@@ -208,6 +210,8 @@ export async function streamRagChat(
       question: request.question,
       thread_id: request.threadId ?? null,
       language: request.language ?? "Vietnamese",
+      farm_plot_id: request.farmPlotId ?? null,
+      farm_zone_id: request.farmZoneId ?? null,
     }),
     signal: options?.signal,
   });

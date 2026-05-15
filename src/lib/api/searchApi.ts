@@ -2,6 +2,8 @@ import apiClient from "../apiClient";
 import { API_ENDPOINTS } from "../routes";
 import type { ApiEnvelope } from "../../shared/types/api";
 import type {
+  SearchPlanItem,
+  SearchPlansParams,
   SearchPostItem,
   SearchPostsParams,
   SearchProfileItem,
@@ -46,6 +48,15 @@ export const searchApi = {
     const response = await apiClient.get<
       ApiEnvelope<SearchSpringPage<SearchProfileItem>> | SearchSpringPage<SearchProfileItem>
     >(API_ENDPOINTS.SEARCH.PROFILES, {
+      params: cleanParams(params),
+    });
+    return unwrapApiData(response.data);
+  },
+
+  searchPlans: async (params: SearchPlansParams) => {
+    const response = await apiClient.get<
+      ApiEnvelope<SearchSpringPage<SearchPlanItem>> | SearchSpringPage<SearchPlanItem>
+    >(API_ENDPOINTS.SEARCH.PLANS, {
       params: cleanParams(params),
     });
     return unwrapApiData(response.data);
