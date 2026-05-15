@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Cpu, Plus, RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Select } from "../../../components/ui/Select";
+import { useTranslation } from "../../../i18n";
+import type { TFunction } from "../../../i18n/context";
 import { ROUTES } from "../../../lib/routes";
 import type {
   DeviceResponse,
@@ -10,30 +12,15 @@ import type {
   ProvisioningStatus,
 } from "../../../types/iot";
 import { formatDateTime } from "../../metrics-view/utils/format";
-import { useMyDevices } from "../queries";
 import {
-  deviceStatusLabel,
-  deviceTypeLabel,
-  provisioningStatusLabel,
-  readableDeviceName,
-} from "../utils/deviceLabels";
+  formatDeviceStatusLabel,
+  formatDeviceTypeLabel,
+} from "../../iot/utils/iotTranslation";
+import { useMyDevices } from "../queries";
 
-const DEVICE_STATUSES: Array<{ value: DeviceStatus; label: string }> = [
-  { value: "ONLINE", label: "Đang online" },
-  { value: "OFFLINE", label: "Đang offline" },
-  { value: "UNKNOWN", label: "Chưa rõ trạng thái" },
-];
+const DEVICE_STATUSES: DeviceStatus[] = ["ONLINE", "OFFLINE", "UNKNOWN"];
 
-const ALL_OPTION = { value: "", label: "Tất cả" };
-
-const PROVISIONING_STATUSES: Array<{
-  value: ProvisioningStatus;
-  label: string;
-}> = [
-  { value: "CLAIMED", label: "Đã liên kết" },
-  { value: "PROVISIONED", label: "Chờ liên kết" },
-  { value: "RETIRED", label: "Ngừng dùng" },
-];
+const PROVISIONING_STATUSES: ProvisioningStatus[] = ["CLAIMED", "PROVISIONED", "RETIRED"];
 
 const statusTone: Record<string, string> = {
   ONLINE: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -50,9 +37,11 @@ const provisioningTone: Record<string, string> = {
 function StatusBadge({
   value,
   toneMap,
+  t,
 }: {
   value?: string | null;
   toneMap: Record<string, string>;
+  t: TFunction;
 }) {
   const label = value || "UNKNOWN";
   return (
@@ -61,15 +50,20 @@ function StatusBadge({
         toneMap[label] || "bg-slate-100 text-slate-600 border-slate-200"
       }`}
     >
-      {toneMap === provisioningTone
-        ? provisioningStatusLabel(label)
-        : deviceStatusLabel(label)}
+      {formatDeviceStatusLabel(t, label)}
     </span>
   );
 }
 
-function DeviceCard({ device }: { device: DeviceResponse }) {
-  const deviceName = readableDeviceName(device);
+function readableDeviceName(
+  t: TFunction,
+  device?: { deviceName?: string | null; deviceCode?: string | null },
+) {
+  return device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
+}
+
+function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
+  const deviceName = readableDeviceName(t, device);
 
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -84,7 +78,7 @@ function DeviceCard({ device }: { device: DeviceResponse }) {
                 {deviceName}
               </h3>
               <p className="text-sm font-semibold text-slate-500">
-                {deviceTypeLabel(device.deviceType)} · {deviceStatusLabel(device.status)}
+                {formatDeviceTypeLabel(t, device.deviceType)} · {formatDeviceStatusLabel(t, device.status)}
               </p>
             </div>
           </div>
@@ -92,31 +86,31 @@ function DeviceCard({ device }: { device: DeviceResponse }) {
           <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                Loại thiết bị
+                {t("iot.devices.index.deviceType")}
               </p>
               <p className="font-semibold text-slate-700">
-                {deviceTypeLabel(device.deviceType)}
+                {formatDeviceTypeLabel(t, device.deviceType)}
               </p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                Vườn
+                {t("iot.common.farm")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.farmPlotId ? "Đã gán vào vườn" : "Chưa gán vườn"}
+                {device.farmPlotId ? t("iot.devices.index.farmAssigned") : t("iot.devices.index.farmUnassigned")}
               </p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                Khu vực
+                {t("iot.common.zone")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.zoneId ? "Đã gán vào khu vực" : "Chưa gán khu vực"}
+                {device.zoneId ? t("iot.devices.index.zoneAssigned") : t("iot.devices.index.zoneUnassigned")}
               </p>
             </div>
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-                Lần online cuối
+                {t("iot.devices.index.lastSeenAt")}
               </p>
               <p className="font-semibold text-slate-700">
                 {formatDateTime(device.lastSeenAt)}
@@ -127,17 +121,18 @@ function DeviceCard({ device }: { device: DeviceResponse }) {
 
         <div className="flex shrink-0 flex-col gap-3 lg:items-end">
           <div className="flex flex-wrap gap-2 lg:justify-end">
-            <StatusBadge value={device.status} toneMap={statusTone} />
+            <StatusBadge value={device.status} toneMap={statusTone} t={t} />
             <StatusBadge
               value={device.provisioningStatus}
               toneMap={provisioningTone}
+              t={t}
             />
           </div>
           <Link
             to={ROUTES.DASHBOARD.DEVICE_DETAIL(device.id)}
             className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700"
           >
-            Xem chi tiết
+            {t("iot.devices.index.viewDetail")}
           </Link>
         </div>
       </div>
@@ -145,14 +140,15 @@ function DeviceCard({ device }: { device: DeviceResponse }) {
   );
 }
 
-function getErrorMessage(error: unknown) {
+function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) {
     return error.message;
   }
-  return "Không tải được danh sách thiết bị. Vui lòng thử lại.";
+  return fallback;
 }
 
 export function DeviceIndexRedirect() {
+  const { t } = useTranslation();
   const [page, setPage] = useState(0);
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState<DeviceStatus | "">("");
@@ -176,20 +172,40 @@ export function DeviceIndexRedirect() {
   const devicesQuery = useMyDevices(params);
   const devices = devicesQuery.data?.items ?? [];
   const totalItems = devicesQuery.data?.totalItems ?? 0;
+  const allOption = useMemo(() => ({ value: "", label: t("iot.devices.index.all") }), [t]);
+  const statusOptions = useMemo(
+    () => [
+      allOption,
+      ...DEVICE_STATUSES.map((value) => ({
+        value,
+        label: formatDeviceStatusLabel(t, value),
+      })),
+    ],
+    [allOption, t],
+  );
+  const provisioningStatusOptions = useMemo(
+    () => [
+      allOption,
+      ...PROVISIONING_STATUSES.map((value) => ({
+        value,
+        label: formatDeviceStatusLabel(t, value),
+      })),
+    ],
+    [allOption, t],
+  );
 
   return (
     <section className="space-y-6">
       <div className="flex flex-col gap-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">
-            IoT devices
+            {t("iot.devices.index.eyebrow")}
           </p>
           <h1 className="mt-2 text-3xl font-black text-slate-900">
-            Quản lý thiết bị IoT
+            {t("iot.devices.index.title")}
           </h1>
           <p className="mt-2 max-w-2xl text-sm font-medium text-slate-600">
-            Theo dõi các thiết bị đã kết nối, trạng thái online và mở nhanh
-            trang chi tiết để xem readings, chart, cấu hình và cảnh báo.
+            {t("iot.devices.index.description")}
           </p>
         </div>
         <Link
@@ -197,7 +213,7 @@ export function DeviceIndexRedirect() {
           className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700"
         >
           <Plus className="h-4 w-4" />
-          Kết nối thiết bị mới
+          {t("iot.devices.index.connectNew")}
         </Link>
       </div>
 
@@ -205,7 +221,7 @@ export function DeviceIndexRedirect() {
         <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px_auto] lg:items-end">
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Tìm kiếm
+              {t("iot.devices.index.search")}
             </span>
             <div className="mt-2 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
               <Search className="h-4 w-4 text-slate-400" />
@@ -215,7 +231,7 @@ export function DeviceIndexRedirect() {
                   setPage(0);
                   setKeyword(event.target.value);
                 }}
-                placeholder="Tên, mã hoặc UID thiết bị"
+                placeholder={t("iot.devices.index.searchPlaceholder")}
                 className="w-full bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
               />
             </div>
@@ -223,32 +239,32 @@ export function DeviceIndexRedirect() {
 
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Trạng thái
+              {t("iot.devices.index.status")}
             </span>
             <Select
-              ariaLabel="Trạng thái"
+              ariaLabel={t("iot.devices.index.status")}
               value={status}
               onChange={(value) => {
                 setPage(0);
                 setStatus(value as DeviceStatus | "");
               }}
-              options={[ALL_OPTION, ...DEVICE_STATUSES]}
+              options={statusOptions}
               className="mt-2"
             />
           </label>
 
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
-              Kết nối
+              {t("iot.devices.index.provisioning")}
             </span>
             <Select
-              ariaLabel="Kết nối"
+              ariaLabel={t("iot.devices.index.provisioning")}
               value={provisioningStatus}
               onChange={(value) => {
                 setPage(0);
                 setProvisioningStatus(value as ProvisioningStatus | "");
               }}
-              options={[ALL_OPTION, ...PROVISIONING_STATUSES]}
+              options={provisioningStatusOptions}
               className="mt-2"
             />
           </label>
@@ -264,27 +280,27 @@ export function DeviceIndexRedirect() {
                 devicesQuery.isFetching ? "animate-spin" : ""
               }`}
             />
-            Tải lại
+            {t("iot.devices.index.refresh")}
           </button>
         </div>
       </div>
 
       {devicesQuery.isLoading ? (
         <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-sm font-bold text-slate-500 shadow-sm">
-          Đang tải danh sách thiết bị...
+          {t("iot.devices.index.loading")}
         </div>
       ) : devicesQuery.isError ? (
         <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-800 shadow-sm">
-          <p className="font-black">Không tải được thiết bị</p>
+          <p className="font-black">{t("iot.devices.index.errorTitle")}</p>
           <p className="mt-1 text-sm font-semibold">
-            {getErrorMessage(devicesQuery.error)}
+            {getErrorMessage(devicesQuery.error, t("iot.devices.index.errorDescription"))}
           </p>
           <button
             type="button"
             onClick={() => devicesQuery.refetch()}
             className="mt-4 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-black text-white transition hover:bg-rose-700"
           >
-            Thử lại
+            {t("iot.common.retry")}
           </button>
         </div>
       ) : devices.length === 0 ? (
@@ -293,29 +309,27 @@ export function DeviceIndexRedirect() {
             <Cpu className="h-7 w-7" />
           </div>
           <h2 className="mt-4 text-xl font-black text-slate-900">
-            Chưa có thiết bị phù hợp
+            {t("iot.devices.index.emptyTitle")}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-slate-500">
-            Nếu bạn vừa bootstrap dữ liệu, hãy kiểm tra user đang đăng nhập và
-            trạng thái filter. Bạn cũng có thể kết nối thiết bị mới từ flow
-            onboarding.
+            {t("iot.devices.index.emptyDescription")}
           </p>
           <Link
             to={ROUTES.DASHBOARD.DEVICE_ONBOARDING}
             className="mt-5 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-700"
           >
             <Plus className="h-4 w-4" />
-            Kết nối thiết bị mới
+            {t("iot.devices.index.connectNew")}
           </Link>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1 text-sm font-bold text-slate-500">
-            <span>{totalItems} thiết bị</span>
-            {devicesQuery.isFetching ? <span>Đang cập nhật...</span> : null}
+            <span>{t("iot.devices.index.count", totalItems)}</span>
+            {devicesQuery.isFetching ? <span>{t("iot.devices.index.updating")}</span> : null}
           </div>
           {devices.map((device) => (
-            <DeviceCard key={device.id} device={device} />
+            <DeviceCard key={device.id} device={device} t={t} />
           ))}
           <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
@@ -324,11 +338,14 @@ export function DeviceIndexRedirect() {
               disabled={!devicesQuery.data?.hasPrevious || devicesQuery.isFetching}
               className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Trang trước
+              {t("iot.devices.index.previousPage")}
             </button>
             <span className="text-sm font-bold text-slate-500">
-              Trang {(devicesQuery.data?.page ?? page) + 1} /{" "}
-              {Math.max(devicesQuery.data?.totalPages ?? 1, 1)}
+              {t(
+                "iot.devices.index.page",
+                (devicesQuery.data?.page ?? page) + 1,
+                Math.max(devicesQuery.data?.totalPages ?? 1, 1),
+              )}
             </span>
             <button
               type="button"
@@ -336,7 +353,7 @@ export function DeviceIndexRedirect() {
               disabled={!devicesQuery.data?.hasNext || devicesQuery.isFetching}
               className="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Trang sau
+              {t("iot.devices.index.nextPage")}
             </button>
           </div>
         </div>

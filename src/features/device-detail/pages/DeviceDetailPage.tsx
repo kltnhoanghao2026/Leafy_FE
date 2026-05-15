@@ -28,15 +28,12 @@ import { SensorChartModal } from "../../metrics-view/components/SensorChartModal
 import { useAlertEvents } from "../../alerts/queries";
 import { MediaImage } from "../../community/components/MediaImage";
 import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
-import {
-  deviceTypeLabel,
-  readableDeviceName,
-} from "../../device-onboarding/utils/deviceLabels";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
 import {
   formatConfigStatusLabel,
   formatDeviceStatusLabel,
+  formatDeviceTypeLabel,
   formatMediaStatusLabel,
   formatSensorLabel,
 } from "../../iot/utils/iotTranslation";
@@ -128,6 +125,11 @@ const readingValue = (reading?: LatestReadingItemResponse): number | string => {
   if (!reading || reading.value === null) return "-";
   return formatNumber(reading.value);
 };
+
+const readableDeviceName = (
+  t: TFunction,
+  device?: { deviceName?: string | null; deviceCode?: string | null },
+) => device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
 
 const csvDateStamp = () => new Date().toISOString().slice(0, 10);
 
@@ -845,7 +847,7 @@ export function DeviceDetailPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-3">
                   <h2 className="text-[30px] font-black text-[#111827] tracking-tight">
-                    {readableDeviceName(device)}
+                    {readableDeviceName(t, device)}
                   </h2>
                   <span className={badgeClass(statusTone(device.status))}>
                     {formatDeviceStatusLabel(t, device.status)}
@@ -857,7 +859,7 @@ export function DeviceDetailPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm font-semibold text-slate-500">
-                  {deviceTypeLabel(device.deviceType)} · {formatDeviceStatusLabel(t, device.status)}
+                  {formatDeviceTypeLabel(t, device.deviceType)} · {formatDeviceStatusLabel(t, device.status)}
                 </p>
               </div>
               <div className="flex items-center gap-3 rounded-3xl bg-[#F2FCF4] px-4 py-3">
@@ -874,7 +876,7 @@ export function DeviceDetailPage() {
             </div>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <InfoTile label={t("iot.devices.detail.type")} value={deviceTypeLabel(device.deviceType)} />
+              <InfoTile label={t("iot.devices.detail.type")} value={formatDeviceTypeLabel(t, device.deviceType)} />
               <InfoTile
                 label={t("iot.devices.detail.firmwareVersion")}
                 value={device.firmwareVersion || t("iot.devices.detail.unknown")}

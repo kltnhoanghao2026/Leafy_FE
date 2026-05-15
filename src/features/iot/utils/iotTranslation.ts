@@ -25,7 +25,7 @@ export type IoTAlertType =
 
 export type IoTDeviceStatus =
   | DeviceStatus
-  | Exclude<ProvisioningStatus, "RETIRED">
+  | ProvisioningStatus
   | "ERROR";
 
 export type IoTConfigStatus =
@@ -35,6 +35,15 @@ export type IoTConfigStatus =
 export type IoTMediaStatus = DeviceMediaEventStatus;
 
 export type IoTChartRange = "H1" | "D1" | "D7" | "M1";
+
+export type IoTDeviceType =
+  | "ESP32_CAM_SENSOR"
+  | "ESP32_SENSOR"
+  | "SENSOR_NODE"
+  | "CAMERA_SENSOR";
+
+// IoT UI keys are grouped under iot.*. These helpers centralize backend enum
+// labels and deliberately fall back to a readable backend value for new codes.
 
 const sensorLabelKeys = {
   AIR_TEMP: "iot.sensor.AIR_TEMP",
@@ -70,9 +79,17 @@ const deviceStatusLabelKeys = {
   OFFLINE: "iot.deviceStatus.OFFLINE",
   PROVISIONED: "iot.deviceStatus.PROVISIONED",
   CLAIMED: "iot.deviceStatus.CLAIMED",
+  RETIRED: "iot.deviceStatus.RETIRED",
   ERROR: "iot.deviceStatus.ERROR",
   UNKNOWN: "iot.deviceStatus.UNKNOWN",
 } as const satisfies Record<IoTDeviceStatus, TranslationKey>;
+
+const deviceTypeLabelKeys = {
+  ESP32_CAM_SENSOR: "iot.deviceType.ESP32_CAM_SENSOR",
+  ESP32_SENSOR: "iot.deviceType.ESP32_SENSOR",
+  SENSOR_NODE: "iot.deviceType.SENSOR_NODE",
+  CAMERA_SENSOR: "iot.deviceType.CAMERA_SENSOR",
+} as const satisfies Record<IoTDeviceType, TranslationKey>;
 
 const configStatusLabelKeys = {
   PENDING: "iot.configStatus.PENDING",
@@ -162,6 +179,16 @@ export const formatDeviceStatusLabel = (
   t,
   status,
   deviceStatusLabelKeys,
+);
+
+export const formatDeviceTypeLabel = (
+  t: TFunction,
+  deviceType?: string | null,
+) => translateKnownValue<IoTDeviceType, typeof deviceTypeLabelKeys>(
+  t,
+  deviceType,
+  deviceTypeLabelKeys,
+  deviceType ? undefined : t("iot.devices.defaultName"),
 );
 
 export const formatConfigStatusLabel = (
