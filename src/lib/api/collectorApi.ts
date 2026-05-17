@@ -8,6 +8,8 @@ import type {
   AlertRulesParams,
   CameraCaptureRequest,
   CameraCaptureResponse,
+  DeviceCameraScheduleRequest,
+  DeviceCameraScheduleResponse,
   ChartRange,
   ClaimDeviceRequest,
   CreateAlertRuleRequest,
@@ -129,6 +131,31 @@ export const collectorApi = {
   getDeviceMedia: (deviceId: string) =>
     apiClient.get<DeviceMediaEventResponse[]>(
       API_ENDPOINTS.IOT.DEVICE_MEDIA(deviceId),
+    ),
+
+  getCameraSchedules: () =>
+    apiClient.get<DeviceCameraScheduleResponse[]>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
+    ),
+
+  createCameraSchedule: (payload: DeviceCameraScheduleRequest) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
+      payload,
+    ),
+
+  updateCameraSchedule: (scheduleId: string, payload: DeviceCameraScheduleRequest) =>
+    apiClient.put<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULE(scheduleId),
+      payload,
+    ),
+
+  deleteCameraSchedule: (scheduleId: string) =>
+    apiClient.delete<void>(API_ENDPOINTS.IOT.CAMERA_SCHEDULE(scheduleId)),
+
+  runCameraScheduleNow: (scheduleId: string) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULE_RUN_NOW(scheduleId),
     ),
 
   getAlertRules: (params: AlertRulesParams = {}) =>

@@ -36,6 +36,8 @@ export type IoTMediaStatus = DeviceMediaEventStatus;
 
 export type IoTChartRange = "H1" | "D1" | "D7" | "M1";
 
+export type IoTCameraScheduleRecurrence = "DAILY" | "WEEKLY" | "NONE";
+
 export type IoTDeviceType =
   | "ESP32_CAM_SENSOR"
   | "ESP32_SENSOR"
@@ -114,6 +116,12 @@ const chartRangeLabelKeys = {
   D7: "iot.charts.D7",
   M1: "iot.charts.M1",
 } as const satisfies Record<IoTChartRange, TranslationKey>;
+
+const scheduleRecurrenceLabelKeys = {
+  DAILY: "iot.cameraSchedules.recurrenceDaily",
+  WEEKLY: "iot.cameraSchedules.recurrenceWeekly",
+  NONE: "iot.cameraSchedules.recurrenceNone",
+} as const satisfies Record<IoTCameraScheduleRecurrence, TranslationKey>;
 
 const fallbackBackendLabel = (value?: string | null) => {
   if (!value) return "";
@@ -226,4 +234,13 @@ export const formatChartRangeLabel = (
   t,
   range,
   chartRangeLabelKeys,
+);
+
+export const formatScheduleRecurrenceLabel = (
+  t: TFunction,
+  recurrence?: string | null,
+) => translateKnownValue<IoTCameraScheduleRecurrence, typeof scheduleRecurrenceLabelKeys>(
+  t,
+  recurrence,
+  scheduleRecurrenceLabelKeys,
 );

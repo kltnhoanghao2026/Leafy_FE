@@ -57,6 +57,10 @@ export type DeviceMediaEventStatus =
   | "FAILED"
   | "TIMEOUT";
 
+export type CameraScheduleRecurrence = "DAILY" | "WEEKLY" | "NONE";
+
+export type CameraScheduleTriggerType = "MANUAL" | "SCHEDULED";
+
 export interface CameraCaptureRequest {
   quality?: "LOW" | "MEDIUM" | "HIGH";
   resolution?: "QVGA" | "VGA";
@@ -87,6 +91,27 @@ export interface DeviceMediaEventResponse {
   commandSentAt: string | null;
   uploadedAt: string | null;
   capturedAt: string | null;
+}
+
+export interface DeviceCameraScheduleRequest {
+  deviceUid: string;
+  enabled?: boolean;
+  triggerType?: CameraScheduleTriggerType;
+  timeOfDay: string;
+  recurrence: CameraScheduleRecurrence;
+}
+
+export interface DeviceCameraScheduleResponse {
+  id: string;
+  deviceId?: string | null;
+  deviceUid: string;
+  enabled: boolean;
+  triggerType: CameraScheduleTriggerType | string;
+  timeOfDay: string;
+  recurrence: CameraScheduleRecurrence | string;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  lastMediaEvent?: DeviceMediaEventResponse | null;
 }
 
 export interface DeviceConfigSnapshotResponse {

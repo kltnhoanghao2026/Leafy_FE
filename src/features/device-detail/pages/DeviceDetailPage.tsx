@@ -8,6 +8,7 @@ import {
   Cpu,
   Droplet,
   ImageOff,
+  Play,
   RefreshCw,
   Save,
   Send,
@@ -60,11 +61,16 @@ import {
   usePushDeviceConfig,
   useUpdateDeviceConfig,
 } from "../queries";
+import {
+  useCameraSchedulesQuery,
+  useRunCameraScheduleNowMutation,
+} from "../../admin/iot-camera-schedules/cameraSchedules.queries";
 import { ROUTES } from "../../../lib/routes";
 import type {
   DeviceConfigResponse,
   DeviceDetailResponse,
   DeviceMediaEventResponse,
+  DeviceCameraScheduleResponse,
   AlertEventItemResponse,
   LatestReadingItemResponse,
   UpdateDeviceConfigRequest,
@@ -355,7 +361,10 @@ interface DeviceMediaPanelProps {
   canCapture: boolean;
   isCapturing: boolean;
   isPolling: boolean;
+  deviceSchedule?: DeviceCameraScheduleResponse | null;
+  isRunningSchedule: boolean;
   onCapture: () => Promise<void>;
+  onRunScheduleNow: () => Promise<void>;
 }
 
 function DeviceMediaPanel({
@@ -363,7 +372,10 @@ function DeviceMediaPanel({
   canCapture,
   isCapturing,
   isPolling,
+  deviceSchedule,
+  isRunningSchedule,
   onCapture,
+  onRunScheduleNow,
 }: DeviceMediaPanelProps) {
   const { t } = useTranslation();
   const latestMedia = mediaEvents[0];
@@ -387,16 +399,37 @@ function DeviceMediaPanel({
             {t("iot.devices.media.description")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void onCapture()}
-          disabled={!canCapture || isCapturing}
-          className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          {isCapturing ? t("iot.devices.media.capturing") : t("iot.devices.media.captureImage")}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {deviceSchedule ? (
+            <button
+              type="button"
+              onClick={() => void onRunScheduleNow()}
+              disabled={!canCapture || isRunningSchedule}
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Play className="mr-2 h-4 w-4" strokeWidth={2.5} />
+              {isRunningSchedule
+                ? t("iot.devices.media.capturing")
+                : t("iot.cameraSchedules.runScheduleNow")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void onCapture()}
+            disabled={!canCapture || isCapturing}
+            className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
+            {isCapturing ? t("iot.devices.media.capturing") : t("iot.devices.media.captureImage")}
+          </button>
+        </div>
       </div>
+
+      {canCapture && !deviceSchedule ? (
+        <p className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
+          {t("iot.cameraSchedules.noScheduleForDevice")}
+        </p>
+      ) : null}
 
       {!canCapture ? (
         <p className="mt-5 rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
@@ -619,6 +652,7 @@ export function DeviceDetailPage() {
   const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
   const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
   const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId);
+  const cameraSchedulesQuery = useCameraSchedulesQuery(!!deviceId);
   const alertEventsQuery = useAlertEvents(
     {
       deviceId: resolvedDeviceId,
@@ -631,6 +665,7 @@ export function DeviceDetailPage() {
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
+  const runScheduleNowMutation = useRunCameraScheduleNowMutation();
 
   useEffect(() => {
     if (!deviceId) return undefined;
@@ -649,8 +684,17 @@ export function DeviceDetailPage() {
   }, [configQuery, deviceId]);
 
   const device = deviceDetailQuery.data;
+  const deviceUid = device?.deviceUid;
   const config = configQuery.data;
   const mediaEvents = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
+  const deviceSchedule = useMemo(() => {
+    if (!deviceUid) return null;
+    return (
+      (cameraSchedulesQuery.data ?? []).find(
+        (schedule) => schedule.deviceUid === deviceUid,
+      ) ?? null
+    );
+  }, [cameraSchedulesQuery.data, deviceUid]);
   const watchedCaptureEvent = useMemo(
     () =>
       captureRequestId
@@ -781,6 +825,16 @@ export function DeviceDetailPage() {
     completedCaptureRef.current = null;
     setCaptureRequestId(response.data.requestId);
     await mediaQuery.refetch();
+  };
+
+  const handleRunScheduleNow = async () => {
+    if (!deviceSchedule) return;
+    const response = await runScheduleNowMutation.mutateAsync(deviceSchedule.id);
+    const requestId = response.data.lastMediaEvent?.requestId ?? null;
+    completedCaptureRef.current = null;
+    setCaptureRequestId(requestId);
+    await mediaQuery.refetch();
+    await cameraSchedulesQuery.refetch();
   };
 
   const isPageLoading = deviceDetailQuery.isLoading || configQuery.isLoading;
@@ -1104,7 +1158,10 @@ export function DeviceDetailPage() {
             canCapture={canManageConfig}
             isCapturing={captureImageMutation.isPending}
             isPolling={isMediaPolling}
+            deviceSchedule={deviceSchedule}
+            isRunningSchedule={runScheduleNowMutation.isPending}
             onCapture={handleCaptureImage}
+            onRunScheduleNow={handleRunScheduleNow}
           />
 
           <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
