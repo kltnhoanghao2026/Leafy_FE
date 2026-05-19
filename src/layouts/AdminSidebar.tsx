@@ -107,6 +107,11 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
           path: ROUTES.ADMIN.IOT_CAMERA_SCHEDULES,
           icon: Camera,
         },
+        {
+          name: "Upload ảnh camera",
+          path: ROUTES.ADMIN.IOT_CAMERA_BATCH_UPLOAD,
+          icon: Camera,
+        },
         { name: "Đồng bộ dữ liệu", path: ROUTES.ADMIN.SYNC, icon: RefreshCw },
       ],
     },

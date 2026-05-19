@@ -15,6 +15,9 @@ const schedule: DeviceCameraScheduleResponse = {
   triggerType: "SCHEDULED",
   timeOfDay: "08:30:00",
   recurrence: "DAILY",
+  resolution: "VGA",
+  quality: "MEDIUM",
+  uploadEndpoint: "http://file-service/files/upload",
   lastRunAt: "2026-05-15T01:00:00Z",
   nextRunAt: "2026-05-16T01:30:00Z",
   lastMediaEvent: {
@@ -65,6 +68,27 @@ function useScheduleHandlers(initial: DeviceCameraScheduleResponse[] = [schedule
       );
       return HttpResponse.json(schedules[0]);
     }),
+    http.post("*/api/admin/camera/run-scheduled/:deviceUid", ({ params }) => {
+      runNowCalled = true;
+      schedules = schedules.map((item) =>
+        item.deviceUid === params.deviceUid
+          ? {
+              ...item,
+              lastRunAt: "2026-05-15T02:00:00Z",
+              lastMediaEvent: {
+                ...item.lastMediaEvent!,
+                id: "media-2",
+                requestId: "request-2",
+                status: "COMMAND_SENT",
+                fileId: null,
+                uploadedAt: null,
+                capturedAt: "2026-05-15T02:00:00Z",
+              },
+            }
+          : item,
+      );
+      return HttpResponse.json(schedules[0]);
+    }),
     http.get("*/api/files/presigned-url/:fileId", ({ params }) =>
       HttpResponse.json({
         code: 1000,
@@ -95,6 +119,8 @@ describe("IotCameraSchedulesPage", () => {
       "https://files.example.test/file-1.jpg",
     );
     expect(screen.getByText(/640x480/)).toBeInTheDocument();
+    expect(screen.getAllByText(/VGA/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/MEDIUM/).length).toBeGreaterThan(0);
   });
 
   it("runs schedule now and refreshes the displayed capture status", async () => {
@@ -106,7 +132,7 @@ describe("IotCameraSchedulesPage", () => {
     });
 
     await screen.findByText("leafy-cam-001");
-    await user.click(screen.getByRole("button", { name: /Chay ngay/i }));
+    await user.click(screen.getByRole("button", { name: /Chay chup theo thiet bi/i }));
 
     await waitFor(() => expect(handlers.wasRunNowCalled()).toBe(true));
     expect(await screen.findByText("request-2")).toBeInTheDocument();

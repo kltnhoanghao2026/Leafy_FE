@@ -1059,22 +1059,10 @@ export function AlertRulesPage() {
       ) : null}
 
       {deleteTarget ? (
-<<<<<<< HEAD
         <ModalShell
           onClose={() => setDeleteTarget(null)}
-          title="Delete alert rule?"
+          title={t("iot.alertRules.deleteDialog.title")}
           subtitle={
-=======
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="w-full max-w-md rounded-[2rem] bg-white p-6 shadow-2xl">
-            <h3 className="text-xl font-black text-slate-900">
-              {t("iot.alertRules.deleteDialog.title")}
-            </h3>
->>>>>>> fb4fe6f67d668c78e6d98d5f490b055a14e52a1c
             <p className="mt-2 text-sm font-semibold text-slate-600">
               {t("iot.alertRules.deleteDialog.description")}
             </p>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import {
   AlertCircle,
+  CalendarPlus,
   Camera,
   CheckCircle2,
   Cpu,
@@ -11,6 +12,7 @@ import {
   Play,
   RefreshCw,
   Save,
+  ScanSearch,
   Send,
   Sun,
   Thermometer,
@@ -63,14 +65,17 @@ import {
 } from "../queries";
 import {
   useCameraSchedulesQuery,
+  useCreateDeviceCameraScheduleMutation,
   useRunCameraScheduleNowMutation,
 } from "../../admin/iot-camera-schedules/cameraSchedules.queries";
+import { useDiseaseDetectMutation } from "../../admin/camera-batch-upload/cameraBatchUpload.queries";
 import { ROUTES } from "../../../lib/routes";
 import type {
   DeviceConfigResponse,
   DeviceDetailResponse,
   DeviceMediaEventResponse,
   DeviceCameraScheduleResponse,
+  CameraScheduleRecurrence,
   AlertEventItemResponse,
   LatestReadingItemResponse,
   UpdateDeviceConfigRequest,
@@ -144,20 +149,6 @@ const chartExportFilename = (
   sensorCode: string,
   range: DisplayChartRange,
 ) => `iot-${scope}-${sensorCode}-${range}-${csvDateStamp()}`;
-
-const alertEventsKey = (alerts: AlertEventItemResponse[]) =>
-  alerts
-    .map((alert) =>
-      [
-        alert.id,
-        alert.status,
-        alert.severity,
-        alert.openedAt,
-        alert.thresholdMin,
-        alert.thresholdMax,
-      ].join(":"),
-    )
-    .join("|");
 
 const trendSignature = (trend: SensorTrend[]) => {
   const first = trend[0];
@@ -285,15 +276,13 @@ function DeviceSensorCard({
   const { t } = useTranslation();
   const knownSensor = SENSOR_CONFIG.find((sensor) => sensor.code === reading.sensorCode);
   const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange);
-  const alertsKey = useMemo(() => alertEventsKey(alerts), [alerts]);
-  const stableAlerts = useMemo(() => alerts, [alertsKey]);
   const trend = useMemo(
-    () => deriveAnalytics(chartToTrend(chartQuery.data, displayRange), stableAlerts),
-    [chartQuery.data, displayRange, stableAlerts],
+    () => deriveAnalytics(chartToTrend(chartQuery.data, displayRange), alerts),
+    [alerts, chartQuery.data, displayRange],
   );
   const backendThresholds = useMemo(
-    () => thresholdsFromAlertEvents(stableAlerts),
-    [stableAlerts],
+    () => thresholdsFromAlertEvents(alerts),
+    [alerts],
   );
   const title = formatSensorLabel(
     t,
@@ -362,9 +351,20 @@ interface DeviceMediaPanelProps {
   isCapturing: boolean;
   isPolling: boolean;
   deviceSchedule?: DeviceCameraScheduleResponse | null;
+  deviceSchedules: DeviceCameraScheduleResponse[];
   isRunningSchedule: boolean;
+  isCreatingSchedule: boolean;
+  isDetectingDisease: boolean;
   onCapture: () => Promise<void>;
   onRunScheduleNow: () => Promise<void>;
+  onCreateSchedule: (payload: {
+    timeOfDay: string;
+    recurrence: CameraScheduleRecurrence;
+    resolution: "QVGA" | "VGA" | "HD";
+    quality: "LOW" | "MEDIUM" | "HIGH";
+    uploadEndpoint?: string;
+  }) => Promise<void>;
+  onDetectLatest: (media: DeviceMediaEventResponse) => Promise<void>;
 }
 
 function DeviceMediaPanel({
@@ -373,11 +373,21 @@ function DeviceMediaPanel({
   isCapturing,
   isPolling,
   deviceSchedule,
+  deviceSchedules,
   isRunningSchedule,
+  isCreatingSchedule,
+  isDetectingDisease,
   onCapture,
   onRunScheduleNow,
+  onCreateSchedule,
+  onDetectLatest,
 }: DeviceMediaPanelProps) {
   const { t } = useTranslation();
+  const [scheduleTime, setScheduleTime] = useState("08:30");
+  const [scheduleRecurrence, setScheduleRecurrence] = useState<CameraScheduleRecurrence>("DAILY");
+  const [scheduleResolution, setScheduleResolution] = useState<"QVGA" | "VGA" | "HD">("VGA");
+  const [scheduleQuality, setScheduleQuality] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
+  const [uploadEndpoint, setUploadEndpoint] = useState("");
   const latestMedia = mediaEvents[0];
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
@@ -422,13 +432,130 @@ function DeviceMediaPanel({
             <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
             {isCapturing ? t("iot.devices.media.capturing") : t("iot.devices.media.captureImage")}
           </button>
+          {latestUploaded?.fileId ? (
+            <button
+              type="button"
+              onClick={() => void onDetectLatest(latestUploaded)}
+              disabled={isDetectingDisease}
+              className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-bold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ScanSearch className="mr-2 h-4 w-4" strokeWidth={2.5} />
+              {isDetectingDisease ? "Analyzing..." : "Trigger Analysis"}
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {canCapture && !deviceSchedule ? (
-        <p className="mt-5 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
-          {t("iot.cameraSchedules.noScheduleForDevice")}
-        </p>
+      {deviceSchedules.length > 0 ? (
+        <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h4 className="text-sm font-black text-emerald-900">
+              {t("iot.cameraSchedules.title")}
+            </h4>
+            <span className="text-xs font-black text-emerald-700">
+              {deviceSchedules.length}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            {deviceSchedules.map((schedule) => (
+              <div key={schedule.id} className="rounded-xl border border-emerald-100 bg-white px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-black text-slate-800">
+                    {schedule.timeOfDay} · {schedule.recurrence}
+                  </span>
+                  <span className={badgeClass(schedule.enabled ? "green" : "slate")}>
+                    {schedule.enabled ? t("iot.cameraSchedules.enabled") : t("iot.cameraSchedules.disabled")}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {t("iot.cameraSchedules.nextRunAt")}: {formatDateTime(schedule.nextRunAt)}
+                </p>
+                <p className="text-xs font-semibold text-slate-500">
+                  {t("iot.cameraSchedules.lastRunAt")}: {formatDateTime(schedule.lastRunAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {canCapture ? (
+        <form
+          className="mt-5 grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[0.7fr_0.7fr_0.7fr_0.7fr_1fr_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onCreateSchedule({
+              timeOfDay: scheduleTime.length === 5 ? `${scheduleTime}:00` : scheduleTime,
+              recurrence: scheduleRecurrence,
+              resolution: scheduleResolution,
+              quality: scheduleQuality,
+              uploadEndpoint: uploadEndpoint.trim() || undefined,
+            });
+          }}
+        >
+          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+            {t("iot.cameraSchedules.timeOfDay")}
+            <input
+              type="time"
+              value={scheduleTime}
+              onChange={(event) => setScheduleTime(event.target.value)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+            {t("iot.cameraSchedules.recurrence")}
+            <select
+              value={scheduleRecurrence}
+              onChange={(event) => setScheduleRecurrence(event.target.value as CameraScheduleRecurrence)}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <option value="DAILY">{t("iot.cameraSchedules.recurrenceDaily")}</option>
+              <option value="WEEKLY">{t("iot.cameraSchedules.recurrenceWeekly")}</option>
+              <option value="NONE">{t("iot.cameraSchedules.recurrenceNone")}</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+            Resolution
+            <select
+              value={scheduleResolution}
+              onChange={(event) => setScheduleResolution(event.target.value as "QVGA" | "VGA" | "HD")}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <option value="QVGA">QVGA</option>
+              <option value="VGA">VGA</option>
+              <option value="HD">HD</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+            Quality
+            <select
+              value={scheduleQuality}
+              onChange={(event) => setScheduleQuality(event.target.value as "LOW" | "MEDIUM" | "HIGH")}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+            >
+              <option value="LOW">LOW</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="HIGH">HIGH</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+            Upload endpoint
+            <input
+              value={uploadEndpoint}
+              onChange={(event) => setUploadEndpoint(event.target.value)}
+              placeholder="default"
+              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={isCreatingSchedule}
+            className="inline-flex items-center justify-center self-end rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            <CalendarPlus className="mr-2 h-4 w-4" />
+            {isCreatingSchedule ? t("iot.cameraSchedules.loading") : t("iot.cameraSchedules.create")}
+          </button>
+        </form>
       ) : null}
 
       {!canCapture ? (
@@ -496,6 +623,18 @@ function DeviceMediaPanel({
                   ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
                   : event.error || event.requestId || t("iot.devices.media.waitingForUpload")}
               </p>
+              {event.analysis ? (
+                <div className={`mt-2 text-xs font-black ${event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
+                  {event.analysis.diseaseDetected
+                    ? `Disease detected: ${event.analysis.diseaseType ?? event.analysis.diseaseName ?? "unknown"}${event.analysis.severity ? ` · ${event.analysis.severity}` : ""}`
+                    : event.analysis.status}
+                  {event.analysis.alertEventId ? (
+                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
+                      Alert
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -666,6 +805,8 @@ export function DeviceDetailPage() {
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
   const runScheduleNowMutation = useRunCameraScheduleNowMutation();
+  const createScheduleMutation = useCreateDeviceCameraScheduleMutation();
+  const detectDiseaseMutation = useDiseaseDetectMutation();
 
   useEffect(() => {
     if (!deviceId) return undefined;
@@ -687,14 +828,13 @@ export function DeviceDetailPage() {
   const deviceUid = device?.deviceUid;
   const config = configQuery.data;
   const mediaEvents = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
-  const deviceSchedule = useMemo(() => {
+  const deviceSchedules = useMemo(() => {
     if (!deviceUid) return null;
-    return (
-      (cameraSchedulesQuery.data ?? []).find(
-        (schedule) => schedule.deviceUid === deviceUid,
-      ) ?? null
+    return (cameraSchedulesQuery.data ?? []).filter(
+      (schedule) => schedule.deviceUid === deviceUid,
     );
   }, [cameraSchedulesQuery.data, deviceUid]);
+  const deviceSchedule = deviceSchedules?.[0] ?? null;
   const watchedCaptureEvent = useMemo(
     () =>
       captureRequestId
@@ -785,22 +925,20 @@ export function DeviceDetailPage() {
   }, [device?.latestReadings, latestReadingsQuery.data]);
   const deviceAlerts = alertEventsQuery.data?.items ?? [];
 
-  useEffect(() => {
-    if (!expandedSensor) return;
+  const displayedExpandedSensor = useMemo(() => {
+    if (!expandedSensor) return null;
     const snapshot = chartSnapshots[expandedSensor.sensorCode];
-    if (!snapshot || snapshot.data === expandedSensor.data.trend) return;
-    setExpandedSensor((current) =>
-      current
-        ? {
-            ...current,
-            data: {
-              ...current.data,
-              trend: snapshot.data,
-              unit: snapshot.unit,
-            },
-          }
-        : current,
-    );
+    if (!snapshot || snapshot.data === expandedSensor.data.trend) {
+      return expandedSensor;
+    }
+    return {
+      ...expandedSensor,
+      data: {
+        ...expandedSensor.data,
+        trend: snapshot.data,
+        unit: snapshot.unit,
+      },
+    };
   }, [chartSnapshots, expandedSensor]);
 
   if (!deviceId) {
@@ -835,6 +973,43 @@ export function DeviceDetailPage() {
     setCaptureRequestId(requestId);
     await mediaQuery.refetch();
     await cameraSchedulesQuery.refetch();
+  };
+
+  const handleCreateCameraSchedule = async (payload: {
+    timeOfDay: string;
+    recurrence: CameraScheduleRecurrence;
+    resolution: "QVGA" | "VGA" | "HD";
+    quality: "LOW" | "MEDIUM" | "HIGH";
+    uploadEndpoint?: string;
+  }) => {
+    if (!deviceUid) return;
+    await createScheduleMutation.mutateAsync({
+      deviceUid,
+      payload: {
+        enabled: true,
+        timeOfDay: payload.timeOfDay,
+        recurrence: payload.recurrence,
+        resolution: payload.resolution,
+        quality: payload.quality,
+        uploadEndpoint: payload.uploadEndpoint,
+      },
+    });
+    await cameraSchedulesQuery.refetch();
+  };
+
+  const handleDetectLatestMedia = async (media: DeviceMediaEventResponse) => {
+    if (!deviceUid || !media.fileId) return;
+    await detectDiseaseMutation.mutateAsync({
+      deviceUid,
+      payload: {
+        mediaEventId: media.id,
+        fileId: media.fileId,
+        deviceUid,
+        force: true,
+      },
+    });
+    await mediaQuery.refetch();
+    await alertEventsQuery.refetch();
   };
 
   const isPageLoading = deviceDetailQuery.isLoading || configQuery.isLoading;
@@ -1159,9 +1334,14 @@ export function DeviceDetailPage() {
             isCapturing={captureImageMutation.isPending}
             isPolling={isMediaPolling}
             deviceSchedule={deviceSchedule}
+            deviceSchedules={deviceSchedules ?? []}
             isRunningSchedule={runScheduleNowMutation.isPending}
+            isCreatingSchedule={createScheduleMutation.isPending}
+            isDetectingDisease={detectDiseaseMutation.isPending}
             onCapture={handleCaptureImage}
             onRunScheduleNow={handleRunScheduleNow}
+            onCreateSchedule={handleCreateCameraSchedule}
+            onDetectLatest={handleDetectLatestMedia}
           />
 
           <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
@@ -1247,14 +1427,14 @@ export function DeviceDetailPage() {
         </>
       ) : null}
 
-      {expandedSensor ? (
+      {displayedExpandedSensor ? (
         <SensorChartModal
-          title={expandedSensor.title}
-          icon={expandedSensor.icon}
-          data={expandedSensor.data}
-          colorClass={expandedSensor.colorClass}
-          barColor={expandedSensor.barColor}
-          iconBgClass={expandedSensor.iconBgClass}
+          title={displayedExpandedSensor.title}
+          icon={displayedExpandedSensor.icon}
+          data={displayedExpandedSensor.data}
+          colorClass={displayedExpandedSensor.colorClass}
+          barColor={displayedExpandedSensor.barColor}
+          iconBgClass={displayedExpandedSensor.iconBgClass}
           chartType={chartType}
           onChartTypeChange={(type) => {
             setChartType(type);
@@ -1265,15 +1445,15 @@ export function DeviceDetailPage() {
           range={range}
           rangeOptions={DISPLAY_CHART_RANGE_OPTIONS}
           onRangeChange={setRange}
-          thresholds={expandedSensor.thresholds}
+          thresholds={displayedExpandedSensor.thresholds}
           isLoading={false}
           isError={false}
           analyticsEnabled={analyticsEnabled}
           onAnalyticsToggle={setAnalyticsEnabled}
-          eventMarkers={createDataUpdateMarker(expandedSensor.data.latestUpdatedAt)}
+          eventMarkers={createDataUpdateMarker(displayedExpandedSensor.data.latestUpdatedAt)}
           exportFilename={chartExportFilename(
             `device-${deviceId}`,
-            expandedSensor.sensorCode,
+            displayedExpandedSensor.sensorCode,
             range,
           )}
           onClose={() => setExpandedSensor(null)}

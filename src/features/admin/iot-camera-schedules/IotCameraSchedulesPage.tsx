@@ -26,6 +26,7 @@ import {
   useCameraSchedulesQuery,
   useCreateCameraScheduleMutation,
   useDeleteCameraScheduleMutation,
+  useRunScheduledCameraForDeviceMutation,
   useRunCameraScheduleNowMutation,
   useUpdateCameraScheduleMutation,
 } from "./cameraSchedules.queries";
@@ -33,6 +34,8 @@ import {
 type EnabledFilter = "all" | "enabled" | "disabled";
 
 const recurrenceOptions: CameraScheduleRecurrence[] = ["DAILY", "WEEKLY", "NONE"];
+const resolutionOptions = ["QVGA", "VGA", "HD"] as const;
+const qualityOptions = ["LOW", "MEDIUM", "HIGH"] as const;
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "-";
@@ -83,6 +86,9 @@ function ScheduleForm({
   const [recurrence, setRecurrence] = useState<CameraScheduleRecurrence>(
     (initial?.recurrence as CameraScheduleRecurrence | undefined) ?? "DAILY",
   );
+  const [resolution, setResolution] = useState(initial?.resolution ?? "VGA");
+  const [quality, setQuality] = useState(initial?.quality ?? "MEDIUM");
+  const [uploadEndpoint, setUploadEndpoint] = useState(initial?.uploadEndpoint ?? "");
 
   return (
     <form
@@ -95,6 +101,9 @@ function ScheduleForm({
           triggerType: "SCHEDULED",
           timeOfDay: normalizeTime(timeOfDay),
           recurrence,
+          resolution: resolution as DeviceCameraScheduleRequest["resolution"],
+          quality: quality as DeviceCameraScheduleRequest["quality"],
+          uploadEndpoint: uploadEndpoint.trim() || undefined,
         });
       }}
     >
@@ -139,6 +148,43 @@ function ScheduleForm({
           className="h-4 w-4 rounded border-slate-300 text-emerald-600"
         />
         {t("iot.cameraSchedules.enabled")}
+      </label>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+        {t("iot.cameraSchedules.resolution")}
+        <select
+          value={resolution ?? "VGA"}
+          onChange={(event) => setResolution(event.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+        >
+          {resolutionOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+        {t("iot.cameraSchedules.quality")}
+        <select
+          value={quality ?? "MEDIUM"}
+          onChange={(event) => setQuality(event.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+        >
+          {qualityOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+        {t("iot.cameraSchedules.uploadEndpoint")}
+        <input
+          value={uploadEndpoint ?? ""}
+          onChange={(event) => setUploadEndpoint(event.target.value)}
+          placeholder="default"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
+        />
       </label>
       <div className="flex items-end gap-2">
         <button
@@ -217,6 +263,7 @@ export function IotCameraSchedulesPage() {
   const updateSchedule = useUpdateCameraScheduleMutation();
   const deleteSchedule = useDeleteCameraScheduleMutation();
   const runNow = useRunCameraScheduleNowMutation();
+  const runDeviceScheduled = useRunScheduledCameraForDeviceMutation();
 
   const filteredSchedules = useMemo(() => {
     const schedules = schedulesQuery.data ?? [];
@@ -305,6 +352,7 @@ export function IotCameraSchedulesPage() {
                   <th className="px-4 py-3">{t("iot.cameraSchedules.enabled")}</th>
                   <th className="px-4 py-3">{t("iot.cameraSchedules.timeOfDay")}</th>
                   <th className="px-4 py-3">{t("iot.cameraSchedules.recurrence")}</th>
+                  <th className="px-4 py-3">{t("iot.cameraSchedules.captureOptions")}</th>
                   <th className="px-4 py-3">{t("iot.cameraSchedules.nextRunAt")}</th>
                   <th className="px-4 py-3">{t("iot.cameraSchedules.lastRunAt")}</th>
                   <th className="px-4 py-3">{t("iot.cameraSchedules.lastCapture")}</th>
@@ -332,6 +380,13 @@ export function IotCameraSchedulesPage() {
                     <td className="px-4 py-4 font-semibold text-slate-700">
                       {formatScheduleRecurrenceLabel(t, schedule.recurrence)}
                     </td>
+                    <td className="px-4 py-4 text-xs font-semibold text-slate-500">
+                      <div>{t("iot.cameraSchedules.resolution")}: {schedule.resolution ?? "-"}</div>
+                      <div>{t("iot.cameraSchedules.quality")}: {schedule.quality ?? "-"}</div>
+                      <div className="max-w-[180px] truncate">
+                        {t("iot.cameraSchedules.uploadEndpoint")}: {schedule.uploadEndpoint || "-"}
+                      </div>
+                    </td>
                     <td className="px-4 py-4 font-semibold text-slate-600">{formatDateTime(schedule.nextRunAt)}</td>
                     <td className="px-4 py-4 font-semibold text-slate-600">{formatDateTime(schedule.lastRunAt)}</td>
                     <td className="px-4 py-4">
@@ -349,9 +404,18 @@ export function IotCameraSchedulesPage() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => runDeviceScheduled.mutate(schedule.deviceUid)}
+                          disabled={runDeviceScheduled.isPending}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          <Play className="h-3.5 w-3.5" />
+                          {t("iot.cameraSchedules.runScheduledCaptureNow")}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => runNow.mutate(schedule.id)}
                           disabled={runNow.isPending}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
                         >
                           <Play className="h-3.5 w-3.5" />
                           {t("iot.cameraSchedules.runNow")}

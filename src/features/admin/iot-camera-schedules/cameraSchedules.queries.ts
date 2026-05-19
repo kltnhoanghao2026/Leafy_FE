@@ -35,6 +35,27 @@ export const useCreateCameraScheduleMutation = () => {
   });
 };
 
+export const useCreateDeviceCameraScheduleMutation = () => {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: ({
+      deviceUid,
+      payload,
+    }: {
+      deviceUid: string;
+      payload: Pick<DeviceCameraScheduleRequest, "enabled" | "timeOfDay" | "recurrence" | "resolution" | "quality" | "uploadEndpoint">;
+    }) => collectorApi.createDeviceCameraSchedule(deviceUid, payload),
+    onSuccess: async () => {
+      toast.success(t("iot.cameraSchedules.toastCreateSuccess"));
+      await queryClient.invalidateQueries({ queryKey: cameraScheduleKeys.all });
+    },
+    onError: (error) =>
+      toast.error(t("iot.cameraSchedules.toastCreateFailed")(toErrorMessage(error))),
+  });
+};
+
 export const useUpdateCameraScheduleMutation = () => {
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -77,6 +98,22 @@ export const useRunCameraScheduleNowMutation = () => {
 
   return useMutation({
     mutationFn: (scheduleId: string) => collectorApi.runCameraScheduleNow(scheduleId),
+    onSuccess: async () => {
+      toast.success(t("iot.cameraSchedules.toastRunSuccess"));
+      await queryClient.invalidateQueries({ queryKey: cameraScheduleKeys.all });
+    },
+    onError: (error) =>
+      toast.error(t("iot.cameraSchedules.toastRunFailed")(toErrorMessage(error))),
+  });
+};
+
+export const useRunScheduledCameraForDeviceMutation = () => {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: (deviceUid: string) =>
+      collectorApi.runScheduledCameraForDevice(deviceUid),
     onSuccess: async () => {
       toast.success(t("iot.cameraSchedules.toastRunSuccess"));
       await queryClient.invalidateQueries({ queryKey: cameraScheduleKeys.all });
