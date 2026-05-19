@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LayoutGrid, List, Search, Sprout } from 'lucide-react';
+import { LayoutGrid, List, Search, Sprout, ShieldOff } from 'lucide-react';
 import { ROUTES } from '../../../lib/routes';
 import {
   useConsultingFarmPlots,
@@ -11,6 +11,7 @@ import { PlantCard } from '../../plant-management/plant/components/PlantCard';
 import { Select } from '../../../components/ui/Select';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import type { PlantResponse, PlantStatus, SpeciesResponse } from '../../plant-management/shared/types';
+import type { PrivacySettings } from '../../settings/types';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,11 @@ function getSpeciesDisplayName(
 ) {
   const species = speciesById.get(plant.speciesId);
   return species?.commonName || species?.cultivarName || 'Chưa rõ giống cây';
+}
+
+interface PlantsTabProps {
+  farmerProfileId: string;
+  privacySettings?: PrivacySettings | null;
 }
 
 // ── Zone filter select ────────────────────────────────────────────────────────
@@ -64,7 +70,8 @@ function ZoneFilterSelect({
 
 // ── PlantsTab ─────────────────────────────────────────────────────────────────
 
-export function PlantsTab({ farmerProfileId }: { farmerProfileId: string }) {
+export function PlantsTab({ farmerProfileId, privacySettings }: PlantsTabProps) {
+  const shared = !!privacySettings?.sharePlantsWithConsultants;
   const plantsQuery = useConsultingPlants(farmerProfileId);
   const { data: farmPlots } = useConsultingFarmPlots(farmerProfileId, !!farmerProfileId);
   const speciesQuery = useSpecies();
@@ -173,8 +180,18 @@ export function PlantsTab({ farmerProfileId }: { farmerProfileId: string }) {
   if (plants.length === 0) {
     return (
       <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white py-16 text-center">
+        {!shared && (
+          <div className="flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-400 text-xs font-bold px-3 py-1 mb-4">
+            <ShieldOff className="w-3 h-3" strokeWidth={2.5} />
+            Chưa chia sẻ
+          </div>
+        )}
         <Sprout className="w-12 h-12 text-slate-300 mb-4" strokeWidth={1.5} />
-        <p className="text-slate-500 font-semibold">Nông dân này chưa có cây trồng nào.</p>
+        <p className="text-slate-500 font-semibold">
+          {shared
+            ? 'Nông dân này chưa có cây trồng nào.'
+            : 'Nông dân chưa chia sẻ dữ liệu cây trồng.'}
+        </p>
       </div>
     );
   }
@@ -183,12 +200,20 @@ export function PlantsTab({ farmerProfileId }: { farmerProfileId: string }) {
     <div className="flex flex-col gap-4 pt-6">
       <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
         {/* Title row */}
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-black text-slate-900">Lọc cây trồng tư vấn</p>
-            <p className="text-xs font-semibold text-slate-500">
-              {filteredPlants.length} / {plants.length} cây hiển thị · {activeCount} cây đang phát triển
-            </p>
+        <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {!shared && (
+              <div className="flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-400 text-xs font-bold px-3 py-1">
+                <ShieldOff className="w-3 h-3" strokeWidth={2.5} />
+                Chưa chia sẻ
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-black text-slate-900">Lọc cây trồng tư vấn</p>
+              <p className="text-xs font-semibold text-slate-500">
+                {filteredPlants.length} / {plants.length} cây hiển thị · {activeCount} cây đang phát triển
+              </p>
+            </div>
           </div>
           {/* Grid / List toggle */}
           <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">

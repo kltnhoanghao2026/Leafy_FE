@@ -72,7 +72,7 @@ export function MonthCalendarView({
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Calendar card */}
       <div className="flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         {/* Month navigation */}

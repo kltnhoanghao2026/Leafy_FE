@@ -4,6 +4,7 @@ import type {
   RagApiResponse,
   RagChatRequest,
   RagChatResult,
+  RagConversation,
   RagHealthResponse,
   RagPlan,
 } from "../types";
@@ -43,5 +44,34 @@ export const ragApi = {
     >(API_ENDPOINTS.RAG.PLAN(planId));
     const plan = unwrapRagResult(response.data);
     return normalizeTreatmentPlan(plan) ?? plan;
+  },
+
+  getRagConversations: async (
+    params: { page?: number; size?: number } = {},
+  ) => {
+    const response = await apiClient.get<
+      RagApiResponse<RagConversation[]> | RagConversation[]
+    >(API_ENDPOINTS.RAG.CONVERSATIONS, {
+      params: { page: params.page ?? 0, size: params.size ?? 20 },
+    });
+    return unwrapRagResult(response.data);
+  },
+
+  getRagConversationById: async (conversationId: string) => {
+    const response = await apiClient.get<
+      RagApiResponse<RagConversation> | RagConversation
+    >(API_ENDPOINTS.RAG.CONVERSATION(conversationId));
+    return unwrapRagResult(response.data);
+  },
+
+  renameRagConversation: async (conversationId: string, title: string) => {
+    const response = await apiClient.patch<
+      RagApiResponse<RagConversation> | RagConversation
+    >(API_ENDPOINTS.RAG.CONVERSATION(conversationId), { title });
+    return unwrapRagResult(response.data);
+  },
+
+  deleteRagConversation: async (conversationId: string) => {
+    await apiClient.delete(API_ENDPOINTS.RAG.CONVERSATION(conversationId));
   },
 };

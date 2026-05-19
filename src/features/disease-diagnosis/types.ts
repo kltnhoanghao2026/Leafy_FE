@@ -9,6 +9,7 @@ export interface PageResponse<T> {
 export interface DiseasePrediction {
   className: string;
   confidenceScore: number;
+  severityLevel?: string;
 }
 
 export interface PredictResponse {
@@ -26,12 +27,15 @@ export interface DiagnoseRequest {
   userId: string;
   imageFileName: string;
   imageContentType: string;
+  fileId?: string;
+  plantId?: string;
   timeStamp: string;
 }
 
 export interface DiagnoseResultItem {
   diseaseName: string;
   confidenceScore: number;
+  severityLevel?: string;
 }
 
 export interface DiagnoseResult {

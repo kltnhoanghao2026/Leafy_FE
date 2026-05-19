@@ -204,7 +204,7 @@ function ChildEventNode({
   const [expanded, setExpanded] = useState(depth === 0);
   const [hovered, setHovered] = useState(false);
   const hasChildren = event.children && event.children.length > 0;
-  const targetIcon = event.targetType ? TARGET_TYPE_ICONS[event.targetType] : null;
+  const TargetIcon = event.targetType ? TARGET_TYPE_ICONS[event.targetType] : null;
   const targetLabel = event.targetType ? TARGET_TYPE_LABELS[event.targetType] : null;
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Sprout;
 
@@ -269,7 +269,7 @@ function ChildEventNode({
                 className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
                 style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
               >
-                {targetIcon && <span className="text-[10px]">{targetIcon}</span>}
+                {TargetIcon && <TargetIcon className="h-3 w-3 shrink-0" />}
                 {targetLabel}
               </span>
             )}

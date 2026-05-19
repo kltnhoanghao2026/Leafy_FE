@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  Award, MapPin, Settings, Camera, ShieldCheck, Loader2, Edit3, Check, X,
-  Users, CalendarDays
+  Award, MapPin, Camera, ShieldCheck, Loader2, Edit3, Check, X,
+  Users, CalendarDays, ArrowRight, ShieldOff, Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Avatar } from '../../../components/ui/Avatar'
@@ -16,8 +16,88 @@ import type { ProfileUpdateRequest } from '../../settings/types'
 import { PostCard } from '../../community/components/PostCard'
 import { mapPostResponseToPost } from '../../community/mappers'
 import { FollowersList } from '../components/FollowersList'
+import { EditProfileModal } from '../components/EditProfileModal'
 
 const ROLE_LABELS: Record<string, string> = { FARMER: 'Nông dân', EXPERT: 'Chuyên gia' }
+
+// ── Applications tab (expert certification flow) ────────────────────────────────
+import { ExpertApplicationHistoryPage } from '../../certificates/pages/ExpertApplicationHistoryPage'
+import { useNavigate } from 'react-router-dom'
+
+interface ApplicationsTabProps {
+  profile: {
+    id: string
+    role: string
+    isVerified: boolean
+  }
+}
+
+function ApplicationsTab({ profile }: ApplicationsTabProps) {
+  const navigate = useNavigate()
+  const isExpert = profile.role === 'EXPERT'
+
+  if (isExpert) {
+    return (
+      <div className="mt-6 flex flex-col items-center gap-4 bg-white rounded-2xl border border-emerald-200 p-8 text-center shadow-sm">
+        <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
+          <ShieldCheck className="w-7 h-7 text-emerald-600" strokeWidth={1.5} />
+        </div>
+        <div>
+          <p className="font-bold text-emerald-800 text-base">Bạn là Chuyên gia đã xác minh</p>
+          <p className="text-sm text-emerald-600 mt-1">
+            Hồ sơ chứng chỉ đã được phê duyệt. Bạn có thể nhận yêu cầu tư vấn từ nông dân.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-6 space-y-4">
+      {/* Non-expert: show CTA to apply */}
+      {!profile.isVerified && (
+        <div className="flex flex-col items-center gap-4 bg-white rounded-2xl border border-amber-200 p-8 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+            <ShieldOff className="w-7 h-7 text-amber-500" strokeWidth={1.5} />
+          </div>
+          <div>
+            <p className="font-bold text-slate-800 text-base">Trở thành Chuyên gia được xác minh</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Gửi hồ sơ chứng chỉ để nhận huy hiệu xác minh và tiếp cận nông dân trên toàn quốc.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(ROUTES.DASHBOARD.APPLY_AS_EXPERT)}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[#245A34] hover:bg-[#1a4226] text-white font-bold text-sm shadow-sm transition-colors"
+          >
+            <Award className="w-4 h-4" strokeWidth={2.5} />
+            Nộp hồ sơ xác minh
+          </button>
+        </div>
+      )}
+
+      {/* Expert but unverified */}
+      {profile.role === 'EXPERT' && !profile.isVerified && (
+        <div className="flex flex-col items-center gap-4 bg-white rounded-2xl border border-amber-200 p-8 text-center shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+            <Clock className="w-7 h-7 text-amber-500 animate-pulse" strokeWidth={1.5} />
+          </div>
+          <div>
+            <p className="font-bold text-slate-800 text-base">Hồ sơ đang chờ xác minh</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Đội ngũ quản trị đang xem xét hồ sơ chứng chỉ của bạn.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Application history */}
+      <ExpertApplicationHistoryPage embedded />
+    </div>
+  )
+}
+
+// ── Hooks ──────────────────────────────────────────────────────────────────────
 
 function useMyProfile() {
   return useQuery({
@@ -50,12 +130,12 @@ function useUpdateProfile() {
 }
 
 export function MyProfilePage() {
-  const navigate = useNavigate()
   const { data: profile, isLoading, error } = useMyProfile()
   const { data: posts = [] } = useMyPosts(profile?.id)
   const updateMutation = useUpdateProfile()
   const qc = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'posts' | 'followers'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'applications'>('posts')
+  const [showEditModal, setShowEditModal] = useState(false)
 
   // Avatar
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -177,10 +257,10 @@ export function MyProfilePage() {
               {/* Action Buttons */}
               <div className="flex justify-center md:justify-end gap-2 md:pb-2 shrink-0">
                 <button
-                  onClick={() => navigate(ROUTES.DASHBOARD.SETTINGS)}
+                  onClick={() => setShowEditModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[14px] font-bold rounded-xl transition-colors"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Edit3 className="w-4 h-4" />
                   Chỉnh sửa hồ sơ
                 </button>
               </div>
@@ -191,9 +271,17 @@ export function MyProfilePage() {
               <button 
                 onClick={() => setActiveTab('posts')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'posts' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Bài viết</button>
-              <button 
+              <button
                 onClick={() => setActiveTab('followers')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'followers' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Người theo dõi</button>
+              <button
+                onClick={() => setActiveTab('applications')}
+                className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'applications' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>
+                Hồ sơ
+                {profile.role !== 'EXPERT' && (
+                  <span className="ml-1.5 w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -354,6 +442,22 @@ export function MyProfilePage() {
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           <FollowersList profileId={profile.id} />
         </div>
+      )}
+
+      {activeTab === 'applications' && (
+        <div className="max-w-3xl mx-auto px-4">
+          <ApplicationsTab profile={profile} />
+        </div>
+      )}
+
+      {showEditModal && (
+        <EditProfileModal
+          profile={profile}
+          onClose={() => setShowEditModal(false)}
+          onSave={async (data) => {
+            await updateMutation.mutateAsync({ userId: profile.userId, data })
+          }}
+        />
       )}
     </div>
   )

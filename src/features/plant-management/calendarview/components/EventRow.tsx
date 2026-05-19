@@ -338,7 +338,10 @@ export function EventRow({ event, accent, isLast, onEdit, onDelete, onEventHover
             {event.targetType && (
               <div className="flex items-center gap-1.5">
                 <span className="text-sm" aria-hidden>
-                  {TARGET_TYPE_ICONS[event.targetType]}
+                  {(() => {
+                    const TargetIcon = TARGET_TYPE_ICONS[event.targetType];
+                    return TargetIcon ? <TargetIcon className="h-3.5 w-3.5" /> : null;
+                  })()}
                 </span>
                 <span
                   className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide"

@@ -26,6 +26,14 @@ export const useMyPreferences = () =>
     select: (response) => response.data.data,
   });
 
+export const usePrivacySettingsByProfileId = (profileId: string) =>
+  useQuery({
+    queryKey: preferenceKeys.byProfile(profileId),
+    queryFn: () => profileApi.getPrivacySettingsByProfileId(profileId),
+    select: (response) => response.data.data,
+    enabled: !!profileId,
+  });
+
 export const useFilePreviewUrl = (fileReference?: string | null) =>
   useQuery({
     queryKey: fileKeys.presignedUrl(fileReference ?? ""),

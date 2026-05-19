@@ -8,10 +8,8 @@ import {
 
 interface PredictionResultCardProps {
   result: PredictResponse;
-  onAskAi?: (
-    prediction: DiseasePrediction,
-    predictions: DiseasePrediction[],
-  ) => void;
+  onGeneratePlan?: (prediction: DiseasePrediction) => void;
+  isGeneratingPlan?: boolean;
 }
 
 const sortPredictions = (items: DiseasePrediction[]) =>
@@ -19,7 +17,8 @@ const sortPredictions = (items: DiseasePrediction[]) =>
 
 export function PredictionResultCard({
   result,
-  onAskAi,
+  onGeneratePlan,
+  isGeneratingPlan,
 }: PredictionResultCardProps) {
   const predictions = sortPredictions(result.predictions ?? []);
   const topPrediction = predictions[0];
@@ -51,16 +50,6 @@ export function PredictionResultCard({
             </p>
           </div>
         </div>
-        <button
-          type="button"
-          disabled={!topPrediction || !onAskAi}
-          onClick={() => {
-            if (topPrediction) onAskAi?.(topPrediction, predictions);
-          }}
-          className="rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-        >
-          Hỏi AI tư vấn cách xử lý
-        </button>
       </div>
 
       <p
@@ -100,6 +89,21 @@ export function PredictionResultCard({
           );
         })}
       </div>
+
+      {!isHealthy && onGeneratePlan && (
+        <div className="mt-5 flex justify-end">
+          <button
+            type="button"
+            disabled={!topPrediction || isGeneratingPlan}
+            onClick={() => {
+              if (topPrediction) onGeneratePlan?.(topPrediction);
+            }}
+            className="rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 flex justify-center items-center"
+          >
+            {isGeneratingPlan ? "Đang tạo kế hoạch..." : "Tạo kế hoạch điều trị"}
+          </button>
+        </div>
+      )}
 
       <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500">
         Model: {result.modelName || "Không rõ"} · Thời gian xử lý:{" "}

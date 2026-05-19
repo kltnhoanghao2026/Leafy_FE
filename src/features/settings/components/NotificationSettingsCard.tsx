@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell, Loader2, MessageSquare, Users, Phone, UserPlus, Cake, AppWindow, Vibrate, Eye } from "lucide-react";
+import { Bell, Loader2, MessageSquare, Users, UserPlus } from "lucide-react";
 import {
   useMyPreferences,
   useUpdateNotificationPreferencesMutation,
@@ -15,12 +15,8 @@ export function NotificationSettingsCard() {
     notifyNewMessageFromDirect: true,
     previewNewMessageFromDirect: true,
     notifyNewMessageFromGroup: true,
-    notifyCall: true,
     notifyNewPostFromFriend: true,
-    notifyDOB: true,
     notifyNewMessage: true,
-    shakeOnNewMessage: true,
-    previewNewMessage: true,
   });
 
   const [message, setMessage] = useState<string | null>(null);
@@ -28,7 +24,13 @@ export function NotificationSettingsCard() {
 
   useEffect(() => {
     if (preferences?.notificationSettings) {
-      setSettings(preferences.notificationSettings as any);
+      setSettings({
+        notifyNewMessageFromDirect: preferences.notificationSettings.notifyNewMessageFromDirect ?? true,
+        previewNewMessageFromDirect: preferences.notificationSettings.previewNewMessageFromDirect ?? true,
+        notifyNewMessageFromGroup: preferences.notificationSettings.notifyNewMessageFromGroup ?? true,
+        notifyNewPostFromFriend: preferences.notificationSettings.notifyNewPostFromFriend ?? true,
+        notifyNewMessage: preferences.notificationSettings.notifyNewMessage ?? true,
+      });
     }
   }, [preferences]);
 
@@ -69,22 +71,16 @@ export function NotificationSettingsCard() {
           
           <SettingsGroup title={t("settings.notification.groups.messages")}>
             <ToggleRow icon={<MessageSquare className="w-5 h-5 text-blue-600"/>} bgClass="bg-blue-100" title={t("settings.notification.directMessage")} desc={t("settings.notification.directMessageDesc")} checked={settings.notifyNewMessageFromDirect} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyNewMessageFromDirect")} />
-            <ToggleRow icon={<Eye className="w-5 h-5 text-indigo-600"/>} bgClass="bg-indigo-100" title={t("settings.notification.previewMessage")} desc={t("settings.notification.previewMessageDesc")} checked={settings.previewNewMessageFromDirect} disabled={updateMutation.isPending} onChange={() => handleToggle("previewNewMessageFromDirect")} />
+            <ToggleRow icon={<Users className="w-5 h-5 text-indigo-600"/>} bgClass="bg-indigo-100" title={t("settings.notification.previewMessage")} desc={t("settings.notification.previewMessageDesc")} checked={settings.previewNewMessageFromDirect} disabled={updateMutation.isPending} onChange={() => handleToggle("previewNewMessageFromDirect")} />
             <ToggleRow icon={<Users className="w-5 h-5 text-teal-600"/>} bgClass="bg-teal-100" title={t("settings.notification.groupMessage")} desc={t("settings.notification.groupMessageDesc")} checked={settings.notifyNewMessageFromGroup} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyNewMessageFromGroup")} />
-          </SettingsGroup>
-
-          <SettingsGroup title={t("settings.notification.groups.calls")}>
-            <ToggleRow icon={<Phone className="w-5 h-5 text-emerald-600"/>} bgClass="bg-emerald-100" title={t("settings.notification.incomingCall")} desc={t("settings.notification.incomingCallDesc")} checked={settings.notifyCall} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyCall")} />
           </SettingsGroup>
 
           <SettingsGroup title={t("settings.notification.groups.friendActivity")}>
             <ToggleRow icon={<UserPlus className="w-5 h-5 text-amber-600"/>} bgClass="bg-amber-100" title={t("settings.notification.newPost")} desc={t("settings.notification.newPostDesc")} checked={settings.notifyNewPostFromFriend} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyNewPostFromFriend")} />
-            <ToggleRow icon={<Cake className="w-5 h-5 text-pink-600"/>} bgClass="bg-pink-100" title={t("settings.notification.birthday")} desc={t("settings.notification.birthdayDesc")} checked={settings.notifyDOB} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyDOB")} />
           </SettingsGroup>
 
           <SettingsGroup title={t("settings.notification.groups.inApp")}>
-            <ToggleRow icon={<AppWindow className="w-5 h-5 text-purple-600"/>} bgClass="bg-purple-100" title={t("settings.notification.inAppNotice")} desc={t("settings.notification.inAppNoticeDesc")} checked={settings.notifyNewMessage} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyNewMessage")} />
-            <ToggleRow icon={<Vibrate className="w-5 h-5 text-orange-600"/>} bgClass="bg-orange-100" title={t("settings.notification.vibrate")} desc={t("settings.notification.vibrateDesc")} checked={settings.shakeOnNewMessage} disabled={updateMutation.isPending} onChange={() => handleToggle("shakeOnNewMessage")} />
+            <ToggleRow icon={<Bell className="w-5 h-5 text-purple-600"/>} bgClass="bg-purple-100" title={t("settings.notification.inAppNotice")} desc={t("settings.notification.inAppNoticeDesc")} checked={settings.notifyNewMessage} disabled={updateMutation.isPending} onChange={() => handleToggle("notifyNewMessage")} />
           </SettingsGroup>
 
         </div>
@@ -99,7 +95,7 @@ export function NotificationSettingsCard() {
   );
 }
 
-function SettingsGroup({ title, children }: any) {
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider pl-2">{title}</h3>
@@ -110,7 +106,15 @@ function SettingsGroup({ title, children }: any) {
   );
 }
 
-function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: any) {
+function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: {
+  icon: React.ReactNode;
+  bgClass: string;
+  title: string;
+  desc: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: () => void;
+}) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-100/60 bg-slate-50/30 rounded-2xl p-4">
       <div className="flex items-center gap-4">

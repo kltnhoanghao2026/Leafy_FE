@@ -71,6 +71,23 @@ export interface UserConnectionResponse {
   updatedAt: string | null;
 }
 
+export type ConsultingDataType = "FARM_PLOTS" | "PLANTS" | "PLANT_EVENTS" | "PLANS";
+
+export type AccessRequestStatus = "PENDING" | "APPROVED" | "DENIED" | "EXPIRED";
+
+export interface ConsultingDataAccessRequestResponse {
+  id: string;
+  expertProfileId: string;
+  expertName: string | null;
+  expertAvatar: string | null;
+  farmerProfileId: string;
+  dataType: ConsultingDataType;
+  status: AccessRequestStatus;
+  expertMessage: string | null;
+  requestedAt: string | null;
+  respondedAt: string | null;
+}
+
 export const profilesApi = {
   getPublicExperts: (params: { page?: number; size?: number; searchTerm?: string } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(
@@ -150,4 +167,31 @@ export const profilesApi = {
         size: params.size ?? 20,
       },
     }),
+
+  requestDataAccess: (
+    farmerProfileId: string,
+    dataType: ConsultingDataType,
+    message?: string,
+  ) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/request`,
+      message ? { message } : undefined,
+      { params: { farmerProfileId, dataType } },
+    ),
+
+  getPendingAccessRequests: (params: { page?: number; size?: number } = {}) =>
+    apiClient.get<ApiEnvelope<SpringPage<ConsultingDataAccessRequestResponse>>>(
+      `/profiles/consulting/access/requests/pending`,
+      { params: { page: params.page ?? 0, size: params.size ?? 20 } },
+    ),
+
+  approveAccessRequest: (requestId: string) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/requests/${requestId}/approve`,
+    ),
+
+  denyAccessRequest: (requestId: string) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/requests/${requestId}/deny`,
+    ),
 };

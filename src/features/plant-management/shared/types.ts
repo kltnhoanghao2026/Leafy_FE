@@ -137,7 +137,7 @@ export interface PlantEventResponse {
   targetType: TargetType | null;
   note: string | null;
   description: string | null;
-  daysFromNow: number | null;
+  daysFromStart: number | null;
   durationDays: number | null;
   planned: boolean;
   calculatedStartDate: string | null;
@@ -146,7 +146,7 @@ export interface PlantEventResponse {
   ppeRequired: string | null;
   mrlNote: string | null;
   estimatedCost: string | null;
-  sourcePlanId: string | null;
+
   planApplyId: string | null;
   /** ID of the parent PlantEvent in the hierarchy (FARM → FARM_ZONE → PLANT). */
   parentPlantEventId: string | null;
@@ -178,7 +178,7 @@ export interface PlantEventCreateRequest {
   targetType?: TargetType;
   note: string;
   description?: string;
-  daysFromNow?: number;
+  daysFromStart?: number;
   durationDays?: number;
   isPlanned?: boolean;
   calculatedStartDate?: string;
@@ -187,7 +187,7 @@ export interface PlantEventCreateRequest {
   ppeRequired?: string;
   mrlNote?: string;
   estimatedCost?: string;
-  sourcePlanId?: string;
+
   planApplyId?: string;
   parentPlantEventId?: string;
   tasks?: EventTaskRequest[];
@@ -204,7 +204,7 @@ export interface PlantEventUpdateRequest {
   eventType?: PlantEventType;
   note?: string;
   description?: string;
-  daysFromNow?: number;
+  daysFromStart?: number;
   durationDays?: number;
   isPlanned?: boolean;
   calculatedStartDate?: string;
@@ -213,7 +213,7 @@ export interface PlantEventUpdateRequest {
   ppeRequired?: string;
   mrlNote?: string;
   estimatedCost?: string;
-  sourcePlanId?: string;
+
   planApplyId?: string;
   parentPlantEventId?: string;
   completed?: boolean;
@@ -228,13 +228,11 @@ export interface PlantEventsCalendarParams {
   farmPlotId?: string;
   farmZoneId?: string;
   plantId?: string;
-  sourcePlanId?: string;
+
   planApplyId?: string;
 }
 
 export interface PlanCreateRequest {
-  ragPlanId?: string;
-  question?: string;
   planName?: string;
   source?: "websearch" | "documents";
   plantId?: string;
@@ -243,7 +241,6 @@ export interface PlanCreateRequest {
   diseaseName: string;
   confidenceScore?: number;
   severityLevel?: string;
-  urgency?: string;
   requiredInputs?: string[];
   safetyWarnings?: string[];
   successIndicators?: string;
@@ -251,6 +248,12 @@ export interface PlanCreateRequest {
   schedule?: PlantEventCreateRequest[];
   /** Whether this plan should be visible to all users. Defaults to false (private). */
   isPublic?: boolean;
+  /** Source type of the plan. Defaults to RAG_GEN for AI-generated plans. */
+  sourceType?: PlanSourceType;
+  /** Knowledge-base documents used to generate this plan. */
+  sourceDocuments?: SourceDocument[];
+  /** Web search results used to supplement this plan. */
+  webSearchResults?: WebSearchResult[];
 }
 
 export interface PlanUpdateRequest {
@@ -258,7 +261,6 @@ export interface PlanUpdateRequest {
   diseaseName?: string;
   confidenceScore?: number;
   severityLevel?: string;
-  urgency?: string;
   requiredInputs?: string[];
   safetyWarnings?: string[];
   successIndicators?: string;
@@ -305,6 +307,8 @@ export interface PlanApplyResponse {
   trackingGranularity: TrackingGranularity | null;
   plantEventIds: string[] | null;
   status: TreatmentStatus;
+  /** Whether this apply can be cancelled by the user. */
+  canCancel?: boolean | null;
   createdAt: string | null;
   lastModifiedAt: string | null;
 }
@@ -324,6 +328,7 @@ export interface PlanListParams {
   sortDir?: "ASC" | "DESC";
   plantId?: string;
   search?: string;
+  sourceType?: PlanSourceType;
 }
 
 export interface PublicPlanListParams {
@@ -332,6 +337,7 @@ export interface PublicPlanListParams {
   sortBy?: string;
   sortDir?: "ASC" | "DESC";
   search?: string;
+  sourceType?: PlanSourceType;
 }
 
 export interface PlantListParams {
@@ -385,7 +391,7 @@ export interface EmbeddedPlanEventResponse {
   targetType: TargetType | null;
   note: string | null;
   description: string | null;
-  daysFromNow: number | null;
+  daysFromStart: number | null;
   durationDays: number | null;
   phiDays: number | null;
   ppeRequired: string | null;
@@ -394,18 +400,37 @@ export interface EmbeddedPlanEventResponse {
   tasks: EventTaskResponse[] | null;
 }
 
+export type PlanSourceType = 'CONSULTED' | 'RAG_GEN' | 'USER_CREATED';
+
+export interface SourceDocument {
+  /** Full text content of the retrieved document page. */
+  pageContent: string;
+  /** Title of the source document. */
+  title?: string;
+  /** URL of the source (if available). */
+  url?: string;
+  /** Qdrant point ID — used to fetch full chunk details via GET /rag/v1/chunks/by-point-ids */
+  pointId?: string;
+  /** Arbitrary metadata from the knowledge base (score, filename, etc.). */
+  metadata?: Record<string, unknown>;
+}
+
+export interface WebSearchResult {
+  title: string;
+  url: string;
+  content: string;
+  score: number;
+}
+
 export interface PlanResponse {
   id: string;
   creatorId: string | null;
   ownerId: string | null;
-  ragPlanId: string | null;
-  question: string | null;
   planName: string | null;
   source: string | null;
   diseaseName: string | null;
   confidenceScore: number | null;
   severityLevel: string | null;
-  urgency: string | null;
   requiredInputs: string[] | null;
   safetyWarnings: string[] | null;
   successIndicators: string | null;
@@ -420,6 +445,9 @@ export interface PlanResponse {
   isPublic: boolean;
   /** Whether this plan was created by an expert on behalf of a farmer. */
   isConsulted: boolean;
+  sourceType?: PlanSourceType;
+  sourceDocuments?: SourceDocument[];
+  webSearchResults?: WebSearchResult[];
   ownerInfo: AuthorInfo | null;
   creatorInfo: AuthorInfo | null;
   createdAt: string | null;
@@ -451,11 +479,15 @@ export interface AgricultureStatsResponse {
   archivedPlants: number;
   todayEvents: number;
   todayCompletedEvents: number;
+  monthEvents: number;
+  monthCompletedEvents: number;
+  monthPendingEvents: number;
   upcomingEvents7d: number;
   overdueEvents: number;
   totalCompletedEvents: number;
   totalPendingEvents: number;
   eventsByType: Record<string, number>;
+  monthEventsByType: Record<string, number>;
   totalPlans: number;
   activePlanApplies: number;
   completedPlanApplies: number;

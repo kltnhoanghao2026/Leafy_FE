@@ -268,7 +268,9 @@ export function CalendarWorkspace({
           {/* Desktop: split layout (lg+) */}
           <div ref={containerRef} className="hidden lg:flex flex-1 min-h-0 flex-row gap-0 overflow-hidden">
             <div className="shrink-0 h-full overflow-hidden" style={{ width: `${leftPct}%` }}>
-              <CalendarViewPanel {...calendarPanelProps} />
+              <div className="h-full overflow-hidden">
+                <CalendarViewPanel {...calendarPanelProps} />
+              </div>
             </div>
 
             <div

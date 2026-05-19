@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, CalendarClock, Eye } from 'lucide-react';
 import { PlanPreviewCalendar } from '../../../consulting/components/PlanPreviewCalendar';
 import { ROUTES } from '../../../../lib/routes';
@@ -19,15 +19,23 @@ export function CreatePlanPage() {
   const ownerProfileId = profileQuery.data?.id ?? '';
   const { data: farmPlots } = useFarmPlots(ownerProfileId, !!ownerProfileId);
 
+  const location = useLocation();
+
   const [form, setForm] = useState<PlanFormState>(() => {
+    if (location.state?.draft?.form) {
+      // Merge with emptyForm() so any fields absent from the AI draft (e.g.
+      // planName, urgency) are always initialized to a safe default.
+      return { ...emptyForm(), ...location.state.draft.form };
+    }
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return (JSON.parse(raw) as { form: PlanFormState; events: PlantEventCreateRequest[] }).form ?? emptyForm();
+      if (raw) return { ...emptyForm(), ...((JSON.parse(raw) as { form: PlanFormState; events: PlantEventCreateRequest[] }).form ?? {}) };
     } catch { /* ignore */ }
     return emptyForm();
   });
 
   const [events, setEvents] = useState<PlantEventCreateRequest[]>(() => {
+    if (location.state?.draft?.events) return location.state.draft.events;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) return (JSON.parse(raw) as { form: PlanFormState; events: PlantEventCreateRequest[] }).events ?? [];
@@ -115,7 +123,7 @@ export function CreatePlanPage() {
       eventType: evt.eventType,
       note: evt.note,
       description: evt.description?.trim() || undefined,
-      daysFromNow: evt.daysFromNow,
+      daysFromStart: evt.daysFromStart,
       durationDays: evt.durationDays,
       estimatedCost: evt.estimatedCost?.trim() || undefined,
       isPlanned: true,
@@ -132,20 +140,28 @@ export function CreatePlanPage() {
 
     const payload: PlanCreateRequest = {
       diseaseName: form.diseaseName.trim(),
-      question: form.question.trim() || undefined,
+      planName: form.planName?.trim() || undefined,
       farmPlotId: form.farmPlotId || undefined,
       severityLevel: form.severityLevel || undefined,
-      urgency: form.urgency || undefined,
-      successIndicators: form.successIndicators.trim() || undefined,
-      estimatedCost: form.estimatedCost.trim() || undefined,
+      successIndicators: form.successIndicators?.trim() || undefined,
+      estimatedCost: form.estimatedCost?.trim() || undefined,
       schedule: cleanedEvents.length > 0 ? cleanedEvents : undefined,
     };
 
     try {
       const created = await mutateAsync(payload);
       localStorage.removeItem(DRAFT_KEY);
-      navigate(ROUTES.DASHBOARD.PLAN_DETAIL(created.id));
-    } catch {
+      // created is PlanResponse; guard against unexpected null/missing id
+      const planId = created?.id;
+      if (planId) {
+        navigate(ROUTES.DASHBOARD.PLAN_DETAIL(planId));
+      } else {
+        // Plan was created but id is missing — navigate to plans list
+        console.warn('[CreatePlanPage] Created plan has no id:', created);
+        navigate(ROUTES.DASHBOARD.PLANS);
+      }
+    } catch (err) {
+      console.error('[CreatePlanPage] handleSubmit error:', err);
       setSubmitError('Có lỗi xảy ra khi tạo kế hoạch. Vui lòng thử lại.');
     }
   };

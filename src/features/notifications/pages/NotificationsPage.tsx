@@ -9,6 +9,7 @@ import {
   useMarkCheckedMutation,
 } from '../queries/mutations';
 import { NotificationItem } from '../components/NotificationItem';
+import { PendingAccessRequests } from '../components/PendingAccessRequests';
 import { notificationKeys } from '../queries/keys';
 import { ROUTES } from '../../../lib/routes';
 import type { UserNotificationResponse } from '../types';
@@ -16,7 +17,7 @@ import { useTranslation } from '../../../i18n';
 
 // ─── Routing map — all NotificationType values ────────────────────────────────
 
-const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null> = {
+const NOTIFICATION_ROUTES: Record<string, (referenceId: string, payload?: Record<string, string>) => string | null> = {
   POST_COMMENT:    (id) => `/dashboard/community?post=${id}`,
   POST_UPVOTE:     (id) => `/dashboard/community?post=${id}`,
   COMMENT_REPLY:   (id) => `/dashboard/community?post=${id}`,
@@ -25,6 +26,12 @@ const NOTIFICATION_ROUTES: Record<string, (referenceId: string) => string | null
   CONSULT_REQUEST: (id) => ROUTES.DASHBOARD.PROFILE_VIEW(id),
   PLAN_CONSULTING_CREATED: (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
   PLAN_APPLIED:            (id) => ROUTES.DASHBOARD.PLAN_DETAIL(id),
+  CONSULTING_DATA_ACCESS_REQUEST: (id, payload) =>
+    payload?.expertProfileId ? ROUTES.DASHBOARD.PROFILE_VIEW(payload.expertProfileId) : null,
+  CONSULTING_DATA_ACCESS_APPROVED: (id, payload) =>
+    payload?.farmerProfileId ? ROUTES.DASHBOARD.PROFILE_VIEW(payload.farmerProfileId) : null,
+  CONSULTING_DATA_ACCESS_DENIED: (id, payload) =>
+    payload?.farmerProfileId ? ROUTES.DASHBOARD.PROFILE_VIEW(payload.farmerProfileId) : null,
   SYSTEM:          () => null,
 };
 
@@ -112,7 +119,7 @@ export function NotificationsPage() {
     if (notification.referenceId && notification.type) {
       const routeFn = NOTIFICATION_ROUTES[notification.type];
       if (routeFn) {
-        const path = routeFn(notification.referenceId);
+        const path = routeFn(notification.referenceId, notification.payload ?? undefined);
         if (path) {
           navigate(path);
           return;
@@ -297,6 +304,9 @@ export function NotificationsPage() {
             )}
           </div>
         )}
+
+        {/* Access Request Approvals — shown when there are pending requests */}
+        <PendingAccessRequests />
       </div>
     </div>
   );

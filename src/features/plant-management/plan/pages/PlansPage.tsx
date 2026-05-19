@@ -17,6 +17,7 @@ import {
   useBulkApplyPlansMutation,
   useBulkDeletePlansMutation,
   useBulkUpdateApplyStatusMutation,
+  useCancelApplyMutation,
   useDeletePlanMutation,
   useMyApplies,
   useMyPlans,
@@ -25,6 +26,7 @@ import {
   useUpdateApplyStatusMutation,
 } from "../..";
 import { useBulkApplyCustomMutation } from "../queries/plan.queries";
+import { CancelApplyDialog } from "../components/CancelApplyDialog";
 import { useSearchPlans } from "../../../search/queries";
 import type { PlanApplyRequest, PlanResponse, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
@@ -73,6 +75,7 @@ export function PlansPage() {
   // ── my-plans-only state ──────────────────────────────────────────────────
   const [plantId, setPlantId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PlanResponse | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<import("../shared/types").PlanApplyResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApplyOpen, setBulkApplyOpen] = useState(false);
   const [bulkApplyCustomOpen, setBulkApplyCustomOpen] = useState(false);
@@ -108,21 +111,18 @@ export function PlansPage() {
         diseaseName: item.diseaseName ?? "",
         creatorId: item.creatorId ?? "",
         ownerId: item.ownerId ?? "",
-        ragPlanId: "",
-        question: "",
-        source: item.source ?? "",
-        confidenceScore: item.confidenceScore ?? 0,
-        severityLevel: item.severityLevel ?? "",
-        urgency: item.urgency ?? "",
         requiredInputs: item.requiredInputs ?? [],
         safetyWarnings: item.safetyWarnings ?? [],
         successIndicators: item.successIndicators ?? "",
         estimatedCost: item.estimatedCost ?? "",
         events: [],
+        source: item.source ?? "",
+        confidenceScore: item.confidenceScore ?? 0,
+        severityLevel: item.severityLevel ?? "",
         applyCount: item.applyCount ?? 0,
         applies: [],
         isPublic: item.isPublic ?? true,
-        isConsulted: item.isConsulted ?? false,
+        sourceType: (item.sourceType as any) ?? 'USER_CREATED',
         ownerInfo: null,
         creatorInfo: item.creatorInfo ? {
           id: item.creatorInfo.id ?? "",
@@ -157,6 +157,7 @@ export function PlansPage() {
   const bulkApplyPlans   = useBulkApplyPlansMutation();
   const bulkApplyCustom  = useBulkApplyCustomMutation();
   const updateApplyStatus = useUpdateApplyStatusMutation();
+  const cancelApply     = useCancelApplyMutation();
 
   const plants    = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
   const plantById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
@@ -217,7 +218,7 @@ export function PlansPage() {
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-5">
 
       {/* ── Header ── */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -554,6 +555,7 @@ export function PlansPage() {
               onStatusChange={(applyId, newStatus) =>
                 void updateApplyStatus.mutateAsync({ applyId, status: newStatus })
               }
+              onCancelApply={setCancelTarget}
             />
           ))}
         </PagedGrid>
@@ -607,6 +609,18 @@ export function PlansPage() {
           onClose={() => setApplyTarget(null)}
           onSubmit={(payload) =>
             void bulkApplyPlans.mutateAsync({ planIds: [applyTarget.id], payload }).then(() => setApplyTarget(null))
+          }
+        />
+      )}
+
+      {/* ── Cancel apply dialog ── */}
+      {cancelTarget && (
+        <CancelApplyDialog
+          apply={cancelTarget}
+          isCancelling={cancelApply.isPending}
+          onClose={() => setCancelTarget(null)}
+          onConfirm={() =>
+            void cancelApply.mutateAsync(cancelTarget.id).then(() => setCancelTarget(null))
           }
         />
       )}

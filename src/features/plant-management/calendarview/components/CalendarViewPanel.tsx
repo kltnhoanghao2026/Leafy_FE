@@ -69,7 +69,7 @@ export function CalendarViewPanel({
   }
 
   return (
-    <>
+    <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
       {activeView === 'month' && (
         <MonthCalendarView
           events={events}
@@ -105,6 +105,6 @@ export function CalendarViewPanel({
           onSelectDate={onSelectDate}
         />
       )}
-    </>
+    </div>
   );
 }

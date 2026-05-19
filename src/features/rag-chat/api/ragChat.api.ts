@@ -171,6 +171,7 @@ export async function askRagQuestion(
       language: request.language ?? "Vietnamese",
       farm_plot_id: request.farmPlotId ?? null,
       farm_zone_id: request.farmZoneId ?? null,
+      route: request.route ?? "auto",
     },
     {
       timeout: 120000,
@@ -212,6 +213,7 @@ export async function streamRagChat(
       language: request.language ?? "Vietnamese",
       farm_plot_id: request.farmPlotId ?? null,
       farm_zone_id: request.farmZoneId ?? null,
+      route: request.route ?? "auto",
     }),
     signal: options?.signal,
   });
@@ -228,6 +230,7 @@ export async function streamRagChat(
 
   const dispatchEvent = (eventName: string, payload: JsonRecord): void => {
     if (eventName === "state") {
+      const stateObj = asRecord(payload.state);
       handlers.onState?.({
         ragState: asString(payload.rag_state ?? payload.ragState),
         step: asNumber(payload.step),
@@ -237,6 +240,7 @@ export async function streamRagChat(
               (item): item is string => typeof item === "string",
             )
           : undefined,
+        pathType: asString(stateObj.path_type ?? stateObj.pathType),
       });
       return;
     }

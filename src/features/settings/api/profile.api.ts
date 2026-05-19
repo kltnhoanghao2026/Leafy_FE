@@ -2,12 +2,8 @@ import type { ApiEnvelope } from "../../../shared/types/api";
 import type {
   AppearanceSettingsUpdateRequest,
   GeneralSettingsUpdateRequest,
-  SecuritySettingsUpdateRequest,
   PrivacySettingsUpdateRequest,
-  MessageSettingsUpdateRequest,
   NotificationSettingsUpdateRequest,
-  SyncSettingsUpdateRequest,
-  UtilitiesSettingsUpdateRequest,
   ProfileResponse,
   ProfileUpdateRequest,
   UserPreferenceResponse,
@@ -43,6 +39,11 @@ export const profileApi = {
       API_ENDPOINTS.PREFERENCES.ME,
     ),
 
+  getPrivacySettingsByProfileId: (profileId: string) =>
+    apiClient.get<ApiEnvelope<UserPreferenceResponse["privacySettings"]>>(
+      API_ENDPOINTS.PREFERENCES.PRIVACY_BY_PROFILE(profileId),
+    ),
+
   updateAppearancePreferences: (data: AppearanceSettingsUpdateRequest) =>
     apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
       API_ENDPOINTS.PREFERENCES.APPEARANCE,
@@ -55,39 +56,15 @@ export const profileApi = {
       data,
     ),
 
-  updateSecurityPreferences: (data: SecuritySettingsUpdateRequest) =>
-    apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
-      API_ENDPOINTS.PREFERENCES.SECURITY,
-      data,
-    ),
-
   updatePrivacyPreferences: (data: PrivacySettingsUpdateRequest) =>
     apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
       API_ENDPOINTS.PREFERENCES.PRIVACY,
       data,
     ),
 
-  updateMessagePreferences: (data: MessageSettingsUpdateRequest) =>
-    apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
-      API_ENDPOINTS.PREFERENCES.MESSAGE,
-      data,
-    ),
-
   updateNotificationPreferences: (data: NotificationSettingsUpdateRequest) =>
     apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
       API_ENDPOINTS.PREFERENCES.NOTIFICATION,
-      data,
-    ),
-
-  updateSyncPreferences: (data: SyncSettingsUpdateRequest) =>
-    apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
-      API_ENDPOINTS.PREFERENCES.SYNC,
-      data,
-    ),
-
-  updateUtilitiesPreferences: (data: UtilitiesSettingsUpdateRequest) =>
-    apiClient.patch<ApiEnvelope<UserPreferenceResponse>>(
-      API_ENDPOINTS.PREFERENCES.UTILITIES,
       data,
     ),
 };

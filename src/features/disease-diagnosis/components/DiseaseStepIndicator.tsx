@@ -19,17 +19,8 @@ export function DiseaseStepIndicator({ step, onStepClick }: DiseaseStepIndicator
   const currentProgress = getStepProgress();
 
   return (
-    <div className="flex flex-col gap-6 mb-8">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Chẩn đoán hình ảnh
-        </h1>
-        <p className="text-slate-500 mt-2">
-          Hệ thống sẽ tự nhận diện các lá cà phê có trong ảnh. Vui lòng chọn lá cần phân tích.
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between relative mt-4 px-2 sm:px-8">
+    <div className="mb-8">
+      <div className="flex items-center justify-between relative px-2 sm:px-8">
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1.5 bg-slate-200 rounded-full -z-10 px-6 sm:px-12 object-contain hidden sm:block">
            <div 
              className="h-full bg-emerald-500 rounded-full transition-all duration-500" 

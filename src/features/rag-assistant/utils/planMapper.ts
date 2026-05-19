@@ -152,8 +152,8 @@ export const mapRagPlanToReviewSchedule = (
     const dayOffset =
       toNumber(record.dayOffset) ??
       toNumber(record.day_offset) ??
-      toNumber(record.daysFromNow) ??
-      toNumber(record.days_from_now) ??
+      toNumber(record.daysFromStart) ??
+      toNumber(record.days_from_start) ??
       index;
     const scheduledDate =
       normalizeDate(
@@ -203,7 +203,7 @@ export const buildCreatePlanRequest = (
       eventType: item.eventType,
       note: item.note.trim() || "LÃ¡Â»â¹ch ÃâiÃ¡Â»Âu trÃ¡Â»â¹",
       description: item.description.trim() || undefined,
-      daysFromNow: daysBetweenDateOnly(values.startDate, item.scheduledDate),
+      daysFromStart: daysBetweenDateOnly(values.startDate, item.scheduledDate),
       durationDays: item.durationDays,
       isPlanned: true,
       calculatedStartDate: item.scheduledDate,

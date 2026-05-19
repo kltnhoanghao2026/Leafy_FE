@@ -1,9 +1,12 @@
+export type RagRoute = "auto" | "fast" | "deep" | "planner";
+
 export interface RagChatRequest {
   question: string;
   threadId?: string | null;
   language?: string;
   farmPlotId?: string | null;
   farmZoneId?: string | null;
+  route?: RagRoute;
 }
 
 export interface RagStreamState {
@@ -11,6 +14,7 @@ export interface RagStreamState {
   step?: number;
   currentNode?: string;
   updatedFields?: string[];
+  pathType?: string;
 }
 
 export interface RagStreamChunk {
@@ -35,6 +39,7 @@ export interface RagConversationMessage {
     ragState?: string;
     currentNode?: string;
     step?: number;
+    pathType?: string;
   };
   responseMeta?: {
     documentsCount?: number;
@@ -58,6 +63,7 @@ export interface RagConversationSummary {
     ragState?: string;
     currentNode?: string;
     step?: number;
+    pathType?: string;
   };
 }
 

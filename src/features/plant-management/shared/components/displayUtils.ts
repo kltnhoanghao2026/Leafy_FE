@@ -8,6 +8,7 @@ import type {
 import {
   Droplets, Beaker, Trash2, Scissors, Search, Bug, Syringe,
   ShieldAlert, HeartPulse, Activity, PackageOpen, Wheat,
+  MapPin, Leaf
 } from 'lucide-react';
 
 import type { ComponentType } from 'react';
@@ -153,10 +154,10 @@ export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
   PLANT: 'Cây cá nhân',
 };
 
-export const TARGET_TYPE_ICONS: Record<TargetType, string> = {
-  FARM: '🌾',
-  FARM_ZONE: '📍',
-  PLANT: '🌱',
+export const TARGET_TYPE_ICONS: Record<TargetType, ComponentType<{ className?: string }>> = {
+  FARM: Wheat,
+  FARM_ZONE: MapPin,
+  PLANT: Leaf,
 };
 
 export const getTargetTypeLabel = (type: TargetType | null | undefined): string =>

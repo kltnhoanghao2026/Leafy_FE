@@ -70,7 +70,6 @@ export function EditPlanDialog({ plan, isSubmitting, onClose, onSubmit }: EditPl
     planName: string;
     diseaseName: string;
     severityLevel: string;
-    urgency: string;
     estimatedCost: string;
     successIndicators: string;
     requiredInputs: string[];
@@ -79,7 +78,6 @@ export function EditPlanDialog({ plan, isSubmitting, onClose, onSubmit }: EditPl
     planName: plan.planName ?? "",
     diseaseName: plan.diseaseName ?? "",
     severityLevel: plan.severityLevel ?? "",
-    urgency: plan.urgency ?? "",
     estimatedCost: plan.estimatedCost ?? "",
     successIndicators: plan.successIndicators ?? "",
     requiredInputs: plan.requiredInputs ?? [],
@@ -107,7 +105,6 @@ export function EditPlanDialog({ plan, isSubmitting, onClose, onSubmit }: EditPl
       planName: form.planName || undefined,
       diseaseName: form.diseaseName || undefined,
       severityLevel: form.severityLevel || undefined,
-      urgency: form.urgency || undefined,
       estimatedCost: form.estimatedCost || undefined,
       successIndicators: form.successIndicators || undefined,
       requiredInputs: form.requiredInputs.filter(Boolean),
@@ -183,7 +180,7 @@ export function EditPlanDialog({ plan, isSubmitting, onClose, onSubmit }: EditPl
           </div>
 
           {/* Severity + Urgency row */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1.5">
               <label htmlFor="ep-severity" className="text-xs font-black uppercase tracking-widest text-slate-500">
                 Mức độ nghiêm trọng
@@ -200,19 +197,6 @@ export function EditPlanDialog({ plan, isSubmitting, onClose, onSubmit }: EditPl
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="ep-urgency" className="text-xs font-black uppercase tracking-widest text-slate-500">
-                Khẩn cấp
-              </label>
-              <input
-                id="ep-urgency"
-                type="text"
-                value={form.urgency}
-                onChange={field("urgency")}
-                placeholder="Ví dụ: Cao, Ngay lập tức..."
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
-              />
             </div>
           </div>
 

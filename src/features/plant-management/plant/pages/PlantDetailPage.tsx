@@ -1,13 +1,24 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Microscope, Pencil, RefreshCw, Sprout, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Image as ImageIcon,
+  Microscope,
+  Pencil,
+  RefreshCw,
+  Sprout,
+  Trash2,
+} from "lucide-react";
 import { ROUTES } from '../../../../lib/routes';
 import { ConfirmDeleteDialog } from '../../../farm-management/components/ConfirmDeleteDialog';
 import { useFarmPlots } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
-import { PlantEventList } from '../../calendarview/components/PlantEventList';
+import { CalendarWorkspace } from '../../calendarview/components/CalendarWorkspace';
+import { PlantEventEditDialog } from '../../calendarview/components/PlantEventEditDialog';
 import { PlantFormDialog } from "../components/PlantFormDialog";
-import { PlanList } from '../../plan/components/PlanList';
 import {
   formatDate,
   PLANT_STATUS_LABELS,
@@ -16,12 +27,48 @@ import {
   useDeletePlant,
   usePlant,
   usePlantEvents,
-  usePlannedPlantEvents,
   useSpecies,
-  usePlansByPlant,
   useUpdatePlant,
+  useToggleTaskMutation,
+  useUpdatePlantEventMutation,
 } from '../..';
+import { useDiagnoseRequests, useDiagnoseResults } from '../../../disease-diagnosis/queries';
+import {
+  formatConfidence,
+  getDiseaseLabel,
+  isHealthyDisease,
+} from '../../../disease-diagnosis/utils/diseaseLabels';
+import { useFilePreviewUrl } from '../../../settings/queries';
 import type { PlantCreateRequest, PlantUpdateRequest } from '../../shared/types';
+import type { PlantEventResponse } from "../../shared/types";
+
+// Image component for diagnosis requests
+function DiagnosisImage({ fileId, alt }: { fileId: string; alt: string }) {
+  const { data: presignedUrl, isError, isLoading } = useFilePreviewUrl(fileId);
+
+  if (isLoading) {
+    return <div className="h-12 w-12 animate-pulse rounded-xl bg-slate-200" />;
+  }
+
+  if (isError || !presignedUrl) {
+    return (
+      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+        <ImageIcon className="h-5 w-5 text-slate-400" strokeWidth={2} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={presignedUrl}
+      alt={alt}
+      className="h-12 w-12 rounded-xl object-cover"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  );
+}
 
 export function PlantDetailPage() {
   const { plantId = "" } = useParams();
@@ -39,10 +86,23 @@ export function PlantDetailPage() {
   const speciesQuery = useSpecies();
   const plantQuery = usePlant(plantId, Boolean(plantId));
   const eventsQuery = usePlantEvents(plantId, Boolean(plantId));
-  const plannedEventsQuery = usePlannedPlantEvents(plantId, Boolean(plantId));
-  const treatmentPlansQuery = usePlansByPlant(plantId, Boolean(plantId));
   const updatePlant = useUpdatePlant();
   const deletePlant = useDeletePlant();
+  const updateEvent = useUpdatePlantEventMutation();
+  const toggleTask = useToggleTaskMutation();
+
+  // State for event editing
+  const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
+
+  // Combine events and planned events for the calendar
+  const allEvents = useMemo(() => {
+    const completed = eventsQuery.data ?? [];
+    return completed;
+  }, [eventsQuery.data]);
+
+  // Diagnosis queries - filter requests/results for this plant
+  const allRequestsQuery = useDiagnoseRequests({ page: 0, size: 100 });
+  const allResultsQuery = useDiagnoseResults({ page: 0, size: 100 });
 
   const plant = plantQuery.data;
   const species = useMemo(
@@ -53,6 +113,27 @@ export function PlantDetailPage() {
     () => farmPlots.find((item) => item.id === plant?.farmPlotId),
     [farmPlots, plant?.farmPlotId],
   );
+
+  // Filter diagnosis history for this specific plant
+  const diagnosisHistory = useMemo(() => {
+    const requests = allRequestsQuery.data?.content ?? [];
+    const results = new Map(
+      (allResultsQuery.data?.content ?? []).map((r) => [r.diagnoseRequestId, r]),
+    );
+
+    // Filter requests for this plant and combine with results
+    return requests
+      .filter((req) => req.plantId === plantId)
+      .map((req) => ({
+        request: req,
+        result: results.get(req.diagnoseRequestId),
+      }))
+      .sort((a, b) => {
+        const dateA = new Date(a.request.timeStamp).getTime();
+        const dateB = new Date(b.request.timeStamp).getTime();
+        return dateB - dateA; // newest first
+      });
+  }, [allRequestsQuery.data, allResultsQuery.data, plantId]);
 
   const handleUpdatePlant = async (
     payload: PlantCreateRequest | PlantUpdateRequest,
@@ -208,26 +289,204 @@ export function PlantDetailPage() {
         </div>
       </section>
 
-      <PlantEventList
-        title="Lịch chăm sóc"
-        events={eventsQuery.data ?? []}
-        isLoading={eventsQuery.isLoading}
-        isError={eventsQuery.isError}
-      />
+      {/* Calendar View Section */}
+      <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <span className="rounded-2xl bg-[#EAF3EA] p-3 text-[#245A34]">
+            <Sprout className="h-5 w-5" strokeWidth={2.5} />
+          </span>
+          <div>
+            <h3 className="text-xl font-black text-slate-900">
+              Lịch chăm sóc
+            </h3>
+            <p className="text-sm font-semibold text-slate-500">
+              Xem lịch chăm sóc cây theo tháng, tuần hoặc danh sách.
+            </p>
+          </div>
+        </div>
 
-      <PlantEventList
-        title="Lịch sắp tới"
-        events={plannedEventsQuery.data ?? []}
-        isLoading={plannedEventsQuery.isLoading}
-        isError={plannedEventsQuery.isError}
-        emptyText="Chưa có lịch chăm sóc sắp tới."
-      />
+        <div className="h-[600px] overflow-hidden">
+          <CalendarWorkspace
+            events={allEvents}
+            calendarQuery={eventsQuery}
+            onEditEvent={setEditEventTarget}
+            onToggleComplete={(event) =>
+              void updateEvent.mutateAsync({ eventId: event.id, payload: { completed: !event.completed } })
+            }
+            onToggleTask={(event, idx) =>
+              void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
+            }
+          />
+        </div>
+      </section>
 
-      <PlanList
-        plans={treatmentPlansQuery.data ?? []}
-        isLoading={treatmentPlansQuery.isLoading}
-        isError={treatmentPlansQuery.isError}
-      />
+      {/* Diagnosis History Section */}
+      <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="rounded-2xl bg-[#EAF3EA] p-3 text-[#245A34]">
+              <Microscope className="h-5 w-5" strokeWidth={2.5} />
+            </span>
+            <div>
+              <h3 className="text-xl font-black text-slate-900">
+                Lịch sử chẩn đoán
+              </h3>
+              <p className="text-sm font-semibold text-slate-500">
+                Các lượt chẩn đoán bệnh cho cây này.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              allRequestsQuery.refetch();
+              allResultsQuery.refetch();
+            }}
+            className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+          >
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.5} />
+            Tải lại
+          </button>
+        </div>
+
+        {allRequestsQuery.isLoading ? (
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
+            ))}
+          </div>
+        ) : allRequestsQuery.isError || allResultsQuery.isError ? (
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+            <p className="text-sm font-bold text-red-700">
+              Không tải được lịch sử chẩn đoán.
+            </p>
+          </div>
+        ) : diagnosisHistory.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+            <p className="text-sm font-semibold text-slate-500">
+              Chưa có lượt chẩn đoán nào cho cây này.
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, {
+                  state: {
+                    plantContext: {
+                      plantId: plant.id,
+                      plantName: displayName,
+                      farmPlotId: plant.farmPlotId,
+                      farmPlotName: farmPlot?.name,
+                    },
+                  },
+                })
+              }
+              className="mt-3 inline-flex items-center rounded-xl bg-[#245A34] px-4 py-2 text-sm font-bold text-white hover:bg-[#1b432a]"
+            >
+              <Microscope className="mr-2 h-4 w-4" strokeWidth={2.5} />
+              Chẩn đoán ngay
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {diagnosisHistory.map(({ request, result }) => {
+              const topPrediction = result?.result?.[0];
+              const isHealthy = !topPrediction || isHealthyDisease(topPrediction.diseaseName);
+              const Icon = isHealthy ? CheckCircle2 : AlertTriangle;
+
+              return (
+                <div
+                  key={request.diagnoseRequestId}
+                  className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-4">
+                      {request.fileId ? (
+                        <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-50 sm:block">
+                          <DiagnosisImage
+                            fileId={request.fileId}
+                            alt={request.imageFileName}
+                          />
+                        </div>
+                      ) : null}
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                          {formatDate(request.timeStamp)}
+                        </p>
+                        <div className="mt-2 flex items-center gap-3">
+                          <span
+                            className={`rounded-2xl p-2 ${
+                              isHealthy
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" strokeWidth={2.5} />
+                          </span>
+                          <div>
+                            <h4 className="text-lg font-black text-slate-900">
+                              {topPrediction
+                                ? getDiseaseLabel(topPrediction.diseaseName)
+                                : isHealthy
+                                ? "Khỏe mạnh"
+                                : "Chưa tải kết quả"}
+                            </h4>
+                            {topPrediction && (
+                              <p className="text-sm font-semibold text-slate-500">
+                                Độ tin cậy: {formatConfidence(topPrediction.confidenceScore)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <p
+                          className={`mt-3 rounded-xl px-3 py-2 text-xs font-bold ${
+                            isHealthy
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-amber-50 text-amber-800"
+                          }`}
+                        >
+                          {isHealthy
+                            ? "Lá cây có dấu hiệu khỏe mạnh."
+                            : "Phát hiện dấu hiệu bệnh. Kết quả chỉ mang tính hỗ trợ."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {result && result.result.length > 0 && (
+                    <div className="mt-5 space-y-2">
+                      <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                        Các dự đoán
+                      </p>
+                      {result.result.map((item) => {
+                        const percent = Math.max(
+                          0,
+                          Math.min(100, Math.round(item.confidenceScore * 100)),
+                        );
+                        return (
+                          <div key={item.diseaseName}>
+                            <div className="flex items-center justify-between gap-3 text-sm font-bold">
+                              <span className="text-slate-700">
+                                {getDiseaseLabel(item.diseaseName)}
+                              </span>
+                              <span className="text-slate-500">{percent}%</span>
+                            </div>
+                            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className="h-full rounded-full bg-[#245A34]"
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {isEditOpen ? (
         <PlantFormDialog
@@ -249,6 +508,19 @@ export function PlantDetailPage() {
           onConfirm={() => void handleDeletePlant()}
         />
       ) : null}
+
+      {editEventTarget && (
+        <PlantEventEditDialog
+          event={editEventTarget}
+          isSubmitting={updateEvent.isPending}
+          onClose={() => setEditEventTarget(null)}
+          onSubmit={(payload) =>
+            void updateEvent
+              .mutateAsync({ eventId: editEventTarget.id, payload })
+              .then(() => setEditEventTarget(null))
+          }
+        />
+      )}
     </div>
   );
 }

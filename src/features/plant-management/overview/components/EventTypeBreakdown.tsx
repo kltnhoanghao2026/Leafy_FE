@@ -3,6 +3,7 @@ import type { PlantEventType } from '../../shared/types';
 
 interface EventTypeBreakdownProps {
   eventsByType: Record<string, number>;
+  titleKey?: string;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -20,7 +21,7 @@ const TYPE_COLORS: Record<string, string> = {
   HARVEST: '#84CC16',
 };
 
-export function EventTypeBreakdown({ eventsByType }: EventTypeBreakdownProps) {
+export function EventTypeBreakdown({ eventsByType, titleKey = 'plantManagement.overview.eventsByTypeTitle' }: EventTypeBreakdownProps) {
   const { t } = useTranslation();
 
   const entries = Object.entries(eventsByType)
@@ -39,12 +40,12 @@ export function EventTypeBreakdown({ eventsByType }: EventTypeBreakdownProps) {
           height: '100%',
         }}
       >
-        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>
-          {t('plantManagement.overview.eventBreakdownTitle')}
-        </h3>
-        <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
-          {t('plantManagement.overview.recentActivityEmpty')}
-        </p>
+          <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 900, color: '#0f172a' }}>
+            {t(titleKey)}
+          </h3>
+          <p style={{ margin: '12px 0 0', fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
+            {t('plantManagement.overview.recentActivityEmpty')}
+          </p>
       </div>
     );
   }
@@ -63,7 +64,7 @@ export function EventTypeBreakdown({ eventsByType }: EventTypeBreakdownProps) {
       }}
     >
       <h3 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: 900, color: '#0f172a', flexShrink: 0 }}>
-        {t('plantManagement.overview.eventBreakdownTitle')}
+        {t(titleKey)}
       </h3>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minHeight: 0, overflow: 'auto' }}>

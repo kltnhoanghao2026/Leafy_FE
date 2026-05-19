@@ -10,6 +10,7 @@ import type {
   RagChatResponse,
   RagConversationMessage,
   RagConversationSummary,
+  RagRoute,
 } from "../types";
 import { useSidebarCollapsed } from "../../../layouts/SidebarContext";
 import { useAuthStore } from "../../../store/authStore";
@@ -65,6 +66,7 @@ const mapConversationMessageToChatMessage = (
     ragState: message.pipeline?.ragState,
     currentNode: message.pipeline?.currentNode,
     step: message.pipeline?.step,
+    pathType: message.pipeline?.pathType,
     isStreaming: false,
     response: isAssistant
       ? {
@@ -114,6 +116,7 @@ export function RagChatPage() {
 
   const [threadId, setThreadId] = useState<string | null>(null);
   const [language, setLanguage] = useState("Vietnamese");
+  const [selectedRoute, setSelectedRoute] = useState<RagRoute>("auto");
   const [question, setQuestion] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messages, setMessages] = useState<RagPageMessage[]>([
@@ -136,8 +139,17 @@ export function RagChatPage() {
 
   const latestDocuments = lastAssistantResponse?.documents ?? [];
   const latestWebResults = lastAssistantResponse?.webSearchResults ?? [];
-  const latestTreatmentPlan = lastAssistantResponse?.plan ?? null;
-  const latestSavedPlanId = lastAssistantResponse?.savedPlanId;
+
+  const allTreatmentPlans = useMemo(() => {
+    return messages
+      .filter((m) => m.role === "assistant" && m.response?.plan)
+      .map((m) => ({
+        plan: m.response!.plan,
+        savedPlanId: m.response!.savedPlanId,
+        documents: m.response!.documents || [],
+        webResults: m.response!.webSearchResults || [],
+      }));
+  }, [messages]);
 
   const streamingAssistantMessage = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
@@ -247,6 +259,7 @@ export function RagChatPage() {
           language,
           farmPlotId: selectedPlotId,
           farmZoneId: selectedZoneId,
+          route: selectedRoute,
         },
         {
           onState: (state) => {
@@ -255,6 +268,7 @@ export function RagChatPage() {
               ragState: state.ragState ?? message.ragState,
               currentNode: state.currentNode ?? message.currentNode,
               step: state.step ?? message.step,
+              pathType: state.pathType ?? message.pathType,
               isStreaming: true,
             }));
           },
@@ -416,6 +430,7 @@ export function RagChatPage() {
     setActiveConversationId(null);
     setThreadId(null);
     setQuestion("");
+    setSelectedRoute("auto");
     setMessages([createAssistantMessage(INITIAL_ASSISTANT_MESSAGE)]);
   };
 
@@ -470,6 +485,8 @@ export function RagChatPage() {
         onLanguageChange={setLanguage}
         onResetConversation={handleResetConversation}
         onToggleInfo={() => setIsInfoOpen((v) => !v)}
+        selectedRoute={selectedRoute}
+        onRouteChange={setSelectedRoute}
       />
       {isInfoOpen && (
         <RagInfoPanel
@@ -484,8 +501,7 @@ export function RagChatPage() {
           }
           documents={latestDocuments}
           webResults={latestWebResults}
-          treatmentPlan={latestTreatmentPlan}
-          savedPlanId={latestSavedPlanId}
+          treatmentPlans={allTreatmentPlans}
           onClose={() => setIsInfoOpen(false)}
         />
       )}

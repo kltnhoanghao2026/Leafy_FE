@@ -65,7 +65,7 @@ export interface PlantEventDto {
   eventType: EventType;
   note: string;
   description: string | null;
-  daysFromNow: number | null;
+  daysFromStart: number | null;
   durationDays: number | null;
   planned: boolean;
   calculatedStartDate: string | null;

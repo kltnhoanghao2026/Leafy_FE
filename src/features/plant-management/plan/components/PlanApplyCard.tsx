@@ -9,6 +9,7 @@ import {
   Play,
   TreePine,
   XCircle,
+  X,
 } from "lucide-react";
 import type { PlanApplyResponse, TreatmentStatus } from "../../shared/types";
 import { ROUTES } from "../../../../lib/routes";
@@ -73,6 +74,8 @@ interface PlanApplyCardProps {
   planName?: string | null;
   variant?: "grid" | "list";
   onStatusChange?: (applyId: string, status: TreatmentStatus) => void;
+  /** Callback to trigger cancel flow. When provided and apply is ACTIVE + canCancel, a cancel button appears. */
+  onCancelApply?: (apply: PlanApplyResponse) => void;
 }
 
 export function PlanApplyCard({
@@ -80,6 +83,7 @@ export function PlanApplyCard({
   planName,
   variant = "grid",
   onStatusChange,
+  onCancelApply,
 }: PlanApplyCardProps) {
   const cfg = STATUS_CONFIG[apply.status] ?? STATUS_CONFIG.PENDING;
   const StatusIcon = cfg.icon;
@@ -110,7 +114,7 @@ export function PlanApplyCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Link
-              to={ROUTES.DASHBOARD.PLAN_DETAIL(apply.planId)}
+              to={ROUTES.DASHBOARD.PLAN_APPLY_DETAIL(apply.id)}
               className="truncate text-sm font-black text-slate-900 hover:text-[#245A34] hover:underline"
             >
               {planName || apply.planName || apply.diseaseName || apply.planId}
@@ -142,15 +146,27 @@ export function PlanApplyCard({
             ))}
           </select>
         )}
+
+        {/* Cancel button — only for ACTIVE applies that are cancellable */}
+        {onCancelApply && apply.status === "ACTIVE" && apply.canCancel !== false && (
+          <button
+            type="button"
+            onClick={() => onCancelApply(apply)}
+            className="flex shrink-0 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+            Hủy
+          </button>
+        )}
       </div>
     );
   }
 
   // ── Grid card ──
   return (
-    <article className="group relative flex flex-col rounded-[1.75rem] border border-slate-100 bg-white shadow-sm transition-all hover:shadow-lg hover:border-slate-200">
+    <article className="group relative flex flex-col rounded-[1.75rem] overflow-hidden border border-slate-100 bg-white shadow-sm transition-all hover:shadow-lg hover:border-slate-200">
       {/* Top accent */}
-      <div className={`h-1.5 w-full rounded-t-[1.75rem] ${
+      <div className={`h-1.5 w-full shrink-0 ${
         apply.status === "ACTIVE" ? "bg-gradient-to-r from-blue-500 to-cyan-400"
         : apply.status === "COMPLETED" ? "bg-gradient-to-r from-emerald-500 to-green-400"
         : apply.status === "APPLYING" ? "bg-gradient-to-r from-purple-500 to-violet-400"
@@ -163,7 +179,7 @@ export function PlanApplyCard({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <Link
-              to={ROUTES.DASHBOARD.PLAN_DETAIL(apply.planId)}
+              to={ROUTES.DASHBOARD.PLAN_APPLY_DETAIL(apply.id)}
               className="block truncate text-[15px] font-black text-slate-900 group-hover:text-[#245A34] transition-colors"
             >
               {planName || apply.planName || apply.diseaseName || apply.planId}
@@ -198,9 +214,10 @@ export function PlanApplyCard({
 
         {/* Metrics */}
         <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-          <span>{apply.plantEventIds?.length ?? 0} sự kiện</span>
-          <span className="flex items-center gap-1 truncate">
-            ID: <span className="font-mono text-[10px] text-slate-500">{scopeId.slice(0, 8)}…</span>
+          <span className="shrink-0">{apply.plantEventIds?.length ?? 0} sự kiện</span>
+          <span className="flex items-center gap-1 min-w-0">
+            <span className="shrink-0">ID:</span>
+            <span className="font-mono text-[10px] text-slate-500 truncate">{scopeId.slice(0, 8)}…</span>
           </span>
         </div>
 
@@ -216,6 +233,20 @@ export function PlanApplyCard({
                 <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
               ))}
             </select>
+          </div>
+        )}
+
+        {/* Cancel button — only for ACTIVE applies that are cancellable */}
+        {onCancelApply && apply.status === "ACTIVE" && apply.canCancel !== false && (
+          <div className="mt-auto pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => onCancelApply(apply)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2.5} />
+              Hủy áp dụng
+            </button>
           </div>
         )}
       </div>

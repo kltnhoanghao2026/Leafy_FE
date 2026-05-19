@@ -38,8 +38,11 @@ export const ROUTES = {
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
     PLANS: "/dashboard/plans",
     PLANS_CREATE: "/dashboard/plans/create",
+    PLANS_GENERATE_PROGRESS: "/dashboard/plans/generate-progress",
     PLAN_DETAIL: (planId: string) =>
       `/dashboard/plans/${planId}`,
+    PLAN_APPLY_DETAIL: (applyId: string) =>
+      `/dashboard/plans/applies/${applyId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
@@ -59,6 +62,8 @@ export const ROUTES = {
     CONSULTING_FARM_PLOT: (farmerProfileId: string, farmPlotId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}`,
     CONSULTING_FARM_ZONE: (farmerProfileId: string, farmPlotId: string, farmZoneId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}/zones/${farmZoneId}`,
     CONSULTING_PLANT: (farmerProfileId: string, plantId: string) => `/dashboard/consulting/${farmerProfileId}/plants/${plantId}`,
+    APPLY_AS_EXPERT: "/dashboard/apply-as-expert",
+    EXPERT_APPLICATION_HISTORY: "/dashboard/expert-application-history",
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -200,12 +205,16 @@ export const API_ENDPOINTS = {
     ME: "/preferences/me",
     APPEARANCE: "/preferences/appearance",
     GENERAL: "/preferences/general",
-    SECURITY: "/preferences/security",
     PRIVACY: "/preferences/privacy",
-    MESSAGE: "/preferences/message",
+    PRIVACY_BY_PROFILE: (profileId: string) => `/preferences/profile/${profileId}/privacy`,
     NOTIFICATION: "/preferences/notification",
-    SYNC: "/preferences/sync",
-    UTILITIES: "/preferences/utilities",
+  },
+
+  CONSULTING_ACCESS: {
+    REQUEST: "/profiles/consulting/access/request",
+    PENDING: "/profiles/consulting/access/requests/pending",
+    APPROVE: (requestId: string) => `/profiles/consulting/access/requests/${requestId}/approve`,
+    DENY: (requestId: string) => `/profiles/consulting/access/requests/${requestId}/deny`,
   },
 
   USERS: {
@@ -254,6 +263,7 @@ export const API_ENDPOINTS = {
     PLANTS: "/plants/consulting",
     PLANT: (id: string) => `/plants/consulting/${id}`,
     PLANT_EVENTS: "/plant-events/consulting",
+    CALENDAR: "/plant-events/consulting/calendar",
     PLANS: "/plans/consulting",
   },
 
@@ -283,9 +293,9 @@ export const API_ENDPOINTS = {
     BY_PLANT: (plantId: string) => `/plant-events/plant/${plantId}`,
     BY_PLANT_TYPE: (plantId: string, eventType: string) =>
       `/plant-events/plant/${plantId}/type/${eventType}`,
-    BY_PLANT_PLANNED: (plantId: string) =>
+    BY_PLAN_PLANNED: (plantId: string) =>
       `/plant-events/plant/${plantId}/planned`,
-    BY_PLAN: (sourcePlanId: string) => `/plant-events/plan/${sourcePlanId}`,
+    BY_PLAN_APPLY: (planApplyId: string) => `/plant-events/plan-apply/${planApplyId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
       `/plant-events/farm-plot/${farmPlotId}`,
     BY_FARM_ZONE: (farmZoneId: string) =>
@@ -304,7 +314,9 @@ export const API_ENDPOINTS = {
     ITEM: (planId: string) => `/plans/${planId}`,
     APPLY: (planId: string) => `/plans/${planId}/apply`,
     APPLIES: (planId: string) => `/plans/${planId}/applies`,
+    APPLY_ITEM: (applyId: string) => `/plans/applies/${applyId}`,
     APPLY_STATUS: (applyId: string) => `/plans/applies/${applyId}/status`,
+    CANCEL_APPLY: (applyId: string) => `/plans/applies/${applyId}/cancel`,
     BULK_APPLY_STATUS: "/plans/applies/bulk/status",
     BULK_DELETE: "/plans/bulk",
     BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",
@@ -343,8 +355,13 @@ export const API_ENDPOINTS = {
     DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
+    CHUNKS_BY_POINT_IDS: "/rag/v1/chunks/by-point-ids",
     TREATMENT_PLANS: "/rag/v1/treatment-plans/",
     TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
+    GENERATE_PLAN: "/rag/v1/plans/generate",
+    GENERATE_PLAN_PREVIEW: "/rag/v1/plans/generate-preview",
+    GENERATE_PLAN_V2: "/rag/v2/plans/generate",
+    GENERATE_PLAN_V2_STREAM: "/rag/v2/plans/generate/stream",
   },
 
   DISEASES: {

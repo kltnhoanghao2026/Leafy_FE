@@ -128,7 +128,7 @@ export function ConsultingCreatePlanPage() {
       eventType: evt.eventType,
       note: evt.note,
       description: evt.description?.trim() || undefined,
-      daysFromNow: evt.daysFromNow,
+      daysFromStart: evt.daysFromStart,
       durationDays: evt.durationDays,
       estimatedCost: evt.estimatedCost?.trim() || undefined,
       isPlanned: true,
@@ -136,12 +136,11 @@ export function ConsultingCreatePlanPage() {
 
     const payload: PlanCreateRequest = {
       diseaseName: form.diseaseName.trim(),
-      question: form.question.trim() || undefined,
+      planName: form.planName?.trim() || undefined,
       farmPlotId: form.farmPlotId || undefined,
       severityLevel: form.severityLevel || undefined,
-      urgency: form.urgency || undefined,
-      successIndicators: form.successIndicators.trim() || undefined,
-      estimatedCost: form.estimatedCost.trim() || undefined,
+      successIndicators: form.successIndicators?.trim() || undefined,
+      estimatedCost: form.estimatedCost?.trim() || undefined,
       schedule: cleanedEvents.length > 0 ? cleanedEvents : undefined,
     };
 

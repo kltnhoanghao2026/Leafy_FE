@@ -1,9 +1,8 @@
 import { useState, useEffect, type ReactNode } from "react";
-import { Lock, Loader2, UserX, MessageSquareOff, PhoneOff, Calendar, Users, Activity, EyeOff, SearchX, Clock } from "lucide-react";
+import { Lock, Loader2, MapPin, Leaf, ClipboardList, Sprout } from "lucide-react";
 import {
   useMyPreferences,
   useUpdatePrivacyPreferencesMutation,
-  useUpdateGeneralPreferencesMutation,
 } from "../queries";
 import { useTranslation } from "../../../i18n/useTranslation";
 
@@ -11,21 +10,13 @@ export function PrivacySettingsCard() {
   const { t } = useTranslation();
   const { data: preferences, isLoading, error, refetch } = useMyPreferences();
   const updatePrivacy = useUpdatePrivacyPreferencesMutation();
-  const updateGeneral = useUpdateGeneralPreferencesMutation();
 
   const [privacyState, setPrivacyState] = useState({
-    showDob: "FULL_DATE",
-    showActiveStatus: true,
-    showReadStatus: true,
-    canText: "EVERYBODY",
-    canCall: "EVERYBODY",
-    showPosts: true,
-    showPostAfter: null as string | null,
-    allowSearchOnPhoneNumber: true,
+    shareFarmPlotsWithConsultants: true,
+    sharePlantsWithConsultants: true,
+    sharePlantEventsWithConsultants: true,
+    sharePlansWithConsultants: true,
   });
-  
-  const [showAllFriends, setShowAllFriends] = useState(false);
-  const [postAfterEnabled, setPostAfterEnabled] = useState(false);
 
   const [message, setMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -33,23 +24,15 @@ export function PrivacySettingsCard() {
   useEffect(() => {
     if (preferences?.privacySettings) {
       setPrivacyState({
-        showDob: preferences.privacySettings.showDob || "FULL_DATE",
-        showActiveStatus: preferences.privacySettings.showActiveStatus ?? true,
-        showReadStatus: preferences.privacySettings.showReadStatus ?? true,
-        canText: preferences.privacySettings.canText || "EVERYBODY",
-        canCall: preferences.privacySettings.canCall || "EVERYBODY",
-        showPosts: preferences.privacySettings.showPosts ?? true,
-        showPostAfter: preferences.privacySettings.showPostAfter || null,
-        allowSearchOnPhoneNumber: preferences.privacySettings.allowSearchOnPhoneNumber ?? true,
+        shareFarmPlotsWithConsultants: preferences.privacySettings.shareFarmPlotsWithConsultants ?? true,
+        sharePlantsWithConsultants: preferences.privacySettings.sharePlantsWithConsultants ?? true,
+        sharePlantEventsWithConsultants: preferences.privacySettings.sharePlantEventsWithConsultants ?? true,
+        sharePlansWithConsultants: preferences.privacySettings.sharePlansWithConsultants ?? true,
       });
-      setPostAfterEnabled(!!preferences.privacySettings.showPostAfter);
-    }
-    if (preferences?.generalSettings) {
-      setShowAllFriends(preferences.generalSettings.showAllFriends ?? false);
     }
   }, [preferences]);
 
-  const handlePrivacyChange = async (key: keyof typeof privacyState, value: any) => {
+  const handlePrivacyChange = async (key: keyof typeof privacyState, value: unknown) => {
     if (updatePrivacy.isPending) return;
     setMessage(null);
     setMutationError(null);
@@ -64,21 +47,7 @@ export function PrivacySettingsCard() {
     }
   };
 
-  const handleGeneralChange = async (value: boolean) => {
-    if (updateGeneral.isPending) return;
-    setMessage(null);
-    setMutationError(null);
-
-    try {
-      await updateGeneral.mutateAsync({ showAllFriends: value } as any);
-      setShowAllFriends(value);
-      setMessage(t("settings.privacy.saved"));
-    } catch (err) {
-      setMutationError(err instanceof Error ? err.message : t("settings.privacy.saveError"));
-    }
-  };
-
-  const isBusy = updatePrivacy.isPending || updateGeneral.isPending;
+  const isBusy = updatePrivacy.isPending;
 
   return (
     <section className="bg-[var(--app-card)] rounded-[24px] p-6 md:p-8 shadow-sm border border-slate-100 flex flex-col">
@@ -97,142 +66,64 @@ export function PrivacySettingsCard() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
-          {/* Active Status */}
-          <ToggleRow
-            icon={<Activity className="w-5 h-5 text-indigo-600" strokeWidth={2} />}
-            bgClass="bg-indigo-100"
-            title={t("settings.privacy.activeStatus")}
-            desc={t("settings.privacy.activeStatusDesc")}
-            checked={privacyState.showActiveStatus}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("showActiveStatus", v)}
-          />
+          {/* ── Consulting Sharing Toggles ── */}
+          <div className="border-t border-slate-200 pt-4 mt-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 px-1">
+              {t("settings.privacy.consultingSharing")}
+            </p>
 
-          {/* Read Receipts */}
-          <ToggleRow
-            icon={<EyeOff className="w-5 h-5 text-blue-600" strokeWidth={2} />}
-            bgClass="bg-blue-100"
-            title={t("settings.privacy.readStatus")}
-            desc={t("settings.privacy.readStatusDesc")}
-            checked={privacyState.showReadStatus}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("showReadStatus", v)}
-          />
-
-          {/* Search by Phone */}
-          <ToggleRow
-            icon={<SearchX className="w-5 h-5 text-purple-600" strokeWidth={2} />}
-            bgClass="bg-purple-100"
-            title={t("settings.privacy.searchPhone")}
-            desc={t("settings.privacy.searchPhoneDesc")}
-            checked={privacyState.allowSearchOnPhoneNumber}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("allowSearchOnPhoneNumber", v)}
-          />
-
-          {/* Show All Friends */}
-          <ToggleRow
-            icon={<Users className="w-5 h-5 text-teal-600" strokeWidth={2} />}
-            bgClass="bg-teal-100"
-            title={t("settings.privacy.allFriends")}
-            desc={t("settings.privacy.allFriendsDesc")}
-            checked={showAllFriends}
-            disabled={isBusy}
-            onChange={handleGeneralChange}
-          />
-
-          {/* Show Posts */}
-          <ToggleRow
-            icon={<UserX className="w-5 h-5 text-amber-600" strokeWidth={2} />}
-            bgClass="bg-amber-100"
-            title={t("settings.privacy.showPosts")}
-            desc={t("settings.privacy.showPostsDesc")}
-            checked={privacyState.showPosts}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("showPosts", v)}
-          />
-
-          {/* Date Limit for Posts */}
-          <div className="flex flex-col gap-2 border border-slate-100/60 bg-slate-50/30 rounded-2xl p-4">
-             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5 text-rose-600" strokeWidth={2} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">{t("settings.privacy.postLimit")}</h3>
-                  <p className="text-[13px] font-semibold text-slate-500 mt-0.5">
-                    {t("settings.privacy.postLimitDesc")}
-                  </p>
-                </div>
-              </div>
-              <div className="shrink-0 flex items-center">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={postAfterEnabled}
-                  onClick={() => {
-                    const next = !postAfterEnabled;
-                    setPostAfterEnabled(next);
-                    if (!next) handlePrivacyChange("showPostAfter", null);
-                  }}
-                  disabled={isBusy}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#245A34] focus:ring-offset-2 ${
-                    postAfterEnabled ? "bg-[#245A34]" : "bg-slate-200"
-                  } disabled:opacity-50`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${postAfterEnabled ? "translate-x-6" : "translate-x-1"}`} />
-                </button>
-              </div>
+            {/* Share Farm Plots */}
+            <div className="mb-3">
+              <ToggleRow
+                icon={<MapPin className="w-5 h-5 text-[#245A34]" strokeWidth={2} />}
+                bgClass="bg-green-100"
+                title={t("settings.privacy.shareFarmPlots")}
+                desc={t("settings.privacy.shareFarmPlotsDesc")}
+                checked={privacyState.shareFarmPlotsWithConsultants}
+                disabled={isBusy}
+                onChange={(v) => handlePrivacyChange("shareFarmPlotsWithConsultants", v)}
+              />
             </div>
-            {postAfterEnabled && (
-              <div className="mt-2 ml-14">
-                <input
-                  type="datetime-local"
-                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-700"
-                  value={privacyState.showPostAfter || ""}
-                  onChange={(e) => handlePrivacyChange("showPostAfter", e.target.value)}
-                  disabled={isBusy}
-                />
-              </div>
-            )}
+
+            {/* Share Plants */}
+            <div className="mb-3">
+              <ToggleRow
+                icon={<Leaf className="w-5 h-5 text-emerald-600" strokeWidth={2} />}
+                bgClass="bg-emerald-100"
+                title={t("settings.privacy.sharePlants")}
+                desc={t("settings.privacy.sharePlantsDesc")}
+                checked={privacyState.sharePlantsWithConsultants}
+                disabled={isBusy}
+                onChange={(v) => handlePrivacyChange("sharePlantsWithConsultants", v)}
+              />
+            </div>
+
+            {/* Share Plant Events */}
+            <div className="mb-3">
+              <ToggleRow
+                icon={<ClipboardList className="w-5 h-5 text-amber-600" strokeWidth={2} />}
+                bgClass="bg-amber-100"
+                title={t("settings.privacy.sharePlantEvents")}
+                desc={t("settings.privacy.sharePlantEventsDesc")}
+                checked={privacyState.sharePlantEventsWithConsultants}
+                disabled={isBusy}
+                onChange={(v) => handlePrivacyChange("sharePlantEventsWithConsultants", v)}
+              />
+            </div>
+
+            {/* Share Plans */}
+            <div>
+              <ToggleRow
+                icon={<Sprout className="w-5 h-5 text-teal-600" strokeWidth={2} />}
+                bgClass="bg-teal-100"
+                title={t("settings.privacy.sharePlans")}
+                desc={t("settings.privacy.sharePlansDesc")}
+                checked={privacyState.sharePlansWithConsultants}
+                disabled={isBusy}
+                onChange={(v) => handlePrivacyChange("sharePlansWithConsultants", v)}
+              />
+            </div>
           </div>
-
-          {/* Who can message */}
-          <SelectRow
-            title={t("settings.privacy.canText")}
-            desc={t("settings.privacy.canTextDesc")}
-            icon={<MessageSquareOff className="w-5 h-5 text-sky-600" strokeWidth={2} />}
-            bgClass="bg-sky-100"
-            value={privacyState.canText}
-            options={[{ label: t("settings.privacy.options.everybody"), value: "EVERYBODY" }, { label: t("settings.privacy.options.friends"), value: "FRIENDS" }, { label: t("settings.privacy.options.nobody"), value: "NOBODY" }]}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("canText", v)}
-          />
-
-          {/* Who can call */}
-          <SelectRow
-            title={t("settings.privacy.canCall")}
-            desc={t("settings.privacy.canCallDesc")}
-            icon={<PhoneOff className="w-5 h-5 text-emerald-600" strokeWidth={2} />}
-            bgClass="bg-emerald-100"
-            value={privacyState.canCall}
-            options={[{ label: t("settings.privacy.options.everybody"), value: "EVERYBODY" }, { label: t("settings.privacy.options.friends"), value: "FRIENDS" }, { label: t("settings.privacy.options.nobody"), value: "NOBODY" }]}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("canCall", v)}
-          />
-
-          {/* Date of Birth Visibility */}
-          <SelectRow
-            title={t("settings.privacy.showDob")}
-            desc={t("settings.privacy.showDobDesc")}
-            icon={<Calendar className="w-5 h-5 text-pink-600" strokeWidth={2} />}
-            bgClass="bg-pink-100"
-            value={privacyState.showDob}
-            options={[{ label: t("settings.privacy.options.fullDate"), value: "FULL_DATE" }, { label: t("settings.privacy.options.monthDay"), value: "MONTH_DAY" }, { label: t("settings.privacy.options.year"), value: "YEAR" }, { label: t("settings.privacy.options.none"), value: "NONE" }]}
-            disabled={isBusy}
-            onChange={(v) => handlePrivacyChange("showDob", v)}
-          />
         </div>
       )}
 
@@ -280,55 +171,6 @@ function ToggleRow({ icon, bgClass, title, desc, checked, disabled, onChange }: 
         >
           <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? "translate-x-6" : "translate-x-1"}`} />
         </button>
-      </div>
-    </div>
-  );
-}
-
-interface SelectOption {
-  label: string;
-  value: string;
-}
-
-interface SelectRowProps {
-  icon: ReactNode;
-  bgClass: string;
-  title: string;
-  desc: string;
-  value: string;
-  options: SelectOption[];
-  disabled: boolean;
-  onChange: (value: string) => void;
-}
-
-function SelectRow({ icon, bgClass, title, desc, value, options, disabled, onChange }: SelectRowProps) {
-  return (
-    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border border-slate-100/60 bg-slate-50/30 rounded-2xl p-4">
-      <div className="flex items-center gap-4 mb-2 lg:mb-0">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${bgClass}`}>
-          {icon}
-        </div>
-        <div>
-          <h3 className="font-bold text-slate-800 text-sm">{title}</h3>
-          <p className="text-[13px] font-semibold text-slate-500 mt-0.5">{desc}</p>
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center bg-slate-50 p-1 rounded-2xl border border-slate-200/60 shrink-0 gap-1">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            type="button"
-            onClick={() => onChange(opt.value)}
-            disabled={disabled}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-60 ${
-              value === opt.value
-                ? "bg-[#245A34] text-white shadow-sm"
-                : "text-slate-500 hover:text-slate-800"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
       </div>
     </div>
   );

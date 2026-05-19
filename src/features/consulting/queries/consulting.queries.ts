@@ -141,3 +141,16 @@ export const useConsultingFarmerCalendar = (
     enabled: enabled && Boolean(params.startDate && params.endDate && params.profileId),
     staleTime: 30_000,
   });
+
+export const useConsultingCalendar = (
+  farmerProfileId: string,
+  startDate: string,
+  endDate: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'consulting-calendar', farmerProfileId, startDate, endDate],
+    queryFn: () => consultingApi.getConsultingCalendar(farmerProfileId, startDate, endDate),
+    enabled: enabled && Boolean(farmerProfileId && startDate && endDate),
+    staleTime: 30_000,
+  });

@@ -122,7 +122,7 @@ export function PlantEventsCalendarPage() {
   const events = useMemo(() => calendarQuery.data ?? [], [calendarQuery.data]);
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden">
+    <div className="flex flex-1 h-full min-h-0 flex-col gap-3 overflow-hidden">
       {/* Header */}
       <div className="shrink-0">
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#245A34]">Plant events</p>

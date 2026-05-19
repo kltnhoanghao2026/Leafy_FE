@@ -45,8 +45,8 @@ export const plantEventApi = {
     return unwrapPageContent(unwrapApiData(response.data));
   },
 
-  getPlantEventsByPlan: async (sourcePlanId: string) =>
-    getPagedEvents(API_ENDPOINTS.PLANT_EVENTS.BY_PLAN(sourcePlanId)),
+  getPlantEventsByPlanApply: async (planApplyId: string) =>
+    getPagedEvents(API_ENDPOINTS.PLANT_EVENTS.BY_PLAN_APPLY(planApplyId)),
 
   getPlantEventsByFarmPlot: async (farmPlotId: string) =>
     getPagedEvents(API_ENDPOINTS.PLANT_EVENTS.BY_FARM_PLOT(farmPlotId)),

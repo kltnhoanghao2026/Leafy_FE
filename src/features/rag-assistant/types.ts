@@ -19,6 +19,39 @@ export interface RagSource {
   score?: number;
 }
 
+// ── V2 Plan Generation Response ─────────────────────────────────────────────────
+
+export interface PlanSource {
+  title: string;
+  content: string;
+  url?: string;
+  score: number;
+}
+
+export interface PlanMetadata {
+  disease_type: string;
+  best_rerank_score: number;
+  web_search_used: boolean;
+  web_sources_count: number;
+  refinement_attempts: number;
+  safety_passed: boolean;
+}
+
+export interface PlanGenerationResponseV2 {
+  plan: Record<string, unknown>;
+  documents: PlanSource[];
+  web_sources: PlanSource[];
+  metadata: PlanMetadata;
+  /** ID of the plan persisted in plant-management-service. null if save failed (non-fatal). */
+  saved_plan_id: string | null;
+}
+
+export interface RagApiResponseV2 {
+  code: number;
+  message: string;
+  result?: PlanGenerationResponseV2;
+}
+
 export interface RagPlan {
   id?: string;
   planId?: string;
@@ -61,6 +94,30 @@ export interface RagHealthResponse {
   status?: string;
   langsmith_tracing?: boolean;
   langsmith_project?: string;
+}
+
+export interface RagConversationMessage {
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+  pipeline?: Record<string, unknown>;
+  responseMeta?: {
+    sources?: RagSource[];
+    plan?: RagPlan;
+    saved_plan_id?: string;
+  };
+}
+
+export interface RagConversation {
+  conversationId: string;
+  threadId: string;
+  title: string;
+  preview: string;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+  lastPipelineState?: Record<string, unknown>;
+  messages?: RagConversationMessage[];
 }
 
 export interface ChatMessage {

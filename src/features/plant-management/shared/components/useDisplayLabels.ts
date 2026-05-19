@@ -30,8 +30,5 @@ export function usePlantManagementLabels() {
 
     severityLabel: (severity: string | null | undefined): string =>
       severity ? (t(`plantManagement.severity.${severity}` as any) ?? severity) : '—',
-
-    urgencyLabel: (urgency: string | null | undefined): string =>
-      urgency ? (t(`plantManagement.urgency.${urgency}` as any) ?? urgency) : '—',
   };
 }

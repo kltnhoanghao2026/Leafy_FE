@@ -4,6 +4,7 @@ import {
   formatConfidence,
   getDiseaseLabel,
 } from "../utils/diseaseLabels";
+import { useFilePreviewUrl } from "../../settings/queries";
 
 interface DiagnosisHistoryListProps {
   requests: DiagnoseRequest[];
@@ -24,6 +25,25 @@ const formatDateTime = (value?: string | null) => {
     minute: "2-digit",
   }).format(date);
 };
+
+function DiagnosisImage({ fileId, alt }: { fileId: string; alt: string }) {
+  const { data: presignedUrl, isError } = useFilePreviewUrl(fileId);
+
+  if (isError || !presignedUrl) {
+    return <div className="h-full w-full bg-slate-100" />;
+  }
+
+  return (
+    <img
+      src={presignedUrl}
+      alt={alt}
+      className="h-full w-full object-cover"
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  );
+}
 
 export function DiagnosisHistoryList({
   requests,
@@ -56,18 +76,28 @@ export function DiagnosisHistoryList({
             className="rounded-[1.5rem] border border-slate-100 bg-white p-5 shadow-sm"
           >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-                  {formatDateTime(request.timeStamp)}
-                </p>
-                <h3 className="mt-2 text-lg font-black text-slate-900">
-                  {request.imageFileName || "Ảnh chẩn đoán"}
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-slate-500">
-                  {topPrediction
-                    ? `${getDiseaseLabel(topPrediction.diseaseName)} · ${formatConfidence(topPrediction.confidenceScore)}`
-                    : "Chưa tải kết quả"}
-                </p>
+              <div className="flex items-start gap-4">
+                {request.fileId ? (
+                  <div className="hidden h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-50 sm:block">
+                    <DiagnosisImage
+                      fileId={request.fileId}
+                      alt={request.imageFileName}
+                    />
+                  </div>
+                ) : null}
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                    {formatDateTime(request.timeStamp)}
+                  </p>
+                  <h3 className="mt-2 text-lg font-black text-slate-900">
+                    {request.imageFileName || "Ảnh chẩn đoán"}
+                  </h3>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">
+                    {topPrediction
+                      ? `${getDiseaseLabel(topPrediction.diseaseName)} · ${formatConfidence(topPrediction.confidenceScore)}`
+                      : "Chưa tải kết quả"}
+                  </p>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button

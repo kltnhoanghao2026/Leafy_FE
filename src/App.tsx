@@ -90,6 +90,11 @@ const PlanDetailPage = lazy(() =>
     default: module.PlanDetailPage,
   })),
 );
+const PlanApplyDetailPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanApplyDetailPage").then((module) => ({
+    default: module.PlanApplyDetailPage,
+  })),
+);
 const PlansPage = lazy(() =>
   import("./features/plant-management/plan/pages/PlansPage").then((module) => ({
     default: module.PlansPage,
@@ -98,6 +103,11 @@ const PlansPage = lazy(() =>
 const CreatePlanPage = lazy(() =>
   import("./features/plant-management/plan/pages/CreatePlanPage").then((module) => ({
     default: module.CreatePlanPage,
+  })),
+);
+const PlanGenerationProgressPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanGenerationProgressPage").then((module) => ({
+    default: module.PlanGenerationProgressPage,
   })),
 );
 const RagChatPage = lazy(() =>
@@ -203,6 +213,18 @@ const ConsultingFarmZonePage = lazy(() =>
 const ConsultingPlantPage = lazy(() =>
   import('./features/consulting/pages/ConsultingPlantPage').then((module) => ({
     default: module.ConsultingPlantPage,
+  }))
+);
+
+const ApplyAsExpertPage = lazy(() =>
+  import('./features/certificates/pages/ApplyAsExpertPage').then((module) => ({
+    default: module.ApplyAsExpertPage,
+  }))
+);
+
+const ExpertApplicationHistoryPage = lazy(() =>
+  import('./features/certificates/pages/ExpertApplicationHistoryPage').then((module) => ({
+    default: module.ExpertApplicationHistoryPage,
   }))
 );
 
@@ -344,10 +366,26 @@ function App() {
                 }
               />
               <Route
+                path="plans/generate-progress"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PlanGenerationProgressPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <PlanDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="plans/applies/:applyId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PlanApplyDetailPage />
                   </Suspense>
                 }
               />
@@ -508,6 +546,22 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <ConsultingPlantPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="apply-as-expert"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ApplyAsExpertPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="expert-application-history"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExpertApplicationHistoryPage />
                   </Suspense>
                 }
               />

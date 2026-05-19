@@ -24,11 +24,13 @@ export const usePlannedPlantEvents = (plantId: string, enabled = true) =>
     enabled: enabled && !!plantId,
   });
 
-export const usePlantEventsByPlan = (sourcePlanId: string, enabled = true) =>
+
+
+export const usePlantEventsByPlanApply = (planApplyId: string, enabled = true) =>
   useQuery({
-    queryKey: plantManagementKeys.plantEventsByPlan(sourcePlanId),
-    queryFn: () => plantEventApi.getPlantEventsByPlan(sourcePlanId),
-    enabled: enabled && !!sourcePlanId,
+    queryKey: plantManagementKeys.plantEventsByPlanApply(planApplyId),
+    queryFn: () => plantEventApi.getPlantEventsByPlanApply(planApplyId),
+    enabled: enabled && !!planApplyId,
   });
 
 export const usePlantEventsCalendar = (params: PlantEventsCalendarParams) =>

@@ -43,7 +43,7 @@ export function WeekStripView({
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Navigation row */}
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
         <button
@@ -168,7 +168,7 @@ export function WeekStripView({
       </div>
 
       {/* Color legend */}
-      <div className="flex items-center justify-center gap-5 border-t border-slate-100 px-4 py-2.5">
+      <div className="flex shrink-0 items-center justify-center gap-5 border-t border-slate-100 px-4 py-2.5">
         {([
           ['#3B82F6', 'Chăm sóc'],
           ['#F97316', 'Sức khỏe'],

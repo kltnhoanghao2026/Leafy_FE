@@ -77,6 +77,13 @@ export const usePlanApplies = (planId: string, enabled = true) =>
     enabled: enabled && !!planId,
   });
 
+export const usePlanApplyDetail = (applyId: string, enabled = true) =>
+  useQuery({
+    queryKey: plantManagementKeys.planApply(applyId),
+    queryFn: () => treatmentPlanApi.getApplyById(applyId),
+    enabled: enabled && !!applyId,
+  });
+
 // ── Cache invalidation ────────────────────────────────────────────────────
 
 const invalidatePlanCaches = async (
@@ -110,7 +117,13 @@ export const useCreatePlan = () => {
     mutationFn: (payload: PlanCreateRequest) =>
       treatmentPlanApi.createPlan(payload),
     onSuccess: async (plan: any) => {
-      await invalidatePlanCaches(queryClient, plan);
+      // Wrap in try/catch so cache-invalidation errors don't propagate
+      // back through mutateAsync and get mistaken for creation failures.
+      try {
+        await invalidatePlanCaches(queryClient, plan);
+      } catch (e) {
+        console.warn('[useCreatePlan] Cache invalidation failed (non-fatal):', e);
+      }
     },
     meta: {
       successMessage: "Đã tạo kế hoạch điều trị.",
@@ -227,6 +240,27 @@ export const useUpdateApplyStatusMutation = () => {
     },
     meta: {
       successMessage: "Đã cập nhật trạng thái áp dụng.",
+    },
+  });
+};
+
+export const useCancelApplyMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (applyId: string) => treatmentPlanApi.cancelApply(applyId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plansRoot(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã hủy áp dụng kế hoạch. Các sự kiện chưa hoàn thành đã được xóa.",
     },
   });
 };

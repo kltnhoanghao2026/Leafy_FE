@@ -120,9 +120,9 @@ function EventRow({
 
           {/* Timing chips */}
           <div className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-slate-400">
-            {event.daysFromNow != null && (
+            {event.daysFromStart != null && (
               <span className="rounded-md bg-slate-50 px-1.5 py-0.5 ring-1 ring-slate-100">
-                +{event.daysFromNow}d
+                +{event.daysFromStart}d
               </span>
             )}
             {event.durationDays != null && (
@@ -197,11 +197,11 @@ function EventRow({
               type="number"
               min={0}
               className={inputCls}
-              value={event.daysFromNow ?? ''}
+              value={event.daysFromStart ?? ''}
               onChange={(e) =>
                 onChange(
                   index,
-                  'daysFromNow',
+                  'daysFromStart',
                   e.target.value === '' ? undefined : Number(e.target.value),
                 )
               }

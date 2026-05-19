@@ -4,11 +4,20 @@ import {
   Calendar,
   Tag,
   Database,
+  AlignLeft,
 } from "lucide-react";
 import type { DocumentSummary } from "../api/knowledgeBaseApi";
 import { useDeleteDocument } from "../hooks/useKnowledgeBase";
 import { useState } from "react";
 import { AdminTable } from "../../../../components/admin/AdminTable";
+
+function isMarkdownFile(contentType: string | null, filename: string): boolean {
+  return (
+    contentType === "text/markdown" ||
+    filename.endsWith(".md") ||
+    filename.endsWith(".markdown")
+  );
+}
 
 interface DocumentsCatalogProps {
   documents: DocumentSummary[];
@@ -128,12 +137,12 @@ export function DocumentsCatalog({
   return (
     <>
       <AdminTable
-        gridCols="grid-cols-[1fr_120px_100px_120px_60px]"
+        gridCols="grid-cols-[1fr_100px_80px_140px_60px]"
         columns={[
           { label: "Tài liệu" },
           { label: "Kích thước" },
           { label: "Chunks" },
-          { label: "Trạng thái" },
+          { label: "Mục lục" },
           { label: "", align: "right" },
         ]}
         isLoading={isLoading}
@@ -146,7 +155,7 @@ export function DocumentsCatalog({
         {documents.map((doc) => (
           <div
             key={doc.document_id}
-            className="grid grid-cols-[1fr_120px_100px_120px_60px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors group"
+            className="grid grid-cols-[1fr_100px_80px_140px_60px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors group"
           >
             {/* Info */}
             <div className="flex items-center gap-3 min-w-0">
@@ -171,6 +180,14 @@ export function DocumentsCatalog({
                       </span>
                     </>
                   )}
+                  {isMarkdownFile(doc.content_type, doc.original_filename) && (
+                    <>
+                      <span className="text-slate-300">•</span>
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded-full font-semibold ring-1 ring-indigo-100/50 text-[10px]">
+                        Markdown
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -185,18 +202,37 @@ export function DocumentsCatalog({
               {doc.chunk_count}
             </div>
 
-            {/* Status */}
+            {/* Sections / Status */}
             <div>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${
-                  doc.status === "ingested"
-                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/50"
-                    : "bg-rose-50 text-rose-700 ring-1 ring-rose-100/50"
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${doc.status === "ingested" ? "bg-emerald-500" : "bg-rose-500"}`} />
-                {doc.status === "ingested" ? "Đã nhập" : "Lỗi"}
-              </span>
+              {isMarkdownFile(doc.content_type, doc.original_filename) && doc.sections.length > 0 ? (
+                <div className="flex flex-wrap gap-1 max-w-[130px]" title={doc.sections.join(", ")}>
+                  {doc.sections.slice(0, 2).map((section, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium bg-indigo-50 text-indigo-700 rounded-full ring-1 ring-indigo-100/60 truncate max-w-[60px]"
+                    >
+                      <AlignLeft className="w-2.5 h-2.5 shrink-0" />
+                      {section.split(" > ").pop()}
+                    </span>
+                  ))}
+                  {doc.sections.length > 2 && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-500 rounded-full">
+                      +{doc.sections.length - 2}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    doc.status === "ingested"
+                      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100/50"
+                      : "bg-rose-50 text-rose-700 ring-1 ring-rose-100/50"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${doc.status === "ingested" ? "bg-emerald-500" : "bg-rose-500"}`} />
+                  {doc.status === "ingested" ? "Đã nhập" : "Lỗi"}
+                </span>
+              )}
             </div>
 
             {/* Actions */}

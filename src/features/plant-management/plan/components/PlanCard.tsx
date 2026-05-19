@@ -1,4 +1,4 @@
-import { AlertTriangle, Banknote, BarChart2, Check, Clock, Globe, MapPin, Play, Sprout, Trash2, UserCheck } from "lucide-react";
+import { AlertTriangle, Banknote, BarChart2, Bot, Check, Clock, Globe, MapPin, Play, Sprout, Trash2, UserCheck } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useFarmZones } from "../../../farm-management/queries";
@@ -18,10 +18,10 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 const SEVERITY_STYLE: Record<string, string> = {
-  LOW:      "text-emerald-600",
-  MEDIUM:   "text-amber-600",
-  HIGH:     "text-orange-600",
-  CRITICAL: "text-red-600",
+  LOW: "text-blue-700 bg-blue-50 ring-1 ring-blue-200/50 rounded-full px-2 py-0.5",
+  MEDIUM: "text-amber-700 bg-amber-50 ring-1 ring-amber-200/50 rounded-full px-2 py-0.5",
+  HIGH: "text-red-700 bg-red-50 ring-1 ring-red-200/50 rounded-full px-2 py-0.5",
+  CRITICAL: "text-rose-700 bg-rose-50 ring-1 ring-rose-200/50 rounded-full px-2 py-0.5",
 };
 
 const URGENCY_STYLE: Record<string, string> = {
@@ -114,7 +114,7 @@ function PlanCardGrid({
   isPublicView = false,
 }: PlanCardProps) {
   const { t } = useTranslation();
-  const { treatmentStatusLabel, severityLabel, urgencyLabel } = usePlantManagementLabels();
+  const { treatmentStatusLabel, severityLabel } = usePlantManagementLabels();
   return (
     <article
       className={`flex flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all ${
@@ -138,12 +138,18 @@ function PlanCardGrid({
             </p>
           )}
           <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-400">
-            {plan.successIndicators || plan.question || t('plantManagement.plan.aiDisclaimer')}
+            {plan.successIndicators || t('plantManagement.plan.aiDisclaimer')}
           </p>
-          {plan.isConsulted && plan.creatorInfo && (
+          {plan.sourceType === 'CONSULTED' && plan.creatorInfo && (
             <p className="mt-1 flex items-center gap-1 truncate text-xs font-semibold text-emerald-700">
               <UserCheck className="h-3.5 w-3.5 shrink-0" />
               {plan.creatorInfo.fullName ?? t('plantManagement.plan.expert')}
+            </p>
+          )}
+          {plan.sourceType === 'RAG_GEN' && (
+            <p className="mt-1 flex items-center gap-1 truncate text-xs font-semibold text-purple-600">
+              <Bot className="h-3.5 w-3.5 shrink-0" />
+              AI tạo
             </p>
           )}
           {isPublicView && plan.ownerInfo && (
@@ -187,17 +193,7 @@ function PlanCardGrid({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-          <div className="min-w-0">
-            <p className="font-black uppercase tracking-wide text-slate-400">{t('plantManagement.plan.urgencyLabel')}</p>
-            <p className={`truncate font-bold ${
-              URGENCY_STYLE[plan.urgency ?? ""] ?? "text-slate-800"
-            }`}>
-              {urgencyLabel(plan.urgency)}
-            </p>
-          </div>
-        </div>
+
         <div className="flex items-center gap-2">
           <Banknote className="h-3.5 w-3.5 shrink-0 text-slate-400" />
           <div className="min-w-0">
@@ -287,12 +283,18 @@ function PlanCardList({
           {plan.diseaseName || t('plantManagement.plan.unknownPlan')}
         </p>
         <p className="truncate text-xs font-semibold text-slate-400">
-          {plan.question || plan.successIndicators || "—"}
+          {plan.successIndicators || "—"}
         </p>
-        {plan.isConsulted && plan.creatorInfo && (
-          <p className="mt-0.5 flex items-center gap-1 truncate text-xs font-semibold text-emerald-700">
+        {plan.sourceType === 'CONSULTED' && plan.creatorInfo && (
+          <p className="flex items-center gap-1 truncate text-xs font-semibold text-emerald-700">
             <UserCheck className="h-3 w-3 shrink-0" />
             {plan.creatorInfo.fullName ?? t('plantManagement.plan.expert')}
+          </p>
+        )}
+        {plan.sourceType === 'RAG_GEN' && (
+          <p className="flex items-center gap-1 truncate text-xs font-semibold text-purple-600">
+            <Bot className="h-3 w-3 shrink-0" />
+            AI tạo
           </p>
         )}
         {isPublicView && plan.ownerInfo && (

@@ -1,16 +1,12 @@
 import { useState } from 'react'
 import { ProfileSettingsCard } from '../components/ProfileSettingsCard'
 import { DisplaySettingsCard } from '../components/DisplaySettingsCard'
-import { AboutCard } from '../components/AboutCard'
-import { SecuritySettingsCard } from '../components/SecuritySettingsCard'
 import { PrivacySettingsCard } from '../components/PrivacySettingsCard'
 import { NotificationSettingsCard } from '../components/NotificationSettingsCard'
-import { MessageSettingsCard } from '../components/MessageSettingsCard'
-import { SyncAndUtilitiesCard } from '../components/SyncAndUtilitiesCard'
-import { User, Monitor, Shield, Bell, MessageCircle } from 'lucide-react'
+import { User, Monitor, Shield, Bell } from 'lucide-react'
 import { useTranslation } from '../../../i18n/useTranslation'
 
-type TabId = 'account' | 'display' | 'privacy' | 'notifications' | 'messaging'
+type TabId = 'account' | 'display' | 'privacy' | 'notifications'
 
 export function SettingsView() {
   const { t } = useTranslation()
@@ -21,7 +17,6 @@ export function SettingsView() {
     { id: 'display', label: t('settings.tabs.display'), icon: <Monitor className="w-4 h-4" /> },
     { id: 'privacy', label: t('settings.tabs.privacy'), icon: <Shield className="w-4 h-4" /> },
     { id: 'notifications', label: t('settings.tabs.notifications'), icon: <Bell className="w-4 h-4" /> },
-    { id: 'messaging', label: t('settings.tabs.messaging'), icon: <MessageCircle className="w-4 h-4" /> },
   ] as const
 
   return (
@@ -57,7 +52,6 @@ export function SettingsView() {
           {activeTab === 'account' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ProfileSettingsCard />
-              <SecuritySettingsCard />
             </div>
           )}
           
@@ -76,14 +70,6 @@ export function SettingsView() {
           {activeTab === 'notifications' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <NotificationSettingsCard />
-            </div>
-          )}
-
-          {activeTab === 'messaging' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <MessageSettingsCard />
-              <SyncAndUtilitiesCard />
-              <AboutCard />
             </div>
           )}
         </div>

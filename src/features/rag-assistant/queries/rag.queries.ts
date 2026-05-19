@@ -39,3 +39,54 @@ export const useRagPlan = (planId: string | null) =>
     queryFn: () => ragApi.getRagPlanById(planId ?? ""),
     enabled: Boolean(planId),
   });
+
+export const useRagConversations = (
+  params: { page?: number; size?: number } = {},
+) =>
+  useQuery({
+    queryKey: ragAssistantKeys.conversations(params),
+    queryFn: () => ragApi.getRagConversations(params),
+  });
+
+export const useRagConversation = (conversationId: string | null) =>
+  useQuery({
+    queryKey: ragAssistantKeys.conversation(conversationId ?? ""),
+    queryFn: () => ragApi.getRagConversationById(conversationId ?? ""),
+    enabled: Boolean(conversationId),
+  });
+
+export const useRenameRagConversationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      conversationId,
+      title,
+    }: {
+      conversationId: string;
+      title: string;
+    }) => ragApi.renameRagConversation(conversationId, title),
+    onSuccess: async (_, { conversationId }) => {
+      await queryClient.invalidateQueries({
+        queryKey: ragAssistantKeys.conversations(),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ragAssistantKeys.conversation(conversationId),
+      });
+    },
+  });
+};
+
+export const useDeleteRagConversationMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (conversationId: string) =>
+      ragApi.deleteRagConversation(conversationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ragAssistantKeys.conversations(),
+      });
+    },
+  });
+};

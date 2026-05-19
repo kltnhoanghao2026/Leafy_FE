@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { CalendarDays, CalendarRange, Clock, GripVertical } from 'lucide-react';
-import { useConsultingFarmerCalendar } from '../queries/consulting.queries';
+import { CalendarDays, CalendarRange, Clock, GripVertical, ShieldOff } from 'lucide-react';
+import { useConsultingCalendar } from '../queries/consulting.queries';
 import { useToggleTaskMutation } from '../../plant-management';
 import { CalendarViewPanel } from '../../plant-management/calendarview/components/CalendarViewPanel';
 import { EventListPanel } from '../../plant-management/calendarview/components/EventListPanel';
@@ -20,6 +20,12 @@ import type {
 } from '../../plant-management/calendarview/components/CalendarViewPanel';
 import type { EventListPanelProps } from '../../plant-management/calendarview/components/EventListPanel';
 import type { PlantEventResponse } from '../../plant-management/shared/types';
+import type { PrivacySettings } from '../../settings/types';
+
+interface CalendarTabProps {
+  farmerProfileId: string;
+  privacySettings?: PrivacySettings | null;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -54,7 +60,8 @@ function getWeekBounds(weekMonday: Date) {
 
 // ── CalendarTab ───────────────────────────────────────────────────────────────
 
-export function CalendarTab({ farmerProfileId }: { farmerProfileId: string }) {
+export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabProps) {
+  const shared = !!privacySettings?.sharePlantEventsWithConsultants;
   const [activeView, setActiveView] = useState<ViewType>('month');
   const [leftPct, setLeftPct] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -93,9 +100,11 @@ export function CalendarTab({ farmerProfileId }: { farmerProfileId: string }) {
     return getMonthBounds(tlMonth);
   }, [activeView, currentMonth, currentWeekMonday, tlMonth]);
 
-  const calendarQuery = useConsultingFarmerCalendar(
-    { startDate, endDate, profileId: farmerProfileId },
-    !!farmerProfileId,
+  const calendarQuery = useConsultingCalendar(
+    farmerProfileId,
+    startDate,
+    endDate,
+    shared && !!farmerProfileId,
   );
 
   const events = useMemo(() => calendarQuery.data ?? [], [calendarQuery.data]);
@@ -230,9 +239,17 @@ export function CalendarTab({ farmerProfileId }: { farmerProfileId: string }) {
     <div className="pt-4 flex flex-1 min-h-0 flex-col gap-3">
       {/* View type switcher */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-          Lịch sự kiện cây trồng
-        </p>
+        <div className="flex items-center gap-2">
+          {!shared && (
+            <div className="flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-400 text-xs font-bold px-3 py-1">
+              <ShieldOff className="w-3 h-3" strokeWidth={2.5} />
+              Chưa chia sẻ
+            </div>
+          )}
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Lịch sự kiện cây trồng
+          </p>
+        </div>
         <div className="flex rounded-xl bg-slate-100 p-1">
           {VIEW_TABS.map(({ id, label, Icon }) => {
             const isActive = activeView === id;

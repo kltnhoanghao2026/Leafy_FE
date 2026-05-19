@@ -5,4 +5,8 @@ export const ragAssistantKeys = {
     [...ragAssistantKeys.all, "plans", params ?? {}] as const,
   plan: (planId: string) =>
     [...ragAssistantKeys.all, "plan", planId] as const,
+  conversations: (params?: { page?: number; size?: number }) =>
+    [...ragAssistantKeys.all, "conversations", params ?? {}] as const,
+  conversation: (id: string) =>
+    [...ragAssistantKeys.all, "conversation", id] as const,
 };

@@ -118,8 +118,12 @@ interface RagInfoPanelProps {
   pipelineState: PipelineState | null;
   documents: RagDocument[];
   webResults: RagWebResult[];
-  treatmentPlan: unknown;
-  savedPlanId: string | undefined;
+  treatmentPlans: Array<{ 
+    plan: unknown; 
+    savedPlanId?: string;
+    documents?: RagDocument[];
+    webResults?: RagWebResult[];
+  }>;
   onClose: () => void;
 }
 
@@ -129,18 +133,10 @@ export function RagInfoPanel({
   pipelineState,
   documents,
   webResults,
-  treatmentPlan,
-  savedPlanId,
+  treatmentPlans,
   onClose,
 }: RagInfoPanelProps) {
   const navigate = useNavigate();
-
-  const plan = asPlanRecord(treatmentPlan);
-  const diseaseName =
-    asPlanString(plan.diseaseName) || "Treatment Plan";
-  const severity = asPlanString(plan.severityLevel).toUpperCase();
-  const urgency = asPlanString(plan.urgency).toUpperCase();
-  const confidence = asPlanNumber(plan.confidenceScore);
 
   return (
     <div className="w-96 shrink-0 h-full border-l border-gray-200/60 bg-white flex flex-col z-10">
@@ -260,72 +256,149 @@ export function RagInfoPanel({
           )}
         </section>
 
-        {/* Treatment plan card */}
-        {treatmentPlan && (
-          <div
-            onClick={() => {
-              if (savedPlanId) {
-                navigate(ROUTES.DASHBOARD.RAG_PLAN(savedPlanId));
-              }
-            }}
-            className={`rounded-2xl border border-violet-200 bg-violet-50 p-4 transition-all ${
-              savedPlanId
-                ? "cursor-pointer hover:bg-violet-100 hover:shadow-md"
-                : "opacity-80"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-violet-100 rounded-lg shrink-0">
-                <FlaskConical className="h-4 w-4 text-violet-700" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-xs font-bold text-violet-900 leading-tight mb-1">
-                  {diseaseName}
-                </h3>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {severity && (
-                    <span
-                      className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
-                        SEVERITY_STYLES[severity] ||
-                        "bg-slate-100 text-slate-600 border-slate-200"
-                      }`}
-                    >
-                      {severity}
-                    </span>
-                  )}
-                  {urgency && (
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                        URGENCY_STYLES[urgency] || "bg-slate-200 text-slate-700"
-                      }`}
-                    >
-                      {urgency}
-                    </span>
-                  )}
-                </div>
-                {typeof confidence === "number" && (
-                  <div className="mb-2">
-                    <div className="flex items-center justify-between text-[10px] text-violet-700 mb-0.5">
-                      <span>Tin cậy</span>
-                      <span className="font-bold">
-                        {Math.round(confidence * 100)}%
+        {/* Treatment plan cards */}
+        {treatmentPlans && treatmentPlans.length > 0 && (
+          <section className="space-y-3">
+            <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 mb-3">
+              <FlaskConical className="h-3.5 w-3.5 text-violet-600" />
+              Kế hoạch trong hội thoại
+            </h3>
+            {treatmentPlans.map(({ plan, savedPlanId, documents: pDocs, webResults: pWebs }, index) => {
+              const p = asPlanRecord(plan);
+              const diseaseName = asPlanString(p.diseaseName) || "Treatment Plan";
+              const severity = asPlanString(p.severityLevel).toUpperCase();
+              const urgency = asPlanString(p.urgency).toUpperCase();
+              const confidence = asPlanNumber(p.confidenceScore);
+              const planDocs = pDocs || [];
+              const planWebs = pWebs || [];
+
+              return (
+                <div
+                  key={`plan-${index}`}
+                  onClick={() => {
+                    if (savedPlanId) {
+                      navigate(ROUTES.DASHBOARD.RAG_PLAN(savedPlanId));
+                    }
+                  }}
+                  className={`rounded-2xl border border-violet-200 bg-violet-50 p-4 transition-all ${
+                    savedPlanId
+                      ? "cursor-pointer hover:bg-violet-100 hover:shadow-md"
+                      : "opacity-80"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-violet-100 rounded-lg shrink-0">
+                      <FlaskConical className="h-4 w-4 text-violet-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs font-bold text-violet-900 leading-tight mb-1">
+                        {diseaseName}
+                      </h3>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {severity && (
+                          <span
+                            className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              SEVERITY_STYLES[severity] ||
+                              "bg-slate-100 text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            {severity}
+                          </span>
+                        )}
+                        {urgency && (
+                          <span
+                            className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                              URGENCY_STYLES[urgency] || "bg-slate-200 text-slate-700"
+                            }`}
+                          >
+                            {urgency}
+                          </span>
+                        )}
+                      </div>
+                      {typeof confidence === "number" && (
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between text-[10px] text-violet-700 mb-0.5">
+                            <span>Tin cậy</span>
+                            <span className="font-bold">
+                              {Math.round(confidence * 100)}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full rounded-full bg-violet-200 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                              style={{ width: `${Math.round(confidence * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <span className="text-[11px] font-semibold text-violet-600 flex items-center gap-1">
+                        Xem chi tiết phác đồ{" "}
+                        <ArrowRight className="h-3 w-3 inline" />
                       </span>
                     </div>
-                    <div className="h-1.5 w-full rounded-full bg-violet-200 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-violet-500 transition-all duration-500"
-                        style={{ width: `${Math.round(confidence * 100)}%` }}
-                      />
-                    </div>
                   </div>
-                )}
-                <span className="text-[11px] font-semibold text-violet-600 flex items-center gap-1">
-                  Xem chi tiết phác đồ{" "}
-                  <ArrowRight className="h-3 w-3 inline" />
-                </span>
-              </div>
-            </div>
-          </div>
+                  
+                  {/* Plan specific sources */}
+                  {(planDocs.length > 0 || planWebs.length > 0) && (
+                    <div className="mt-4 pt-3 border-t border-violet-200/60 space-y-3">
+                      {planDocs.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-bold text-violet-800 flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                            <BookOpenText className="h-3 w-3" />
+                            Tài liệu RAG
+                          </h4>
+                          <div className="space-y-1.5">
+                            {planDocs.slice(0, 3).map((doc, dIdx) => (
+                              <div key={dIdx} className="bg-white/60 rounded px-2 py-1.5 border border-violet-100">
+                                <p className="text-[10px] font-bold text-violet-900 truncate">
+                                  {readDocumentLabel(doc, dIdx)}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {planWebs.length > 0 && (
+                        <div>
+                          <h4 className="text-[10px] font-bold text-violet-800 flex items-center gap-1.5 mb-1.5 uppercase tracking-wider">
+                            <Globe className="h-3 w-3" />
+                            Nguồn Web
+                          </h4>
+                          <div className="space-y-1.5">
+                            {planWebs.slice(0, 3).map((result, wIdx) => {
+                              const url = readWebUrl(result);
+                              const label = readWebLabel(result, wIdx);
+                              return (
+                                <div key={wIdx} className="bg-white/60 rounded px-2 py-1.5 border border-violet-100">
+                                  {url ? (
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-700 hover:text-violet-900"
+                                    >
+                                      <Link2 className="w-2.5 h-2.5" />
+                                      <span className="truncate">{label}</span>
+                                    </a>
+                                  ) : (
+                                    <p className="text-[10px] font-semibold text-violet-700 truncate">
+                                      {label}
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </section>
         )}
       </div>
     </div>

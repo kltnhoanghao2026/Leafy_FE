@@ -8,4 +8,6 @@ export {
   usePredictDiseaseMutation,
   usePredictHealth,
   useDetectLeafMutation,
+  useUpdateDiagnosePlantMutation,
+  useGenerateTreatmentPlanMutation,
 } from "./disease.queries";

@@ -4,6 +4,7 @@ import { usePlants } from '../../plant-management';
 import { useMyProfile } from "../../settings/queries";
 import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
 import type { PlantResponse } from '../../plant-management/shared/types';
+import { Select } from "../../../components/ui/Select";
 
 export interface DiagnosisPlantContext {
   plantId?: string;
@@ -17,6 +18,7 @@ export interface DiagnosisPlantContext {
 interface DiagnosisPlantSelectorProps {
   value: DiagnosisPlantContext;
   onChange: (value: DiagnosisPlantContext) => void;
+  compact?: boolean;
 }
 
 const getPlantName = (plant: PlantResponse) =>
@@ -38,6 +40,7 @@ const toContext = (
 export function DiagnosisPlantSelector({
   value,
   onChange,
+  compact = false,
 }: DiagnosisPlantSelectorProps) {
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
@@ -82,98 +85,86 @@ export function DiagnosisPlantSelector({
   }, [onChange, plants, plots, value]);
 
   return (
-    <section className="rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-[#245A34]">
-          Thông tin cây liên quan
-        </p>
-        <h3 className="mt-2 text-xl font-black text-slate-900">
-          Gắn chẩn đoán với cây/vườn
-        </h3>
-        <p className="mt-1 text-sm font-semibold text-slate-500">
-          Không bắt buộc. Context này giúp AI tư vấn sát cây và khu vực hơn.
-        </p>
-      </div>
+    <section className={compact ? "" : "rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm"}>
+      {!compact && (
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#245A34]">
+            Thông tin cây liên quan
+          </p>
+          <h3 className="mt-2 text-xl font-black text-slate-900">
+            Gắn chẩn đoán với cây/vườn
+          </h3>
+          <p className="mt-1 text-sm font-semibold text-slate-500">
+            Không bắt buộc. Context này giúp AI tư vấn sát cây và khu vực hơn.
+          </p>
+        </div>
+      )}
 
-      <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className={`${compact ? "mt-2" : "mt-5"} grid grid-cols-1 gap-4 ${compact ? "sm:grid-cols-3" : "md:grid-cols-3"}`}>
         <label className="block">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">
             Vườn
           </span>
-          <select
+          <Select
             value={value.farmPlotId ?? ""}
-            onChange={(event) => {
-              const plot = plots.find((item) => item.id === event.target.value) ?? null;
+            onChange={(selectedId) => {
+              const plot = plots.find((item) => item.id === String(selectedId)) ?? null;
               onChange({
                 farmPlotId: plot?.id,
                 farmPlotName: plot?.name,
               });
             }}
-            className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
+            options={[
+              { value: "", label: "Không chọn vườn" },
+              ...plots.map((plot) => ({ value: plot.id, label: plot.name })),
+            ]}
             disabled={plotsQuery.isLoading}
-          >
-            <option value="">Không chọn vườn</option>
-            {plots.map((plot) => (
-              <option key={plot.id} value={plot.id}>
-                {plot.name}
-              </option>
-            ))}
-          </select>
+          />
         </label>
 
         <label className="block">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">
             Khu vực
           </span>
-          <select
+          <Select
             value={value.farmZoneId ?? ""}
-            onChange={(event) => {
-              const zone = zones.find((item) => item.id === event.target.value) ?? null;
+            onChange={(selectedId) => {
+              const zone = zones.find((item) => item.id === String(selectedId)) ?? null;
               onChange({
                 ...value,
                 farmZoneId: zone?.id,
                 farmZoneName: zone?.zoneName,
               });
             }}
-            className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 disabled:text-slate-400"
+            options={[
+              { value: "", label: value.farmPlotId ? "Không chọn khu vực" : "Chọn vườn trước" },
+              ...zones.map((zone) => ({ value: zone.id, label: zone.zoneName })),
+            ]}
             disabled={!value.farmPlotId || zonesQuery.isLoading}
-          >
-            <option value="">
-              {value.farmPlotId ? "Không chọn khu vực" : "Chọn vườn trước"}
-            </option>
-            {zones.map((zone) => (
-              <option key={zone.id} value={zone.id}>
-                {zone.zoneName}
-              </option>
-            ))}
-          </select>
+          />
         </label>
 
         <label className="block">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">
             Cây trồng
           </span>
-          <select
+          <Select
             value={value.plantId ?? ""}
-            onChange={(event) => {
+            onChange={(selectedId) => {
               const plant =
-                filteredPlants.find((item) => item.id === event.target.value) ??
+                filteredPlants.find((item) => item.id === String(selectedId)) ??
                 null;
               const plot =
                 plots.find((item) => item.id === plant?.farmPlotId) ??
                 selectedPlot;
               onChange(toContext(plant, plot, selectedZone));
             }}
-            className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
+            options={[
+              { value: "", label: "Không chọn cây" },
+              ...filteredPlants.map((plant) => ({ value: plant.id, label: getPlantName(plant) })),
+            ]}
             disabled={plantsQuery.isLoading}
-          >
-            <option value="">Không chọn cây</option>
-            {filteredPlants.map((plant) => (
-              <option key={plant.id} value={plant.id}>
-                {getPlantName(plant)}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </div>
 

@@ -7,20 +7,18 @@ import { Field, inputCls, errorInputCls, FieldError } from './FormField';
 
 export interface PlanFormState {
   diseaseName: string;
-  question: string;
+  planName: string;
   farmPlotId: string;
   severityLevel: string;
-  urgency: string;
   successIndicators: string;
   estimatedCost: string;
 }
 
 export const emptyForm = (): PlanFormState => ({
   diseaseName: '',
-  question: '',
+  planName: '',
   farmPlotId: '',
   severityLevel: '',
-  urgency: '',
   successIndicators: '',
   estimatedCost: '',
 });
@@ -30,7 +28,7 @@ export const emptyEvent = (): PlantEventCreateRequest => ({
   eventType: '' as PlantEventCreateRequest['eventType'],
   note: '',
   description: '',
-  daysFromNow: undefined,
+  daysFromStart: undefined,
   durationDays: undefined,
   estimatedCost: '',
 });
@@ -45,13 +43,6 @@ const SEVERITY_OPTIONS = [
   { value: 'CRITICAL', label: 'Nghiêm trọng' },
 ];
 
-const URGENCY_OPTIONS = [
-  { value: '', label: '-- Không xác định --' },
-  { value: 'LOW', label: 'Thấp' },
-  { value: 'MEDIUM', label: 'Trung bình' },
-  { value: 'HIGH', label: 'Cao' },
-  { value: 'IMMEDIATE', label: 'Ngay lập tức' },
-];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -88,8 +79,8 @@ export function PlanInfoSection({ form, updateForm, farmPlotOptions, errors }: P
         <Field label="Tên kế hoạch (tuỳ chọn)">
           <input
             className={inputCls}
-            value={form.question}
-            onChange={(e) => updateForm('question', e.target.value)}
+            value={form.planName}
+            onChange={(e) => updateForm('planName', e.target.value)}
             placeholder="VD: Kế hoạch xử lý tháng 5..."
           />
         </Field>
@@ -105,21 +96,13 @@ export function PlanInfoSection({ form, updateForm, farmPlotOptions, errors }: P
           </Field>
         )}
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Field label="Mức độ nghiêm trọng">
             <Select
               className="mt-1.5"
               value={form.severityLevel}
               onChange={(v) => updateForm('severityLevel', v as string)}
               options={SEVERITY_OPTIONS}
-            />
-          </Field>
-          <Field label="Mức độ khẩn cấp">
-            <Select
-              className="mt-1.5"
-              value={form.urgency}
-              onChange={(v) => updateForm('urgency', v as string)}
-              options={URGENCY_OPTIONS}
             />
           </Field>
         </div>

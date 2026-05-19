@@ -56,7 +56,7 @@ export interface SearchPlanItem {
   estimatedCost: string | null;
   source: string | null;
   isPublic: boolean | null;
-  isConsulted: boolean | null;
+  sourceType: string | null;
   eventCount: number | null;
   applyCount: number | null;
   creatorInfo: SearchAuthorInfo | null;
