@@ -8,6 +8,7 @@ import {
   formatAlertTypeLabel,
   formatConfigStatusLabel,
   formatDeviceStatusLabel,
+  formatDeviceTypeLabel,
   formatSensorLabel,
   formatSeverityLabel,
 } from "./iotTranslation";
@@ -37,6 +38,8 @@ describe("iot translation helpers", () => {
     expect(formatAlertStatusLabel(tEn, "ACKNOWLEDGED")).toBe("Acknowledged");
     expect(formatAlertTypeLabel(tEn, "DEVICE_OFFLINE")).toBe("Device offline");
     expect(formatDeviceStatusLabel(tEn, "ONLINE")).toBe("Online");
+    expect(formatDeviceStatusLabel(tEn, "RETIRED")).toBe("Retired");
+    expect(formatDeviceTypeLabel(tEn, "ESP32_CAM_SENSOR")).toBe("ESP32 camera sensor");
     expect(formatConfigStatusLabel(tEn, "ACKED")).toBe("Acknowledged by device");
   });
 

@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { Check, AlertTriangle } from 'lucide-react'
 import type { ZoneHealth } from '../mockData'
+import { useTranslation } from '../../../i18n'
 
 interface HealthGaugesRowProps {
   health: ZoneHealth
@@ -35,6 +36,7 @@ function ProgressCard({
 }
 
 export function HealthGaugesRow({ health }: HealthGaugesRowProps) {
+  const { t } = useTranslation()
   // Using custom icons or fallback lucide icons
   const ExclamationIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -47,21 +49,21 @@ export function HealthGaugesRow({ health }: HealthGaugesRowProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <ProgressCard 
-        title="Cây khỏe mạnh" 
+        title={t("iot.dashboard.healthHealthyPlants")}
         value={health.healthy} 
         icon={Check} 
         colorClass="text-[#10B981]" // Emerald
         iconBgClass="bg-[#ECFDF5]"
       />
       <ProgressCard 
-        title="Cảnh báo sức khỏe" 
+        title={t("iot.dashboard.healthWarnings")}
         value={health.warning} 
         icon={AlertTriangle} 
         colorClass="text-[#F59E0B]" // Amber
         iconBgClass="bg-[#FFFBEB]"
       />
       <ProgressCard 
-        title="Nghiêm trọng" 
+        title={t("iot.dashboard.healthCritical")}
         value={health.danger} 
         icon={ExclamationIcon} 
         colorClass="text-[#EF4444]" // Red

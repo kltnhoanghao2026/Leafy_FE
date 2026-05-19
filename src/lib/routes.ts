@@ -87,6 +87,8 @@ export const ROUTES = {
     SEEDING: "/admin/seeding",
     SYNC: "/admin/sync",
     IOT_DEMO_TOOLS: "/admin/iot-demo-tools",
+    IOT_CAMERA_SCHEDULES: "/admin/iot-camera-schedules",
+    IOT_CAMERA_BATCH_UPLOAD: "/admin/iot-camera-batch-upload",
   },
 } as const;
 
@@ -389,6 +391,17 @@ export const API_ENDPOINTS = {
       `/iot/devices/${deviceId}/camera/capture`,
     DEVICE_MEDIA: (deviceId: string) => `/iot/devices/${deviceId}/media`,
     MEDIA_EVENT: (mediaEventId: string) => `/iot/media-events/${mediaEventId}`,
+    CAMERA_SCHEDULES: "/iot/camera-schedules",
+    CAMERA_SCHEDULE: (scheduleId: string) => `/iot/camera-schedules/${scheduleId}`,
+    CAMERA_SCHEDULE_RUN_NOW: (scheduleId: string) =>
+      `/iot/camera-schedules/${scheduleId}/run-now`,
+    DEVICE_CAMERA_CAPTURE_SCHEDULE: (deviceUid: string) =>
+      `/iot/devices/${deviceUid}/camera/capture-schedule`,
+    DEVICE_CAMERA_DETECT: (deviceUid: string) =>
+      `/iot/devices/${deviceUid}/camera/detect`,
+    ADMIN_CAMERA_UPLOAD_FOLDER: "/admin/camera/upload-folder",
+    ADMIN_CAMERA_RUN_SCHEDULED: (deviceUid: string) =>
+      `/admin/camera/run-scheduled/${deviceUid}`,
     DASHBOARD_OVERVIEW: "/iot/dashboard/overview",
     FARM_ZONE_OVERVIEW: (zoneId: string) =>
       `/iot/farm-zones/${zoneId}/overview`,

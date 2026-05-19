@@ -1,8 +1,10 @@
 import { MessageSquare } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { profilesApi } from '../../profiles/api/profilesApi'
+import { useTranslation } from '../../../i18n'
 
 export function ExpertRecommendations() {
+  const { t } = useTranslation()
   const { data, isLoading } = useQuery({
     queryKey: ['public-experts', 'recommendations'],
     queryFn: () => profilesApi.getPublicExperts({ size: 3 }),
@@ -12,7 +14,7 @@ export function ExpertRecommendations() {
 
   return (
     <div className="bg-[#F2FCF4] rounded-[2rem] p-6 lg:p-8">
-      <h3 className="text-[18px] font-bold text-[#245A34] tracking-tight mb-6">Chuyên gia gợi ý</h3>
+      <h3 className="text-[18px] font-bold text-[#245A34] tracking-tight mb-6">{t("iot.dashboard.expertRecommendations")}</h3>
       
       {isLoading ? (
         <div className="flex items-center justify-center py-4">
@@ -20,7 +22,7 @@ export function ExpertRecommendations() {
         </div>
       ) : experts.length === 0 ? (
         <div className="text-center py-4 text-[#245A34] text-sm opacity-70">
-          Chưa có gợi ý nào.
+          {t("iot.dashboard.noExpertRecommendations")}
         </div>
       ) : (
         <div className="space-y-4">

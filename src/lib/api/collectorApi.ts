@@ -8,6 +8,11 @@ import type {
   AlertRulesParams,
   CameraCaptureRequest,
   CameraCaptureResponse,
+  AdminCameraUploadResponse,
+  DeviceCameraScheduleRequest,
+  DeviceCameraScheduleResponse,
+  DeviceMediaAnalysisResponse,
+  DiseaseDetectRequest,
   ChartRange,
   ClaimDeviceRequest,
   CreateAlertRuleRequest,
@@ -130,6 +135,72 @@ export const collectorApi = {
     apiClient.get<DeviceMediaEventResponse[]>(
       API_ENDPOINTS.IOT.DEVICE_MEDIA(deviceId),
     ),
+
+  getCameraSchedules: () =>
+    apiClient.get<DeviceCameraScheduleResponse[]>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
+    ),
+
+  createCameraSchedule: (payload: DeviceCameraScheduleRequest) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
+      payload,
+    ),
+
+  updateCameraSchedule: (scheduleId: string, payload: DeviceCameraScheduleRequest) =>
+    apiClient.put<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULE(scheduleId),
+      payload,
+    ),
+
+  deleteCameraSchedule: (scheduleId: string) =>
+    apiClient.delete<void>(API_ENDPOINTS.IOT.CAMERA_SCHEDULE(scheduleId)),
+
+  runCameraScheduleNow: (scheduleId: string) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.CAMERA_SCHEDULE_RUN_NOW(scheduleId),
+    ),
+
+  runScheduledCameraForDevice: (deviceUid: string) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.ADMIN_CAMERA_RUN_SCHEDULED(deviceUid),
+    ),
+
+  createDeviceCameraSchedule: (
+    deviceUid: string,
+    payload: Pick<DeviceCameraScheduleRequest, "enabled" | "timeOfDay" | "recurrence" | "resolution" | "quality" | "uploadEndpoint">,
+  ) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE_SCHEDULE(deviceUid),
+      payload,
+    ),
+
+  detectCameraDisease: (deviceUid: string, payload: DiseaseDetectRequest) =>
+    apiClient.post<DeviceMediaAnalysisResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_DETECT(deviceUid),
+      payload,
+    ),
+
+  uploadCameraFolder: ({
+    files,
+    deviceUid,
+    autoDetect,
+  }: {
+    files: File[];
+    deviceUid: string;
+    autoDetect: boolean;
+  }) => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    return apiClient.post<AdminCameraUploadResponse>(
+      API_ENDPOINTS.IOT.ADMIN_CAMERA_UPLOAD_FOLDER,
+      formData,
+      {
+        params: { deviceUid, autoDetect },
+        headers: { "Content-Type": "multipart/form-data" },
+      },
+    );
+  },
 
   getAlertRules: (params: AlertRulesParams = {}) =>
     apiClient.get<PagedResponse<AlertRuleResponse>>(
