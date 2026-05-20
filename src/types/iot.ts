@@ -57,6 +57,10 @@ export type DeviceMediaEventStatus =
   | "FAILED"
   | "TIMEOUT";
 
+export type CameraScheduleRecurrence = "DAILY" | "WEEKLY" | "NONE";
+
+export type CameraScheduleTriggerType = "MANUAL" | "SCHEDULED";
+
 export interface CameraCaptureRequest {
   quality?: "LOW" | "MEDIUM" | "HIGH";
   resolution?: "QVGA" | "VGA";
@@ -87,6 +91,80 @@ export interface DeviceMediaEventResponse {
   commandSentAt: string | null;
   uploadedAt: string | null;
   capturedAt: string | null;
+  analysis?: DeviceMediaAnalysisResponse | null;
+}
+
+export interface DeviceMediaAnalysisResponse {
+  id: string;
+  mediaEventId: string;
+  alertEventId: string | null;
+  fileId: string;
+  deviceUid: string;
+  requestId: string | null;
+  triggerType: string | null;
+  status: "PENDING" | "PROCESSING" | "PROCESSED" | "DISEASE_DETECTED" | "FAILED" | string;
+  diseaseDetected: boolean;
+  severity: AlertSeverity | string | null;
+  diseaseType: string | null;
+  diseaseName: string | null;
+  confidence: number | null;
+  notes: string | null;
+  fileUrl: string | null;
+  capturedAt: string | null;
+  analyzedAt: string | null;
+  error: string | null;
+}
+
+export interface DiseaseDetectRequest {
+  mediaEventId?: string;
+  fileId?: string;
+  fileUrl?: string;
+  deviceUid?: string;
+  force?: boolean;
+}
+
+export interface AdminCameraUploadItemResponse {
+  originalFileName: string;
+  fileId: string | null;
+  fileUrl: string | null;
+  mediaEvent: DeviceMediaEventResponse | null;
+  analysis: DeviceMediaAnalysisResponse | null;
+  status: string;
+  error: string | null;
+}
+
+export interface AdminCameraUploadResponse {
+  deviceUid: string;
+  autoDetect: boolean;
+  uploadedAt: string;
+  items: AdminCameraUploadItemResponse[];
+}
+
+export interface DeviceCameraScheduleRequest {
+  deviceUid: string;
+  enabled?: boolean;
+  triggerType?: CameraScheduleTriggerType;
+  timeOfDay: string;
+  recurrence: CameraScheduleRecurrence;
+  resolution?: "QVGA" | "VGA" | "HD";
+  quality?: "LOW" | "MEDIUM" | "HIGH";
+  uploadEndpoint?: string;
+}
+
+export interface DeviceCameraScheduleResponse {
+  id: string;
+  deviceId?: string | null;
+  deviceUid: string;
+  enabled: boolean;
+  triggerType: CameraScheduleTriggerType | string;
+  timeOfDay: string;
+  recurrence: CameraScheduleRecurrence | string;
+  resolution?: "QVGA" | "VGA" | "HD" | string | null;
+  quality?: "LOW" | "MEDIUM" | "HIGH" | string | null;
+  uploadEndpoint?: string | null;
+  lastRunAt: string | null;
+  nextRunAt: string | null;
+  lastMediaEvent?: DeviceMediaEventResponse | null;
 }
 
 export interface DeviceConfigSnapshotResponse {

@@ -26,6 +26,8 @@ import { CertificateApprovalPage } from "./features/admin/certificates";
 import { DataSeedingPage } from "./features/admin/seeding";
 import { DataSyncPage } from "./features/admin/sync";
 import { IotDemoToolsPage } from "./features/admin/iot-demo/IotDemoToolsPage";
+import { IotCameraSchedulesPage } from "./features/admin/iot-camera-schedules/IotCameraSchedulesPage";
+import { AdminCameraBatchUploadPage } from "./features/admin/camera-batch-upload/AdminCameraBatchUploadPage";
 import { isIotDemoToolsEnabled } from "./features/admin/iot-demo/iotDemo.api";
 import { AdminLayout } from "./layouts/AdminLayout";
 import { AdminOverviewPage } from "./features/admin/overview";
@@ -661,6 +663,14 @@ function App() {
                   element={<IotDemoToolsPage />}
                 />
               )}
+              <Route
+                path="iot-camera-schedules"
+                element={<IotCameraSchedulesPage />}
+              />
+              <Route
+                path="iot-camera-batch-upload"
+                element={<AdminCameraBatchUploadPage />}
+              />
             </Route>
           </Route>
 

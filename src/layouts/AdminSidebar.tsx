@@ -17,6 +17,7 @@ import {
   CalendarDays,
   MapPinned,
   RadioTower,
+  Camera,
   BookOpen,
 } from "lucide-react";
 import { useState } from "react";
@@ -101,6 +102,16 @@ export function AdminSidebar({ collapsed }: AdminSidebarProps) {
               },
             ]
           : []),
+        {
+          name: "Lịch chụp camera",
+          path: ROUTES.ADMIN.IOT_CAMERA_SCHEDULES,
+          icon: Camera,
+        },
+        {
+          name: "Upload ảnh camera",
+          path: ROUTES.ADMIN.IOT_CAMERA_BATCH_UPLOAD,
+          icon: Camera,
+        },
         { name: "Đồng bộ dữ liệu", path: ROUTES.ADMIN.SYNC, icon: RefreshCw },
       ],
     },
