@@ -12,6 +12,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   Sprout,
+  Leaf,
   Users,
   Settings,
   MessageSquare,
@@ -43,6 +44,10 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
 
+  const utilityBadgeMap: Record<string, number> = {
+    [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
+  };
+
   const coreNavItems: SidebarNavItem[] = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
     { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
@@ -54,6 +59,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const agricultureNavItems: SidebarNavItem[] = [
     { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    { name: t('nav.species'), path: ROUTES.DASHBOARD.SPECIES, icon: Leaf },
     { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
     { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
     { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: ScanSearch },
@@ -66,6 +72,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const utilityNavItems: SidebarNavItem[] = [
     { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
+    { name: 'Thông báo', path: ROUTES.DASHBOARD.NOTIFICATIONS, icon: Bell },
     { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
@@ -183,9 +190,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
           {coreNavItems.map((item) => renderNavItem(item))}
         </div>
         {renderSection('agriculture', t('nav.sectionAgriculture'), agricultureNavItems)}
-        {renderSection('utility', t('nav.sectionOther'), utilityNavItems, {
-          [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
-        })}
+        {renderSection('utility', t('nav.sectionOther'), utilityNavItems, utilityBadgeMap)}
       </nav>
     </aside>
   );

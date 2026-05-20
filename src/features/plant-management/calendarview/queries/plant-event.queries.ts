@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { plantEventApi } from "../api/plant-event.api";
-import type { PlantEventsCalendarParams, PlantEventUpdateRequest, EventProgressUpdateRequest } from '../../shared/types';
+import type { PlantEventsCalendarParams, PlantEventUpdateRequest, PlantEventCreateRequest, EventProgressUpdateRequest } from '../../shared/types';
 import { plantManagementKeys } from '../../shared/queries/keys';
 
 export const usePlantEvent = (eventId: string, enabled = true) =>
@@ -97,6 +97,54 @@ export const useDeletePlantEventMutation = () => {
     },
     meta: {
       successMessage: "Đã xóa lịch chăm sóc.",
+    },
+  });
+};
+
+export const useDeletableChildren = (eventId: string) =>
+  useQuery({
+    queryKey: [...plantManagementKeys.plantEvent(eventId), "deletable-children"],
+    queryFn: () => plantEventApi.getDeletableChildren(eventId),
+    enabled: !!eventId,
+  });
+
+export const useDeleteWithChildrenMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ eventId, confirmDelete }: { eventId: string; confirmDelete: boolean }) =>
+      plantEventApi.deleteWithChildren(eventId, confirmDelete),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã xóa lịch chăm sóc và các sự kiện con.",
+    },
+  });
+};
+
+export const useCreatePlantEventMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: PlantEventCreateRequest) =>
+      plantEventApi.createPlantEvent(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã tạo lịch chăm sóc.",
     },
   });
 };

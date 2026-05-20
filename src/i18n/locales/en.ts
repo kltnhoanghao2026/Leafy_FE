@@ -52,6 +52,7 @@ export const en: TranslationDict = {
     experts: "Experts",
     alerts: "Alerts",
     plants: "Plants",
+    species: "Plant Species",
     devices: "Devices",
     admin: "Admin",
     home: "Home",

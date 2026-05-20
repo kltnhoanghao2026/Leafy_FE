@@ -19,6 +19,7 @@ const TYPE_COLORS: Record<string, string> = {
   PHENOLOGY: '#6366F1',
   REPOT: '#A855F7',
   HARVEST: '#84CC16',
+  ALERT_TRIGGERED: '#EF4444',
 };
 
 export function EventTypeBreakdown({ eventsByType, titleKey = 'plantManagement.overview.eventsByTypeTitle' }: EventTypeBreakdownProps) {

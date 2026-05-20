@@ -6,6 +6,7 @@ import type {
   PlantEventResponse,
   PlantEventsCalendarParams,
   PlantEventUpdateRequest,
+  PlantEventCreateRequest,
   EventProgressResponse,
   EventProgressUpdateRequest,
 } from '../../shared/types';
@@ -61,6 +62,13 @@ export const plantEventApi = {
     return unwrapApiData(response.data);
   },
 
+  createPlantEvent: async (payload: PlantEventCreateRequest) => {
+    const response = await apiClient.post<
+      ApiEnvelope<PlantEventResponse> | PlantEventResponse
+    >(API_ENDPOINTS.PLANT_EVENTS.CREATE, payload);
+    return unwrapApiData(response.data);
+  },
+
   updatePlantEvent: async (
     eventId: string,
     payload: PlantEventUpdateRequest,
@@ -74,6 +82,20 @@ export const plantEventApi = {
   deletePlantEvent: async (eventId: string) => {
     await apiClient.delete<ApiEnvelope<void> | void>(
       API_ENDPOINTS.PLANT_EVENTS.ITEM(eventId),
+    );
+  },
+
+  getDeletableChildren: async (eventId: string) => {
+    const response = await apiClient.get<
+      ApiEnvelope<PlantEventResponse[]> | PlantEventResponse[]
+    >(API_ENDPOINTS.PLANT_EVENTS.DELETABLE_CHILDREN(eventId));
+    return unwrapApiData(response.data);
+  },
+
+  deleteWithChildren: async (eventId: string, confirmDelete: boolean) => {
+    await apiClient.delete<ApiEnvelope<void> | void>(
+      API_ENDPOINTS.PLANT_EVENTS.WITH_CHILDREN(eventId),
+      { params: { confirmDelete } },
     );
   },
 

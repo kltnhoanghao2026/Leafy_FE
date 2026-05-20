@@ -182,6 +182,13 @@ export const treatmentPlanApi = {
     return unwrapApiData(response.data);
   },
 
+  completeApply: async (applyId: string, success: boolean) => {
+    const response = await apiClient.patch<
+      ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
+    >(API_ENDPOINTS.PLANS.COMPLETE_APPLY(applyId), { success });
+    return unwrapApiData(response.data);
+  },
+
   bulkUpdateApplyStatus: async (
     payload: BulkPlanStatusUpdateRequest,
   ): Promise<BulkOperationResult> => {

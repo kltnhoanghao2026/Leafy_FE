@@ -20,7 +20,7 @@ interface PendingAccessRequestsProps {
 export function PendingAccessRequests({ compact = false }: PendingAccessRequestsProps) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
-  const isVi = i18n.language === "vi";
+  const isVi = i18n?.language === "vi";
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["consulting-access-requests", "pending"],

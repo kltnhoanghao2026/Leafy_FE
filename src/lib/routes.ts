@@ -36,6 +36,10 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
+    SPECIES: "/dashboard/species",
+    FARM_PLOT_DETAIL: (farmPlotId: string) => `/dashboard/farms/${farmPlotId}`,
+    FARM_ZONE_DETAIL: (farmPlotId: string, farmZoneId: string) => `/dashboard/farms/${farmPlotId}/zones/${farmZoneId}`,
+    SPECIES_DETAIL: (id: string) => `/dashboard/species/${id}`,
     PLANS: "/dashboard/plans",
     PLANS_CREATE: "/dashboard/plans/create",
     PLANS_GENERATE_PROGRESS: "/dashboard/plans/generate-progress",
@@ -251,6 +255,7 @@ export const API_ENDPOINTS = {
     PLOT: (id: string) => `/farms/plots/${id}`,
     PLOT_ZONES: (plotId: string) => `/farms/plots/${plotId}/zones`,
     ZONE: (id: string) => `/farms/zones/${id}`,
+    ZONES_BY_OWNER: "/farms/zones",
     ADMIN_PLOTS: "/farms/plots/admin",
     ADMIN_ZONES: "/farms/admin/zones",
   },
@@ -306,6 +311,10 @@ export const API_ENDPOINTS = {
       `/plant-events/${eventId}/progress/${progressId}`,
     PROGRESS_GENERATE: (eventId: string) =>
       `/plant-events/${eventId}/progress/generate`,
+    DELETABLE_CHILDREN: (eventId: string) =>
+      `/plant-events/${eventId}/deletable-children`,
+    WITH_CHILDREN: (eventId: string) =>
+      `/plant-events/${eventId}/with-children`,
   },
 
   PLANS: {
@@ -317,6 +326,7 @@ export const API_ENDPOINTS = {
     APPLY_ITEM: (applyId: string) => `/plans/applies/${applyId}`,
     APPLY_STATUS: (applyId: string) => `/plans/applies/${applyId}/status`,
     CANCEL_APPLY: (applyId: string) => `/plans/applies/${applyId}/cancel`,
+    COMPLETE_APPLY: (applyId: string) => `/plans/applies/${applyId}/complete`,
     BULK_APPLY_STATUS: "/plans/applies/bulk/status",
     BULK_DELETE: "/plans/bulk",
     BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",

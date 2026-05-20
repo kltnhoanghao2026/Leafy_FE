@@ -1,7 +1,6 @@
 import apiClient from "../../../lib/apiClient";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
-import type { RagApiResponseV2, PlanGenerationResponseV2 } from "../../rag-assistant/types";
 import type {
   DiagnoseRequest,
   DiagnoseResult,
@@ -9,6 +8,27 @@ import type {
   PredictHealthResponse,
   PredictResponse,
 } from "../types";
+
+interface RagApiResponseV2 {
+  code: number;
+  message: string;
+  result?: PlanGenerationResponseV2;
+}
+
+interface PlanGenerationResponseV2 {
+  plan: Record<string, unknown>;
+  documents: Array<{ title: string; content: string; url?: string; score: number }>;
+  web_sources: Array<{ title: string; content: string; url?: string; score: number }>;
+  metadata: {
+    disease_type: string;
+    best_rerank_score: number;
+    web_search_used: boolean;
+    web_sources_count: number;
+    refinement_attempts: number;
+    safety_passed: boolean;
+  };
+  saved_plan_id: string | null;
+}
 
 const unwrapApiData = <T>(payload: T | ApiEnvelope<T>): T => {
   if (

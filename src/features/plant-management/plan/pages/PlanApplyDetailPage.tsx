@@ -20,6 +20,7 @@ import { ROUTES } from "../../../../lib/routes";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
 import { PlantEventEditDialog } from "../../calendarview/components/PlantEventEditDialog";
 import { CalendarWorkspace } from "../../calendarview/components/CalendarWorkspace";
+import { PlantEventProgressModal } from "../../overview/components/PlantEventProgressModal";
 import {
   useCancelApplyMutation,
   useDeletePlantEventMutation,
@@ -52,6 +53,7 @@ export function PlanApplyDetailPage() {
   const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
   const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
   const [cancelTarget, setCancelTarget] = useState<import("../shared/types").PlanApplyResponse | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<PlantEventResponse | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   const profileQuery = useMyProfile();
@@ -233,6 +235,8 @@ export function PlanApplyDetailPage() {
               events={events}
               calendarQuery={eventsQuery}
               onEditEvent={setEditEventTarget}
+              onSelectEvent={setSelectedEvent}
+              onDelete={setDeleteEventTarget}
               onToggleComplete={(event) =>
                 void updateEvent.mutateAsync({ eventId: event.id, payload: { completed: !event.completed } })
               }
@@ -412,10 +416,22 @@ export function PlanApplyDetailPage() {
           event={editEventTarget}
           isSubmitting={updateEvent.isPending}
           onClose={() => setEditEventTarget(null)}
+          zIndex="z-[60]"
           onSubmit={(payload) =>
             void updateEvent
               .mutateAsync({ eventId: editEventTarget.id, payload })
               .then(() => setEditEventTarget(null))
+          }
+        />
+      )}
+      {selectedEvent && (
+        <PlantEventProgressModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onEdit={(event) => { setSelectedEvent(null); setEditEventTarget(event); }}
+          onDelete={(event) => { setSelectedEvent(null); setDeleteEventTarget(event); }}
+          onToggleTask={(event, idx) =>
+            void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
           }
         />
       )}

@@ -63,7 +63,7 @@ export function CreatePlanPage() {
     [farmPlots],
   );
 
-  const updateForm = (field: keyof PlanFormState, value: string) => {
+  const updateForm = (field: keyof PlanFormState, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setPlanErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -126,6 +126,9 @@ export function CreatePlanPage() {
       daysFromStart: evt.daysFromStart,
       durationDays: evt.durationDays,
       estimatedCost: evt.estimatedCost?.trim() || undefined,
+      phiDays: evt.phiDays,
+      ppeRequired: evt.ppeRequired?.trim() || undefined,
+      mrlNote: evt.mrlNote?.trim() || undefined,
       isPlanned: true,
       tasks: evt.tasks && evt.tasks.length > 0
         ? evt.tasks.map((t, i) => ({
@@ -142,9 +145,14 @@ export function CreatePlanPage() {
       diseaseName: form.diseaseName.trim(),
       planName: form.planName?.trim() || undefined,
       farmPlotId: form.farmPlotId || undefined,
+      speciesId: form.speciesId || undefined,
+      source: 'documents',
       severityLevel: form.severityLevel || undefined,
+      requiredInputs: form.requiredInputs?.trim() ? [form.requiredInputs.trim()] : undefined,
+      safetyWarnings: form.safetyWarnings?.trim() ? [form.safetyWarnings.trim()] : undefined,
       successIndicators: form.successIndicators?.trim() || undefined,
       estimatedCost: form.estimatedCost?.trim() || undefined,
+      isPublic: form.isPublic,
       schedule: cleanedEvents.length > 0 ? cleanedEvents : undefined,
     };
 

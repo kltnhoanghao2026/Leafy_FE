@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X,
   CheckCircle2,
@@ -13,8 +14,12 @@ import {
   Clock,
   LayoutGrid,
   ChevronDown,
+  ChevronUp,
   GitBranch,
+  Pencil,
+  Trash2,
 } from "lucide-react";
+import { ROUTES } from "../../../../lib/routes";
 import {
   usePlantEvent,
   useEventProgress,
@@ -38,6 +43,12 @@ import {
 interface PlantEventProgressModalProps {
   event: PlantEventResponse;
   onClose: () => void;
+  /** Called when the user clicks Edit for any event (main or child). */
+  onEdit?: (event: PlantEventResponse) => void;
+  /** Called when the user clicks Delete for any event (main or child). */
+  onDelete?: (event: PlantEventResponse) => void;
+  /** Called when the user toggles a task on any child event. */
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
 }
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -121,67 +132,140 @@ function ProgressRow({
   label,
   index,
   onToggle,
+  onEditNote,
   isToggling,
 }: {
   entry: EventProgressResponse;
   label: string;
   index: number;
   onToggle: (progressId: string, completed: boolean) => void;
+  onEditNote: (progressId: string, note: string) => void;
   isToggling: boolean;
 }) {
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteValue, setNoteValue] = useState(entry.note ?? "");
+
+  const handleNoteSave = () => {
+    setEditingNote(false);
+    if (noteValue !== entry.note) {
+      onEditNote(entry.id, noteValue);
+    }
+  };
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleNoteSave();
+    if (e.key === "Escape") {
+      setNoteValue(entry.note ?? "");
+      setEditingNote(false);
+    }
+  };
+
   return (
     <div
-      className={`group flex items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200 ${
+      className={`group flex flex-col gap-2 rounded-2xl border px-4 py-3 transition-all duration-200 ${
         entry.completed
           ? "border-emerald-100 bg-linear-to-r from-emerald-50 to-white shadow-sm"
           : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
       }`}
     >
-      {/* Index badge */}
-      <span
-        className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${
-          entry.completed
-            ? "bg-emerald-100 text-emerald-600"
-            : "bg-slate-100 text-slate-500"
-        }`}
-      >
-        {entry.completed ? "✓" : index + 1}
-      </span>
-
-      {/* Toggle button */}
-      <button
-        type="button"
-        disabled={isToggling}
-        onClick={() => onToggle(entry.id, !entry.completed)}
-        className="shrink-0 transition-all hover:scale-110 disabled:opacity-40"
-        title={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
-        aria-label={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
-      >
-        {entry.completed ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
-        ) : (
-          <Circle className="h-5 w-5 text-slate-300 group-hover:text-slate-400" strokeWidth={2} />
-        )}
-      </button>
-
-      <div className="min-w-0 flex-1">
-        <p
-          className={`text-sm font-semibold truncate leading-tight ${
-            entry.completed ? "text-slate-400 line-through" : "text-slate-700"
+      <div className="flex items-center gap-3">
+        {/* Index badge */}
+        <span
+          className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${
+            entry.completed
+              ? "bg-emerald-100 text-emerald-600"
+              : "bg-slate-100 text-slate-500"
           }`}
         >
-          {label}
-        </p>
-        {entry.note && (
-          <p className="mt-0.5 text-xs text-slate-400 truncate">{entry.note}</p>
+          {entry.completed ? "✓" : index + 1}
+        </span>
+
+        {/* Toggle button */}
+        <button
+          type="button"
+          disabled={isToggling}
+          onClick={() => onToggle(entry.id, !entry.completed)}
+          className="shrink-0 transition-all hover:scale-110 disabled:opacity-40"
+          title={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
+          aria-label={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
+        >
+          {entry.completed ? (
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
+          ) : (
+            <Circle className="h-5 w-5 text-slate-300 group-hover:text-slate-400" strokeWidth={2} />
+          )}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p
+              className={`text-sm font-semibold truncate leading-tight ${
+                entry.completed ? "text-slate-400 line-through" : "text-slate-700"
+              }`}
+            >
+              {label}
+            </p>
+            {entry.completedAt && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-500">
+                <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />
+                {new Date(entry.completedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
+              </span>
+            )}
+          </div>
+
+          {/* Note — editable inline */}
+          {editingNote ? (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <input
+                type="text"
+                autoFocus
+                value={noteValue}
+                onChange={(e) => setNoteValue(e.target.value)}
+                onBlur={handleNoteSave}
+                onKeyDown={handleNoteKeyDown}
+                className="flex-1 rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-slate-600 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
+                placeholder="Nhập ghi chú..."
+              />
+              <button
+                type="button"
+                onClick={handleNoteSave}
+                className="shrink-0 rounded-lg bg-blue-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-blue-600"
+              >
+                Lưu
+              </button>
+              <button
+                type="button"
+                onClick={() => { setNoteValue(entry.note ?? ""); setEditingNote(false); }}
+                className="shrink-0 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-50"
+              >
+                Hủy
+              </button>
+            </div>
+          ) : (
+            <div
+              className="mt-0.5 flex items-center gap-1.5"
+              onClick={() => { setNoteValue(entry.note ?? ""); setEditingNote(true); }}
+            >
+              <p className={`text-xs truncate cursor-text ${entry.note ? "text-slate-400" : "text-slate-300 italic"}`}>
+                {entry.note || "Thêm ghi chú..."}
+              </p>
+              <button
+                type="button"
+                className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-600"
+                title="Sửa ghi chú"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {entry.targetType === "PLANT" ? (
+          <Leaf className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
+        ) : (
+          <LayoutGrid className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
         )}
       </div>
-
-      {entry.targetType === "PLANT" ? (
-        <Leaf className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
-      ) : (
-        <LayoutGrid className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
-      )}
     </div>
   );
 }
@@ -194,33 +278,36 @@ function ChildEventNode({
   dotColorRgb,
   depth,
   onToggleComplete,
+  onEdit,
+  onDelete,
+  onToggleTask,
 }: {
   event: PlantEventResponse;
   dotColor: string;
   dotColorRgb: string;
   depth: number;
   onToggleComplete: (eventId: string, completed: boolean) => void;
+  onEdit?: (event: PlantEventResponse) => void;
+  onDelete?: (event: PlantEventResponse) => void;
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
 }) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(depth === 0);
-  const [hovered, setHovered] = useState(false);
+  const [tasksExpanded, setTasksExpanded] = useState(false);
   const hasChildren = event.children && event.children.length > 0;
   const TargetIcon = event.targetType ? TARGET_TYPE_ICONS[event.targetType] : null;
   const targetLabel = event.targetType ? TARGET_TYPE_LABELS[event.targetType] : null;
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Sprout;
 
-  // Task progress
   const tasks = event.tasks ?? [];
-  const taskDone = tasks.filter(t => t.completed).length;
+  const taskDone = tasks.filter((t) => t.completed).length;
   const taskPct = tasks.length > 0 ? Math.round((taskDone / tasks.length) * 100) : 0;
+  const childrenDone = hasChildren ? event.children.filter((c) => c.completed).length : 0;
 
-  // Children completion summary
-  const childrenDone = hasChildren ? event.children.filter(c => c.completed).length : 0;
-
-  // Date formatting
   const fmtDate = (d: string | null | undefined) => {
     if (!d) return null;
-    const [y, m, day] = d.split('-');
-    return `${day}/${m}`;
+    const parts = d.split("-");
+    return `${parts[2]}/${parts[1]}`;
   };
   const startStr = fmtDate(event.calculatedStartDate);
   const endStr = fmtDate(event.calculatedEndDate);
@@ -228,10 +315,7 @@ function ChildEventNode({
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       className="transition-colors duration-150 rounded-xl"
-      style={hovered ? { backgroundColor: `rgba(${dotColorRgb},0.05)` } : undefined}
     >
       <div className="flex w-full items-start gap-3 px-2 py-2.5">
         {/* Completion toggle */}
@@ -239,7 +323,7 @@ function ChildEventNode({
           type="button"
           onClick={() => onToggleComplete(event.id, !event.completed)}
           className="mt-2 shrink-0 transition-all hover:scale-110"
-          title={event.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
+          title={event.completed ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
         >
           {event.completed ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -247,6 +331,30 @@ function ChildEventNode({
             <Circle className="h-5 w-5 text-slate-300 hover:text-slate-400" />
           )}
         </button>
+
+        {/* Edit & Delete actions */}
+        <div className="mt-2 flex shrink-0 items-center gap-1">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(event)}
+              className="rounded-lg p-1 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+              title="Chỉnh sửa"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(event)}
+              className="rounded-lg p-1 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+              title="Xóa"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
         {/* Icon badge */}
         <span
@@ -258,10 +366,13 @@ function ChildEventNode({
 
         {/* Content */}
         <div className="min-w-0 flex-1 pt-0.5">
+          {/* Title row */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-sm font-semibold truncate leading-tight ${
-              event.completed ? 'text-slate-400 line-through' : 'text-slate-800'
-            }`}>
+            <span
+              className={`text-sm font-semibold truncate leading-tight ${
+                event.completed ? "text-slate-400 line-through" : "text-slate-800"
+              }`}
+            >
               {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
             </span>
             {targetLabel && (
@@ -273,67 +384,197 @@ function ChildEventNode({
                 {targetLabel}
               </span>
             )}
+            <span
+              className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold"
+              style={{
+                backgroundColor: event.planned ? `${dotColor}18` : "#f1f5f9",
+                color: event.planned ? dotColor : "#94a3b8",
+                borderColor: event.planned ? `${dotColor}44` : "#e2e8f0",
+              }}
+            >
+              {event.planned ? "Đã lên lịch" : "Đã ghi nhận"}
+            </span>
           </div>
+
+          {/* Note / description */}
           {(event.note || event.description) && (
-            <p className="mt-0.5 text-xs text-slate-400 truncate">
-              {event.note || event.description}
-            </p>
+            <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{event.note || event.description}</p>
           )}
 
-          {/* Date row */}
-          {dateLabel && (
-            <div className="mt-0.5 flex items-center gap-1">
-              <CalendarDays className="h-3 w-3 text-slate-400" />
-              <span className="text-[10px] text-slate-400">{dateLabel}</span>
-              {event.durationDays != null && event.durationDays > 1 && (
-                <span
-                  className="ml-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
-                  style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
-                >
-                  {event.durationDays}d
-                </span>
-              )}
-            </div>
-          )}
+          {/* Meta badges */}
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-400">
+            {dateLabel && (
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="h-3 w-3" />
+                {dateLabel}
+              </span>
+            )}
+            {event.durationDays != null && event.durationDays > 1 && (
+              <span
+                className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
+              >
+                {event.durationDays}d
+              </span>
+            )}
+            {/* Plant badge */}
+            {event.plant && (
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.DASHBOARD.PLANT_DETAIL(event.plantId))}
+                className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+              >
+                <Leaf className="h-2.5 w-2.5" />
+                {event.plant.nickName || event.plant.plantNumber || event.plant.tagCode || event.plant.id.slice(0, 8)}
+              </button>
+            )}
+            {/* Farm Zone badge */}
+            {event.farmZone?.zoneName && (
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.DASHBOARD.FARM_ZONE_DETAIL(event.farmPlotId ?? "", event.farmZoneId ?? ""))}
+                className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                <MapPin className="h-2.5 w-2.5" />
+                {event.farmZone.zoneName}
+              </button>
+            )}
+            {/* Farm Plot badge (only if no zone) */}
+            {event.farmPlot?.name && !event.farmZone?.zoneName && (
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.DASHBOARD.FARM_PLOT_DETAIL(event.farmPlotId ?? ""))}
+                className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 hover:bg-amber-100 transition-colors"
+              >
+                <MapPin className="h-2.5 w-2.5" />
+                {event.farmPlot.name}
+              </button>
+            )}
+            {/* Plan badge */}
+            {event.planApply && (
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.DASHBOARD.PLAN_DETAIL(event.planApplyId ?? ""))}
+                className="inline-flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-[9px] font-medium text-purple-700 hover:bg-purple-100 transition-colors"
+              >
+                <CalendarDays className="h-2.5 w-2.5" />
+                {event.planApply.planName || event.planApply.diseaseName || "Kế hoạch"}
+              </button>
+            )}
+            {event.estimatedCost && (
+              <span className="ml-auto font-semibold text-slate-600">{event.estimatedCost}</span>
+            )}
+          </div>
 
           {/* Task progress bar (if tasks exist) */}
           {tasks.length > 0 && (
             <div className="mt-1.5 flex items-center gap-1.5">
-              <ListChecks className="h-3 w-3 shrink-0" style={{ color: taskDone === tasks.length ? '#10B981' : dotColor }} />
+              <ListChecks
+                className="h-3 w-3 shrink-0"
+                style={{ color: taskDone === tasks.length ? "#10B981" : dotColor }}
+              />
               <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-1 rounded-full transition-all duration-500"
                   style={{
                     width: `${taskPct}%`,
-                    backgroundColor: taskDone === tasks.length ? '#10B981' : dotColor,
+                    backgroundColor: taskDone === tasks.length ? "#10B981" : dotColor,
                   }}
                 />
               </div>
               <span
                 className="text-[10px] font-bold tabular-nums"
-                style={{ color: taskDone === tasks.length ? '#10B981' : dotColor }}
+                style={{ color: taskDone === tasks.length ? "#10B981" : dotColor }}
               >
                 {taskDone}/{tasks.length}
               </span>
+              <button
+                type="button"
+                onClick={() => setTasksExpanded((v) => !v)}
+                className="ml-1 rounded p-0.5 text-slate-400 hover:bg-slate-100 transition-colors"
+                aria-label={tasksExpanded ? "Ẩn công việc" : "Hiện công việc"}
+              >
+                {tasksExpanded ? (
+                  <ChevronUp className="h-3 w-3" />
+                ) : (
+                  <ChevronDown className="h-3 w-3" />
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Expandable task rows */}
+          {tasks.length > 0 && tasksExpanded && (
+            <div className="mt-2 space-y-1">
+              {tasks
+                .slice()
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .map((task, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5"
+                  >
+                    <button
+                      type="button"
+                      title={task.completed ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
+                      onClick={() => onToggleTask?.(event, idx)}
+                      className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
+                    >
+                      {task.completed ? (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Circle className="h-3.5 w-3.5 text-slate-300" />
+                      )}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`text-[11px] font-semibold leading-tight ${
+                          task.completed ? "text-slate-400 line-through" : "text-slate-700"
+                        }`}
+                      >
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="mt-0.5 text-[10px] leading-tight text-slate-400">
+                          {task.description}
+                        </p>
+                      )}
+                    </div>
+                    {task.estimatedCost && (
+                      <span
+                        className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold"
+                        style={{
+                          backgroundColor: dotColor + "18",
+                          color: dotColor,
+                        }}
+                      >
+                        {task.estimatedCost}
+                      </span>
+                    )}
+                  </div>
+                ))}
             </div>
           )}
 
           {/* Children completion summary (inline) */}
           {hasChildren && (
             <div className="mt-1.5 flex items-center gap-1.5">
-              <GitBranch className="h-3 w-3 shrink-0" style={{ color: childrenDone === event.children.length ? '#10B981' : dotColor }} />
+              <GitBranch
+                className="h-3 w-3 shrink-0"
+                style={{ color: childrenDone === event.children.length ? "#10B981" : dotColor }}
+              />
               <div className="flex-1 h-1 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-1 rounded-full transition-all duration-500"
                   style={{
                     width: `${Math.round((childrenDone / event.children.length) * 100)}%`,
-                    backgroundColor: childrenDone === event.children.length ? '#10B981' : dotColor,
+                    backgroundColor: childrenDone === event.children.length ? "#10B981" : dotColor,
                   }}
                 />
               </div>
               <span
                 className="text-[10px] font-bold tabular-nums"
-                style={{ color: childrenDone === event.children.length ? '#10B981' : dotColor }}
+                style={{ color: childrenDone === event.children.length ? "#10B981" : dotColor }}
               >
                 {childrenDone}/{event.children.length}
               </span>
@@ -345,14 +586,16 @@ function ChildEventNode({
         {hasChildren && (
           <button
             type="button"
-            onClick={() => setExpanded(v => !v)}
+            onClick={() => setExpanded((v) => !v)}
             className="mt-1 shrink-0 flex items-center gap-1 rounded-lg px-1.5 py-1 hover:bg-slate-200 transition-colors"
           >
             <span className="text-[10px] font-bold text-slate-400 tabular-nums">
               {event.children.length}
             </span>
             <ChevronDown
-              className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`}
+              className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
+                expanded ? "" : "-rotate-90"
+              }`}
             />
           </button>
         )}
@@ -370,6 +613,9 @@ function ChildEventNode({
             dotColorRgb={dotColorRgb}
             depth={depth + 1}
             onToggleComplete={onToggleComplete}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggleTask={onToggleTask}
           />
         </div>
       )}
@@ -383,16 +629,22 @@ function ChildEventTree({
   dotColorRgb,
   depth,
   onToggleComplete,
+  onEdit,
+  onDelete,
+  onToggleTask,
 }: {
   children: PlantEventResponse[];
   dotColor: string;
   dotColorRgb: string;
   depth: number;
   onToggleComplete: (eventId: string, completed: boolean) => void;
+  onEdit?: (event: PlantEventResponse) => void;
+  onDelete?: (event: PlantEventResponse) => void;
+  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      {children.map(child => (
+      {children.map((child) => (
         <ChildEventNode
           key={child.id}
           event={child}
@@ -400,6 +652,9 @@ function ChildEventTree({
           dotColorRgb={dotColorRgb}
           depth={depth}
           onToggleComplete={onToggleComplete}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onToggleTask={onToggleTask}
         />
       ))}
     </div>
@@ -411,6 +666,9 @@ function ChildEventTree({
 export function PlantEventProgressModal({
   event: initialEvent,
   onClose,
+  onEdit,
+  onDelete,
+  onToggleTask,
 }: PlantEventProgressModalProps) {
   // Always fetch live data so toggling reflects immediately
   const { data: liveEvent } = usePlantEvent(initialEvent.id, true);
@@ -507,6 +765,14 @@ export function PlantEventProgressModal({
     });
   };
 
+  const handleEditNote = (progressId: string, note: string) => {
+    void updateProgress.mutateAsync({
+      eventId: event.id,
+      progressId,
+      payload: { note },
+    });
+  };
+
   const handleToggleChildComplete = (childEventId: string, completed: boolean) => {
     void updateChildEvent.mutateAsync({
       eventId: childEventId,
@@ -554,14 +820,36 @@ export function PlantEventProgressModal({
                   <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{event.description}</p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                className="shrink-0 -mt-0.5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                aria-label="Đóng"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-1">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(event)}
+                    className="rounded-full p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
+                    title="Chỉnh sửa"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    type="button"
+                    onClick={() => onDelete(event)}
+                    className="rounded-full p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    title="Xóa"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="shrink-0 -mt-0.5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                  aria-label="Đóng"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Date / status chips */}
@@ -803,6 +1091,7 @@ export function PlantEventProgressModal({
                         label={resolveTargetLabel(entry)}
                         index={idx}
                         onToggle={handleToggleProgress}
+                        onEditNote={handleEditNote}
                         isToggling={updateProgress.isPending}
                       />
                     ))}
@@ -842,7 +1131,7 @@ export function PlantEventProgressModal({
                   </div>
                 )}
 
-                <ChildEventTree children={event.children} dotColor={dotColor} dotColorRgb={dotColorRgb} depth={0} onToggleComplete={handleToggleChildComplete} />
+                <ChildEventTree children={event.children} dotColor={dotColor} dotColorRgb={dotColorRgb} depth={0} onToggleComplete={handleToggleChildComplete} onEdit={onEdit} onDelete={onDelete} onToggleTask={onToggleTask} />
               </section>
             )}
 

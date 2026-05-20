@@ -10,13 +10,21 @@ import { EventCompletionCard } from '../components/EventCompletionCard';
 import { EventTypeBreakdown } from '../components/EventTypeBreakdown';
 import { MonthStatsPanel } from '../components/MonthStatsPanel';
 import { GroupedEventList } from '../../calendarview/components/GroupedEventList';
-import { useUpdatePlantEventMutation, useToggleTaskMutation } from '../../calendarview/queries';
+import { PlantEventEditDialog } from '../../calendarview/components/PlantEventEditDialog';
+import { DeleteEventModal } from '../../calendarview/components/DeleteEventModal';
+import {
+  useUpdatePlantEventMutation,
+  useToggleTaskMutation,
+  useDeletePlantEventMutation,
+} from '../../calendarview/queries';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 
 export function AgricultureOverviewPage() {
   const { t } = useTranslation();
   const todayString = toLocalDateOnly(new Date());
   const [selectedEvent, setSelectedEvent] = useState<PlantEventResponse | null>(null);
+  const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
+  const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
 
   const statsQuery = useAgricultureStats();
   const todayEventsQuery = usePlantEventsCalendar({
@@ -29,6 +37,8 @@ export function AgricultureOverviewPage() {
 
   const toggleComplete = useUpdatePlantEventMutation();
   const toggleTask = useToggleTaskMutation();
+  const updateMutation = useUpdatePlantEventMutation();
+  const deleteMutation = useDeletePlantEventMutation();
 
   const handleToggleComplete = (event: PlantEventResponse) => {
     void toggleComplete.mutateAsync({
@@ -38,6 +48,16 @@ export function AgricultureOverviewPage() {
   };
   const handleToggleTask = (event: PlantEventResponse, taskIndex: number) => {
     void toggleTask.mutateAsync({ eventId: event.id, taskIndex });
+  };
+
+  const handleEdit = (event: PlantEventResponse) => {
+    setSelectedEvent(null);
+    setEditEventTarget(event);
+  };
+
+  const handleDelete = (event: PlantEventResponse) => {
+    setSelectedEvent(null);
+    setDeleteEventTarget(event);
   };
 
   return (
@@ -288,6 +308,30 @@ export function AgricultureOverviewPage() {
         <PlantEventProgressModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {editEventTarget && (
+        <PlantEventEditDialog
+          event={editEventTarget}
+          isSubmitting={updateMutation.isPending}
+          onClose={() => setEditEventTarget(null)}
+          zIndex="z-[60]"
+          onSubmit={payload =>
+            void updateMutation
+              .mutateAsync({ eventId: editEventTarget.id, payload })
+              .then(() => setEditEventTarget(null))
+          }
+        />
+      )}
+
+      {deleteEventTarget && (
+        <DeleteEventModal
+          event={deleteEventTarget}
+          onClose={() => setDeleteEventTarget(null)}
+          zIndex="z-[60]"
         />
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ModalShell } from '../../../components/ui/ModalShell'
+import { X } from 'lucide-react'
 
 interface AddDeviceModalProps {
   isOpen: boolean
@@ -90,6 +90,6 @@ export function AddDeviceModal({ isOpen, onClose, onAdd, zones }: AddDeviceModal
           </div>
         </form>
       </div>
-    </ModalShell>
+    </div>
   )
 }

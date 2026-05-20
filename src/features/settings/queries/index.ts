@@ -1,4 +1,4 @@
-export { profileKeys } from "./keys";
+export { profileKeys, fileKeys } from "./keys";
 export { useFilePreviewUrl, useMyPreferences, useMyProfile, useProfileByUserId, usePrivacySettingsByProfileId } from "./queries";
 export {
   useUpdateAppearancePreferencesMutation,

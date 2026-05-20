@@ -2,12 +2,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 import { useTranslation } from '../../../../i18n';
-
-
 import type { PlantEventResponse } from '../../shared/types';
-
-const VI_WEEKDAY_SHORT = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const SELECTED_COLOR = '#2F7F34';
+import { VI_WEEKDAY_SHORT, SELECTED_COLOR, CALENDAR_LEGEND } from '../utils/colorUtils';
 
 
 interface WeekStripViewProps {
@@ -169,11 +165,7 @@ export function WeekStripView({
 
       {/* Color legend */}
       <div className="flex shrink-0 items-center justify-center gap-5 border-t border-slate-100 px-4 py-2.5">
-        {([
-          ['#3B82F6', 'Chăm sóc'],
-          ['#F97316', 'Sức khỏe'],
-          ['#10B981', 'Sinh trưởng'],
-        ] as const).map(([color, label]) => (
+        {CALENDAR_LEGEND.map(({ color, label }) => (
           <span key={label} className="flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
             <span className="text-[10px] font-medium text-slate-500">{label}</span>

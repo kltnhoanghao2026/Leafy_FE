@@ -265,6 +265,28 @@ export const useCancelApplyMutation = () => {
   });
 };
 
+export const useCompleteApplyMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ applyId, success }: { applyId: string; success: boolean }) =>
+      treatmentPlanApi.completeApply(applyId, success),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plansRoot(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã kết thúc kế hoạch.",
+    },
+  });
+};
+
 export const useBulkUpdateApplyStatusMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

@@ -2,38 +2,8 @@ import { RefreshCw } from 'lucide-react';
 import { MonthCalendarView } from './MonthCalendarView';
 import { WeekStripView } from './WeekStripView';
 import { TimelineView } from './TimelineView';
-import type { PlantEventResponse } from '../../shared/types';
 import { useTranslation } from '../../../../i18n';
-
-export type ViewType = 'month' | 'week' | 'timeline';
-
-export type HoveredDateRange = { start: string; end: string; color: string };
-
-export interface CalendarViewPanelProps {
-  calendarQuery: { isLoading: boolean; isError: boolean; refetch: () => unknown };
-  activeView: ViewType;
-  events: PlantEventResponse[];
-  // Month
-  currentMonth: Date;
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  // Week
-  weekDays: string[];
-  eventsByDate: Map<string, PlantEventResponse[]>;
-  onPrevWeek: () => void;
-  onNextWeek: () => void;
-  onThisWeek: () => void;
-  isCurrentWeek: boolean;
-  weekLabel: string;
-  // Timeline
-  tlMonth: Date;
-  onPrevTlMonth: () => void;
-  onNextTlMonth: () => void;
-  // Shared
-  selectedDate: string | null;
-  onSelectDate: (d: string | null) => void;
-  hoveredDateRange: HoveredDateRange | null;
-}
+import type { ViewType, HoveredDateRange, CalendarViewPanelProps } from '../schemas/calendar.types';
 
 export function CalendarViewPanel({
   calendarQuery,

@@ -1,52 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useFarmPlots, useFarmZones } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
 import {
   usePlantEventsCalendar,
-  usePlants,
   useToggleTaskMutation,
   useUpdatePlantEventMutation,
 } from '../..';
 import { useMyApplies } from '../../plan/queries/plan.queries';
-import { PlantEventEditDialog } from '../../calendarview/components/PlantEventEditDialog';
-import { CalendarWorkspace, type CalendarDateRange } from '../../calendarview/components/CalendarWorkspace';
+import { PlantEventEditDialog } from '../components/PlantEventEditDialog';
+import { PlantEventCreateDialog } from '../components/PlantEventCreateDialog';
+import { CalendarWorkspace, type CalendarDateRange } from '../components/CalendarWorkspace';
 import { PlantEventProgressModal } from '../../overview/components/PlantEventProgressModal';
-import { Select } from '../../../../components/ui/Select';
-import { toLocalDateOnly } from '../../shared/utils/dateOnly';
-import type { PlantEventResponse, PlanApplyResponse } from '../../shared/types';
-
-const todayDate = new Date();
-
-function getInitialMonthBounds() {
-  const y = todayDate.getFullYear();
-  const m = todayDate.getMonth();
-  return {
-    startDate: toLocalDateOnly(new Date(y, m, 1)),
-    endDate:   toLocalDateOnly(new Date(y, m + 1, 0)),
-  };
-}
-
-/** Build a human-readable label for a PlanApply */
-function applyLabel(apply: PlanApplyResponse): string {
-  const shortId = apply.planId.slice(-6);
-  const scope = apply.plantId
-    ? 'Cây'
-    : apply.farmZoneId
-    ? 'Khu vực'
-    : apply.farmPlotId
-    ? 'Vườn'
-    : 'Toàn bộ';
-  const statusMap: Record<string, string> = {
-    PENDING: 'Chờ xử lý',
-    APPLYING: 'Đang xử lý',
-    ACTIVE: 'Đang áp dụng',
-    COMPLETED: 'Hoàn thành',
-    CANCELLED: 'Đã hủy',
-  };
-  const startLabel = apply.startDate ? ` · ${apply.startDate}` : '';
-  return `Kế hoạch ...${shortId} · ${scope}${startLabel} · ${statusMap[apply.status] ?? apply.status}`;
-}
+import { SuccessPromptModal } from '../components/SuccessPromptModal';
+import { FilterModal } from '../components/FilterModal';
+import { DeleteEventModal } from '../components/DeleteEventModal';
+import { getInitialMonthBounds, applyLabel } from '../utils/dateUtils';
+import type { PlantEventResponse, PlantEventCreateRequest } from '../../shared/types';
+import { Filter, Plus } from 'lucide-react';
+import { useCreatePlantEventMutation } from '../queries/plant-event.queries';
 
 // ── PlantEventsCalendarPage ───────────────────────────────────────────────────
 
@@ -59,6 +30,8 @@ export function PlantEventsCalendarPage() {
   const [farmPlotId,      setFarmPlotId]      = useState(routeFilters?.farmPlotId ?? '');
   const [farmZoneId,      setFarmZoneId]      = useState(routeFilters?.farmZoneId ?? '');
   const [plantId,         setPlantId]         = useState(routeFilters?.plantId    ?? '');
+  const [targetType,       setTargetType]       = useState('');
+  const [eventType,        setEventType]        = useState('');
   const [selectedApplyId, setSelectedApplyId] = useState('');
 
   const initialBounds = useMemo(getInitialMonthBounds, []);
@@ -70,9 +43,6 @@ export function PlantEventsCalendarPage() {
 
   const profileQuery   = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? '';
-  const plotsQuery     = useFarmPlots(ownerProfileId, !!ownerProfileId);
-  const zonesQuery     = useFarmZones(farmPlotId, !!farmPlotId);
-  const plantsQuery    = usePlants();
 
   // Fetch ALL applies (active + completed etc.) so users can view historical schedules too
   const appliesQuery = useMyApplies({ size: 100 });
@@ -80,124 +50,89 @@ export function PlantEventsCalendarPage() {
 
   const updateEvent = useUpdatePlantEventMutation();
   const toggleTask  = useToggleTaskMutation();
+  const createEvent = useCreatePlantEventMutation();
 
-  const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
-  const [selectedEvent,   setSelectedEvent]   = useState<PlantEventResponse | null>(null);
-
-  /**
-   * When the user selects a PlanApply from the dropdown:
-   * - store the apply id directly as planApplyId for the calendar query
-   * - auto-fill scope filters (farmPlot, farmZone, plant) from the apply's own scope
-   */
-  const handleApplyChange = (applyId: string) => {
-    setSelectedApplyId(applyId);
-    if (!applyId) return;
-    const apply = applies.find(a => a.id === applyId);
-    if (!apply) return;
-
-    // Auto-fill the narrowest scope the apply has
-    if (apply.plantId) {
-      setPlantId(apply.plantId);
-    }
-    if (apply.farmZoneId) {
-      setFarmZoneId(apply.farmZoneId);
-    }
-    if (apply.farmPlotId) {
-      setFarmPlotId(apply.farmPlotId);
-    }
-  };
-
-  /** Clear the apply-driven filters when the user manually changes a scope filter */
-  const clearApply = () => setSelectedApplyId('');
+  const [editEventTarget,   setEditEventTarget]   = useState<PlantEventResponse | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedEvent,     setSelectedEvent]     = useState<PlantEventResponse | null>(null);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
+  // Triggered when the last event of a PlanApply is completed — shows success prompt
+  const [pendingCompleteApply, setPendingCompleteApply] = useState<{
+    applyId: string;
+    eventId: string;
+  } | null>(null);
 
   const calendarQuery = usePlantEventsCalendar({
     startDate:    dateRange.startDate,
     endDate:      dateRange.endDate,
-    farmPlotId:   farmPlotId        || undefined,
-    farmZoneId:   farmZoneId        || undefined,
-    plantId:      plantId           || undefined,
-    planApplyId:  selectedApplyId   || undefined,
+    farmPlotId:   farmPlotId         || undefined,
+    farmZoneId:   farmZoneId         || undefined,
+    plantId:      plantId            || undefined,
+    targetType:   targetType         || undefined,
+    eventType:    eventType          || undefined,
+    planApplyId:  selectedApplyId    || undefined,
   });
 
   const events = useMemo(() => calendarQuery.data ?? [], [calendarQuery.data]);
 
+  /**
+   * Handle event completion toggle.
+   * After completing, check if this was the last event (backend sets isLastIncompleteEventForApply).
+   * If so, trigger the success prompt modal.
+   */
+  const handleToggleComplete = async (event: PlantEventResponse) => {
+    const updated = await updateEvent.mutateAsync({
+      eventId: event.id,
+      payload: { completed: !event.completed },
+    });
+    if (updated?.isLastIncompleteEventForApply && updated.planApplyId) {
+      setPendingCompleteApply({ applyId: updated.planApplyId, eventId: updated.id });
+    }
+  };
+
+  // Count active filters
+  const activeFilterCount = [
+    farmPlotId,
+    farmZoneId,
+    plantId,
+    targetType,
+    eventType,
+    selectedApplyId,
+  ].filter(Boolean).length;
+
   return (
-    <div className="flex flex-1 h-full min-h-0 flex-col gap-3 overflow-hidden">
+    <div className="flex flex-col h-screen overflow-hidden">
       {/* Header */}
-      <div className="shrink-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#245A34]">Plant events</p>
-        <h2 className="mt-0.5 text-xl font-black tracking-tight text-slate-900">Lịch chăm sóc</h2>
-      </div>
-
-      {/* Filter bar */}
-      <div className="shrink-0 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Vườn */}
+      <div className="shrink-0 flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Vườn</span>
-          <Select
-            className="mt-1"
-            value={farmPlotId}
-            onChange={v => { setFarmPlotId(String(v)); setFarmZoneId(''); clearApply(); }}
-            placeholder="Tất cả vườn"
-            options={[
-              { value: '', label: 'Tất cả vườn' },
-              ...(plotsQuery.data ?? []).map(p => ({ value: p.id, label: p.name })),
-            ]}
-          />
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#245A34]">Plant events</p>
+          <h2 className="mt-0.5 text-xl font-black tracking-tight text-slate-900">Lịch chăm sóc</h2>
         </div>
 
-        {/* Khu vực */}
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Khu vực</span>
-          <Select
-            className="mt-1"
-            value={farmZoneId}
-            onChange={v => { setFarmZoneId(String(v)); clearApply(); }}
-            disabled={!farmPlotId}
-            placeholder={farmPlotId ? 'Tất cả khu vực' : 'Chọn vườn trước'}
-            options={[
-              { value: '', label: farmPlotId ? 'Tất cả khu vực' : 'Chọn vườn trước' },
-              ...(zonesQuery.data ?? []).map(z => ({ value: z.id, label: z.zoneName })),
-            ]}
-          />
-        </div>
+        <div className="flex items-center gap-3">
+          {/* Create event button */}
+          <button
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#245A34] rounded-xl hover:bg-[#1e4a2c] transition-all"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Tạo lịch</span>
+          </button>
 
-        {/* Cây */}
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cây</span>
-          <Select
-            className="mt-1"
-            value={plantId}
-            onChange={v => { setPlantId(String(v)); clearApply(); }}
-            placeholder="Tất cả cây"
-            options={[
-              { value: '', label: 'Tất cả cây' },
-              ...(plantsQuery.data ?? []).map(p => ({
-                value: p.id,
-                label: p.nickName || p.plantNumber || p.id,
-              })),
-            ]}
-          />
-        </div>
-
-        {/* Áp dụng kế hoạch (PlanApply) */}
-        <div>
-          <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-            Áp dụng kế hoạch
-          </span>
-          <Select
-            className="mt-1"
-            value={selectedApplyId}
-            onChange={v => handleApplyChange(String(v))}
-            placeholder={appliesQuery.isLoading ? 'Đang tải...' : 'Tất cả áp dụng'}
-            options={[
-              { value: '', label: 'Tất cả áp dụng' },
-              ...applies.map(a => ({
-                value: a.id,
-                label: applyLabel(a),
-              })),
-            ]}
-          />
+          {/* Filter button */}
+          <button
+            onClick={() => setIsFilterModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
+          >
+            <Filter className="h-4 w-4" />
+            <span>Lọc</span>
+            {activeFilterCount > 0 && (
+              <span className="flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-[#245A34] rounded-full">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -208,13 +143,12 @@ export function PlantEventsCalendarPage() {
           calendarQuery={calendarQuery}
           onDateRangeChange={setDateRange}
           onEditEvent={setEditEventTarget}
-          onToggleComplete={(event) =>
-            void updateEvent.mutateAsync({ eventId: event.id, payload: { completed: !event.completed } })
-          }
+          onToggleComplete={handleToggleComplete}
           onToggleTask={(event, idx) =>
             void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
           }
           onSelectEvent={setSelectedEvent}
+          onDelete={setDeleteEventTarget}
         />
       </div>
 
@@ -223,6 +157,7 @@ export function PlantEventsCalendarPage() {
           event={editEventTarget}
           isSubmitting={updateEvent.isPending}
           onClose={() => setEditEventTarget(null)}
+          zIndex="z-[60]"
           onSubmit={payload =>
             void updateEvent
               .mutateAsync({ eventId: editEventTarget.id, payload })
@@ -230,12 +165,74 @@ export function PlantEventsCalendarPage() {
           }
         />
       )}
+      {isCreateDialogOpen && (
+        <PlantEventCreateDialog
+          isSubmitting={createEvent.isPending}
+          onClose={() => setIsCreateDialogOpen(false)}
+          onSubmit={(payload: PlantEventCreateRequest) =>
+            void createEvent
+              .mutateAsync(payload)
+              .then(() => setIsCreateDialogOpen(false))
+          }
+        />
+      )}
       {selectedEvent && (
         <PlantEventProgressModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onEdit={(event) => setEditEventTarget(event)}
+          onDelete={(event) => setDeleteEventTarget(event)}
+          onToggleTask={(event, idx) =>
+            void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
+          }
         />
       )}
+      {pendingCompleteApply && (
+        <SuccessPromptModal
+          applyId={pendingCompleteApply.applyId}
+          onClose={() => setPendingCompleteApply(null)}
+        />
+      )}
+
+      {deleteEventTarget && (
+        <DeleteEventModal
+          event={deleteEventTarget}
+          onClose={() => setDeleteEventTarget(null)}
+          zIndex="z-[60]"
+        />
+      )}
+
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        filters={{
+          farmPlotId,
+          farmZoneId,
+          plantId,
+          targetType,
+          eventType,
+          selectedApplyId,
+        }}
+        onApply={(newFilters) => {
+          setFarmPlotId(newFilters.farmPlotId);
+          setFarmZoneId(newFilters.farmZoneId);
+          setPlantId(newFilters.plantId);
+          setTargetType(newFilters.targetType);
+          setEventType(newFilters.eventType);
+          setSelectedApplyId(newFilters.selectedApplyId);
+        }}
+        onClear={() => {
+          setFarmPlotId('');
+          setFarmZoneId('');
+          setPlantId('');
+          setTargetType('');
+          setEventType('');
+          setSelectedApplyId('');
+        }}
+        applies={applies}
+        ownerProfileId={ownerProfileId}
+        applyLabel={applyLabel}
+      />
     </div>
   );
 }

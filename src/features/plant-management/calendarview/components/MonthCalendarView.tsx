@@ -2,11 +2,11 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
+import { buildCalendarGrid, buildEventsByDate } from '../utils/dateUtils';
+import { CALENDAR_LEGEND } from '../utils/colorUtils';
 import { useTranslation } from '../../../../i18n';
 import type { PlantEventResponse } from '../../shared/types';
-
-const VI_WEEKDAY_HEADER = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const SELECTED_COLOR = '#2F7F34';
+import { VI_WEEKDAY_HEADER, SELECTED_COLOR } from '../utils/colorUtils';
 
 interface MonthCalendarViewProps {
   events: PlantEventResponse[];
@@ -16,23 +16,6 @@ interface MonthCalendarViewProps {
   selectedDate: string | null;
   onSelectDate: (d: string | null) => void;
   hoveredDateRange?: { start: string; end: string; color: string } | null;
-}
-
-function buildCalendarGrid(month: Date): (string | null)[][] {
-  const year = month.getFullYear();
-  const mon = month.getMonth();
-  const firstDay = new Date(year, mon, 1).getDay(); // 0=Sun
-  const daysInMonth = new Date(year, mon + 1, 0).getDate();
-  const cells: (string | null)[] = Array(firstDay).fill(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dd = String(d).padStart(2, '0');
-    const mm = String(mon + 1).padStart(2, '0');
-    cells.push(`${year}-${mm}-${dd}`);
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  const rows: (string | null)[][] = [];
-  for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
-  return rows;
 }
 
 export function MonthCalendarView({
@@ -46,26 +29,8 @@ export function MonthCalendarView({
 }: MonthCalendarViewProps) {
   const todayStr = toLocalDateOnly(new Date());
 
-  // Build eventsByDate map (handle multi-day spans)
-  const eventsByDate = useMemo(() => {
-    const map = new Map<string, PlantEventResponse[]>();
-    for (const evt of events) {
-      const start = evt.calculatedStartDate;
-      const end   = evt.calculatedEndDate ?? start;
-      if (!start) continue;
-      const startD = new Date(start + 'T00:00:00');
-      const endD   = new Date((end ?? start) + 'T00:00:00');
-      for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
-        const key = toLocalDateOnly(d);
-        if (!map.has(key)) map.set(key, []);
-        const list = map.get(key)!;
-        if (!list.some(e => e.id === evt.id)) list.push(evt);
-      }
-    }
-    return map;
-  }, [events]);
-
   const rows = buildCalendarGrid(month);
+  const eventsByDate = useMemo(() => buildEventsByDate(events), [events]);
   const now = new Date();
   const isCurrentMonth =
     month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth();
@@ -177,11 +142,7 @@ export function MonthCalendarView({
 
         {/* Dot legend */}
         <div className="flex items-center justify-center gap-5 border-t border-slate-100 px-4 py-2.5">
-          {([
-            ['#3B82F6', 'Chăm sóc'],
-            ['#F97316', 'Sức khỏe'],
-            ['#10B981', 'Sinh trưởng'],
-          ] as const).map(([color, label]) => (
+          {CALENDAR_LEGEND.map(({ color, label }) => (
             <span key={label} className="flex items-center gap-1.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
               <span className="text-[10px] font-medium text-slate-500">{label}</span>

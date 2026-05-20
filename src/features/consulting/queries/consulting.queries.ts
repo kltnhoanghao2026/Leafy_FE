@@ -3,11 +3,28 @@ import { profilesApi } from '../../profiles/api/profilesApi';
 import { consultingApi } from '../api/consulting.api';
 import { consultingKeys } from './consulting.keys';
 import { plantEventApi } from '../../plant-management/calendarview/api/plant-event.api';
+import { toPageResponse } from '../../plant-management/shared/api/apiUtils';
+import type { ConsultationRequestResponse } from '../../profiles/api/profilesApi';
 import type {
   PlantEventCreateRequest,
   PlantEventsCalendarParams,
   PlanCreateRequest,
 } from '../../plant-management/shared/types';
+
+export const useConsultingPendingCount = () =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'pending-count'],
+    queryFn: async () => {
+      const res = await profilesApi.getPendingConsultations({ page: 0, size: 1 });
+      const d = (res as any).data;
+      if (d && typeof d === 'object' && 'data' in d) {
+        const page = toPageResponse<ConsultationRequestResponse>((d as any).data);
+        return page.totalElements ?? 0;
+      }
+      return 0;
+    },
+    staleTime: 30_000,
+  });
 
 export const useConsultingFarmers = () =>
   useQuery({

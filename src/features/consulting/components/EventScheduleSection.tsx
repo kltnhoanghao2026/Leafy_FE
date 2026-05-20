@@ -235,6 +235,41 @@ function EventRow({
             />
           </Field>
 
+          <Field label="Khoảng cách an toàn thu hoạch - PHI (ngày)">
+            <input
+              type="number"
+              min={0}
+              className={inputCls}
+              value={event.phiDays ?? ''}
+              onChange={(e) =>
+                onChange(
+                  index,
+                  'phiDays',
+                  e.target.value === '' ? undefined : Number(e.target.value),
+                )
+              }
+              placeholder="VD: 7"
+            />
+          </Field>
+
+          <Field label="PPE bắt buộc (tuỳ chọn)">
+            <input
+              className={inputCls}
+              value={event.ppeRequired ?? ''}
+              onChange={(e) => onChange(index, 'ppeRequired', e.target.value)}
+              placeholder="VD: Găng tay, khẩu trang, kính..."
+            />
+          </Field>
+
+          <Field label="Giới hạn tồn dư tối đa - MRL (tuỳ chọn)" className="sm:col-span-2">
+            <input
+              className={inputCls}
+              value={event.mrlNote ?? ''}
+              onChange={(e) => onChange(index, 'mrlNote', e.target.value)}
+              placeholder="VD: MRL ≤ 0.01 mg/kg theo Codex..."
+            />
+          </Field>
+
           {/* ── Tasks sub-form ── */}
           <div className="sm:col-span-2 rounded-2xl border border-slate-200 bg-white p-3">
             {/* Header */}

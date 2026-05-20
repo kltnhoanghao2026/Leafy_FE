@@ -49,6 +49,7 @@ export const vi = {
     experts: "Chuyên gia",
     alerts: "Cảnh báo",
     plants: "Cây trồng",
+    species: "Giống cây",
     devices: "Thiết bị",
     admin: "Quản trị",
     home: "Trang chủ",

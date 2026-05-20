@@ -8,55 +8,10 @@ import {
   CATEGORY_LABELS,
 } from '../../shared/components/displayUtils';
 import { EventRow } from './EventRow';
-import type { EventAccentStyle } from './EventRow';
+import { CATEGORY_ACCENT_STYLES } from '../schemas/eventAccent';
+import type { GroupedEventListProps } from '../schemas/calendar.types';
 
-// ── Category accent styles ────────────────────────────────────────────────────
-const CATEGORY_ACCENT: Record<EventCategory, EventAccentStyle> = {
-  ROUTINE_CARE: {
-    borderColor: '#3B82F6',
-    headerText: 'text-blue-700',
-    countBg: 'bg-blue-100',
-    countText: 'text-blue-700',
-    iconBg: 'bg-blue-50',
-    iconText: 'text-blue-500',
-    dotColor: '#3B82F6',
-    badgeBg: 'bg-blue-50',
-    badgeBorder: 'border-blue-200',
-    badgeText: 'text-blue-700',
-    headerBadgeBg: 'bg-blue-50',
-    headerBadgeText: 'text-blue-600',
-  },
-  HEALTH_MEDICAL: {
-    borderColor: '#F97316',
-    headerText: 'text-orange-700',
-    countBg: 'bg-orange-100',
-    countText: 'text-orange-700',
-    iconBg: 'bg-orange-50',
-    iconText: 'text-orange-500',
-    dotColor: '#F97316',
-    badgeBg: 'bg-orange-50',
-    badgeBorder: 'border-orange-200',
-    badgeText: 'text-orange-700',
-    headerBadgeBg: 'bg-red-50',
-    headerBadgeText: 'text-red-500',
-  },
-  GROWTH_LIFECYCLE: {
-    borderColor: '#10B981',
-    headerText: 'text-emerald-700',
-    countBg: 'bg-emerald-100',
-    countText: 'text-emerald-700',
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-600',
-    dotColor: '#10B981',
-    badgeBg: 'bg-emerald-50',
-    badgeBorder: 'border-emerald-200',
-    badgeText: 'text-[#245A34]',
-    headerBadgeBg: 'bg-emerald-50',
-    headerBadgeText: 'text-emerald-700',
-  },
-};
-
-const CATEGORY_ORDER: EventCategory[] = ['ROUTINE_CARE', 'HEALTH_MEDICAL', 'GROWTH_LIFECYCLE'];
+const CATEGORY_ORDER: EventCategory[] = ['ROUTINE_CARE', 'HEALTH_MEDICAL', 'GROWTH_LIFECYCLE', 'ALERTS'];
 
 /** Recursively count all events (including nested children). */
 function countAllEvents(events: PlantEventResponse[]): number {
@@ -105,7 +60,7 @@ interface CategorySectionProps {
 
 function CategorySection({ category, events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const accent = CATEGORY_ACCENT[category];
+  const accent = CATEGORY_ACCENT_STYLES[category];
 
   // Compute done count recursively (including nested children).
   const totalCount = countAllEvents(events);
@@ -163,25 +118,12 @@ function CategorySection({ category, events, onEdit, onDelete, onEventHover, onT
 
 // ── GroupedEventList (public API) ─────────────────────────────────────────────
 
-export interface GroupedEventListProps {
-  events: PlantEventResponse[];
-  selectedDate?: string | null;
-  onEdit?: (event: PlantEventResponse) => void;
-  onDelete?: (event: PlantEventResponse) => void;
-  onEventHover?: (event: PlantEventResponse | null) => void;
-  onToggleComplete?: (event: PlantEventResponse) => void;
-  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
-  onSelectEvent?: (event: PlantEventResponse) => void;
-  emptyNode?: React.ReactNode;
-  headerAction?: React.ReactNode;
-  hideHeader?: boolean;
-}
-
 export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction, hideHeader }: GroupedEventListProps) {
   const grouped: Record<EventCategory, PlantEventResponse[]> = {
     ROUTINE_CARE: [],
     HEALTH_MEDICAL: [],
     GROWTH_LIFECYCLE: [],
+    ALERTS: [],
   };
 
   for (const evt of events) {

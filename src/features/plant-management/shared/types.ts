@@ -3,6 +3,26 @@ export type TrackingGranularity = "NONE" | "ZONE" | "PLANT";
 /** Scope of a PlantEvent or EmbeddedPlanEvent. */
 export type TargetType = "FARM" | "FARM_ZONE" | "PLANT";
 
+export type IncidentStatus = "RESOLVED" | "FAILED" | "CANCELLED";
+
+export interface IncidentResponse {
+  id: string;
+  planApplyId: string | null;
+  planId: string | null;
+  diseaseName: string | null;
+  plantId: string | null;
+  farmZoneId: string | null;
+  farmPlotId: string | null;
+  detectedEventId: string | null;
+  recoveredEventId: string | null;
+  detectedDate: string | null;
+  recoveredDate: string | null;
+  outcome: IncidentStatus | null;
+  success: boolean | null;
+  createdAt: string | null;
+  lastModifiedAt: string | null;
+}
+
 export interface EventProgressResponse {
   id: string;
   eventId: string;
@@ -18,7 +38,7 @@ export interface EventProgressResponse {
 }
 
 export interface EventProgressUpdateRequest {
-  completed: boolean;
+  completed?: boolean;
   note?: string;
 }
 export type TreatmentStatus = "PENDING" | "APPLYING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
@@ -51,7 +71,8 @@ export type PlantEventType =
   | "HEALTH_RECOVERY"
   | "PHENOLOGY"
   | "REPOT"
-  | "HARVEST";
+  | "HARVEST"
+  | "ALERT_TRIGGERED";
 
 export interface PageResponse<T> {
   content: T[];
@@ -150,6 +171,8 @@ export interface PlantEventResponse {
   planApplyId: string | null;
   /** ID of the parent PlantEvent in the hierarchy (FARM → FARM_ZONE → PLANT). */
   parentPlantEventId: string | null;
+  /** True when this is the last incomplete event for its PlanApply — triggers success prompt. */
+  isLastIncompleteEventForApply: boolean | null;
   completed: boolean;
   trackingGranularity?: TrackingGranularity | null;
   excludedPlantIds?: string[] | null;
@@ -157,6 +180,8 @@ export interface PlantEventResponse {
   progressTotal?: number | null;
   progressCompleted?: number | null;
   tasks: EventTaskResponse[] | null;
+  /** File IDs (MongoDB _id) of images/videos attached to this event via file-service. */
+  attachmentIds?: string[] | null;
   createdAt: string | null;
   lastModifiedAt: string | null;
   createdBy: string | null;
@@ -164,6 +189,48 @@ export interface PlantEventResponse {
   active: boolean;
   /** Child events in the hierarchy (FARM → FARM_ZONE → PLANT). Empty array for leaf nodes. */
   children: PlantEventResponse[];
+
+  /** Denormalized plant info for quick display without extra API calls. */
+  plant?: PlantSummary | null;
+  /** Denormalized farm plot info for quick display. */
+  farmPlot?: FarmPlotSummary | null;
+  /** Denormalized farm zone info for quick display. */
+  farmZone?: FarmZoneSummary | null;
+  /** Denormalized plan apply summary for quick display. */
+  planApply?: PlanApplySummary | null;
+}
+
+export interface PlantSummary {
+  id: string;
+  plantNumber: string | null;
+  nickName: string | null;
+  tagCode: string | null;
+  speciesId: string | null;
+  farmPlotId: string | null;
+  farmZoneId: string | null;
+}
+
+export interface FarmPlotSummary {
+  id: string;
+  name: string | null;
+  code: string | null;
+  addressLine: string | null;
+}
+
+export interface FarmZoneSummary {
+  id: string;
+  farmPlotId: string | null;
+  zoneName: string | null;
+  zoneCode: string | null;
+}
+
+export interface PlanApplySummary {
+  id: string;
+  planId: string | null;
+  planName: string | null;
+  diseaseName: string | null;
+  targetName: string | null;
+  status: string | null;
 }
 
 export interface PlantEventCreateRequest {
@@ -194,6 +261,8 @@ export interface PlantEventCreateRequest {
   trackingGranularity?: TrackingGranularity;
   excludedPlantIds?: string[];
   excludedFarmZoneIds?: string[];
+  /** File IDs of images/videos to attach to this event via file-service. */
+  attachmentIds?: string[];
 }
 
 export interface PlantEventUpdateRequest {
@@ -219,6 +288,8 @@ export interface PlantEventUpdateRequest {
   completed?: boolean;
   /** Replace the entire task list. Omit to leave tasks unchanged. */
   tasks?: EventTaskRequest[];
+  /** Replace the attachment list. Omit to leave attachments unchanged. */
+  attachmentIds?: string[];
 }
 
 export interface PlantEventsCalendarParams {
@@ -228,7 +299,8 @@ export interface PlantEventsCalendarParams {
   farmPlotId?: string;
   farmZoneId?: string;
   plantId?: string;
-
+  targetType?: TargetType | "";
+  eventType?: PlantEventType | "";
   planApplyId?: string;
 }
 
@@ -238,6 +310,8 @@ export interface PlanCreateRequest {
   plantId?: string;
   farmPlotId?: string;
   farmZoneId?: string;
+  /** Species the plan is for. */
+  speciesId?: string;
   diseaseName: string;
   confidenceScore?: number;
   severityLevel?: string;
@@ -307,6 +381,8 @@ export interface PlanApplyResponse {
   trackingGranularity: TrackingGranularity | null;
   plantEventIds: string[] | null;
   status: TreatmentStatus;
+  /** Outcome — true = succeeded, false = failed, null = unresolved. */
+  success?: boolean | null;
   /** Whether this apply can be cancelled by the user. */
   canCancel?: boolean | null;
   createdAt: string | null;

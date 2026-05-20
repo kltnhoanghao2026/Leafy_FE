@@ -28,7 +28,7 @@ import {
 import { useBulkApplyCustomMutation } from "../queries/plan.queries";
 import { CancelApplyDialog } from "../components/CancelApplyDialog";
 import { useSearchPlans } from "../../../search/queries";
-import type { PlanApplyRequest, PlanResponse, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
+import type { PlanApplyRequest, PlanResponse, PlanSourceType, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
 import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
 import { BulkApplyCustomDialog } from "../components/BulkApplyCustomDialog";
@@ -60,6 +60,13 @@ const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "CANCELLED", label: "Đã hủy" },
 ];
 
+const SOURCE_TYPE_CHIPS: Array<{ value: PlanSourceType | ""; label: string }> = [
+  { value: "", label: "Tất cả nguồn" },
+  { value: "USER_CREATED", label: "Tự tạo" },
+  { value: "RAG_GEN", label: "AI tạo" },
+  { value: "CONSULTED", label: "Tư vấn" },
+];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function PlansPage() {
   const navigate = useNavigate();
@@ -71,6 +78,7 @@ export function PlansPage() {
   const [pageSize, setPageSize] = useState(20);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [applyStatusFilter, setApplyStatusFilter] = useState<TreatmentStatus | "">("")
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<PlanSourceType | "">("");
 
   // ── my-plans-only state ──────────────────────────────────────────────────
   const [plantId, setPlantId] = useState("");
@@ -86,8 +94,8 @@ export function PlansPage() {
   const [applyTarget, setApplyTarget] = useState<PlanResponse | null>(null);
 
   // ── data ─────────────────────────────────────────────────────────────────
-  const myPlansQuery  = useMyPlans({ plantId: plantId || undefined, search: search || undefined, page, size: pageSize });
-  const pubPlansQuery = usePublicPlans({ search: search || undefined, page, size: pageSize } satisfies PublicPlanListParams);
+  const myPlansQuery  = useMyPlans({ plantId: plantId || undefined, search: search || undefined, sourceType: sourceTypeFilter || undefined, page, size: pageSize });
+  const pubPlansQuery = usePublicPlans({ search: search || undefined, sourceType: sourceTypeFilter || undefined, page, size: pageSize } satisfies PublicPlanListParams);
   const myAppliesQuery = useMyApplies({ status: applyStatusFilter || undefined, page, size: pageSize });
   const plantsQuery   = usePlants();
   const profileQuery  = useMyProfile();
@@ -178,7 +186,7 @@ export function PlansPage() {
   const totalPages = activeQuery.data?.totalPages ?? 0;
 
   // Reset page & selection when tab / filters change
-  useEffect(() => { setPage(0); setSelectedIds(new Set()); }, [viewTab, search, plantId, pageSize, applyStatusFilter]);
+  useEffect(() => { setPage(0); setSelectedIds(new Set()); }, [viewTab, search, plantId, pageSize, applyStatusFilter, sourceTypeFilter]);
 
   // ── my-plans helpers ─────────────────────────────────────────────────────
   const handleDelete = async () => {
@@ -287,41 +295,6 @@ export function PlansPage() {
           </p>
         </div>
       )}
-      {/* ── Applied Plans: status filter + info banner ── */}
-      {viewTab === "applied" && (
-        <>
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
-            <Play className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-            <p className="text-sm font-semibold text-emerald-700">
-              Danh sách các kế hoạch bạn đã áp dụng vào vườn hoặc cây trồng. Theo dõi trạng thái từng lần áp dụng tại đây.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { value: "" as const, label: "Tất cả" },
-              { value: "PENDING" as const, label: "Chờ xử lý" },
-              { value: "APPLYING" as const, label: "Đang áp dụng" },
-              { value: "ACTIVE" as const, label: "Đang thực hiện" },
-              { value: "COMPLETED" as const, label: "Hoàn thành" },
-              { value: "CANCELLED" as const, label: "Đã hủy" },
-            ].map(({ value, label }) => (
-              <button
-                key={value || "all"}
-                type="button"
-                onClick={() => setApplyStatusFilter(value)}
-                className={`rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
-                  applyStatusFilter === value
-                    ? "border-[#245A34] bg-[#245A34] text-white shadow-md"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
 
       {/* ── Filter card ── */}
       <FilterCard viewMode={viewMode} onViewModeChange={setViewMode}>
@@ -355,6 +328,54 @@ export function PlansPage() {
               />
             </div>
           )}
+        </div>
+
+        {/* Applied tab: status filter + info */}
+        {viewTab === "applied" && (
+          <div className="flex flex-wrap gap-2">
+            {[
+              { value: "" as const, label: "Tất cả" },
+              { value: "PENDING" as const, label: "Chờ xử lý" },
+              { value: "APPLYING" as const, label: "Đang áp dụng" },
+              { value: "ACTIVE" as const, label: "Đang thực hiện" },
+              { value: "COMPLETED" as const, label: "Hoàn thành" },
+              { value: "CANCELLED" as const, label: "Đã hủy" },
+            ].map(({ value, label }) => (
+              <button
+                key={value || "all"}
+                type="button"
+                onClick={() => setApplyStatusFilter(value)}
+                className={`rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
+                  applyStatusFilter === value
+                    ? "border-[#245A34] bg-[#245A34] text-white shadow-md"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Source type filter chips */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500 self-center">Nguồn:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {SOURCE_TYPE_CHIPS.map(({ value, label }) => (
+              <button
+                key={value || "all"}
+                type="button"
+                onClick={() => setSourceTypeFilter(value)}
+                className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                  sourceTypeFilter === value
+                    ? "border-[#245A34] bg-[#245A34] text-white shadow-sm"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </FilterCard>
 
