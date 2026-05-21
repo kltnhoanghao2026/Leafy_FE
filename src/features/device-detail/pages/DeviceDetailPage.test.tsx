@@ -128,7 +128,7 @@ function setupHandlers() {
     http.get(`*/api/iot/devices/${deviceId}/latest-readings`, () => HttpResponse.json([])),
     http.get(`*/api/iot/devices/${deviceId}/config`, () => HttpResponse.json(config)),
     http.get(`*/api/iot/devices/${deviceId}/media`, () => HttpResponse.json([media])),
-    http.get("*/api/iot/camera-schedules", () => HttpResponse.json([schedule])),
+    http.get(`*/api/iot/devices/${deviceUid}/camera/capture-schedule`, () => HttpResponse.json([schedule])),
     http.get("*/api/iot/alert-events", () =>
       HttpResponse.json({
         items: [],
@@ -174,8 +174,8 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
-    expect(screen.getByText(/08:30:00/)).toBeInTheDocument();
-    expect(screen.getByText(/DAILY/)).toBeInTheDocument();
+    expect(await screen.findByText(/08:30:00/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Hang ngay/).length).toBeGreaterThan(0);
     const images = await screen.findAllByRole("img");
     expect(images.some((image) => image.getAttribute("src") === "https://files.example.test/file-1.jpg")).toBe(true);
     expect(screen.getByText(/coffee-rust/i)).toBeInTheDocument();
@@ -188,7 +188,7 @@ describe("DeviceDetailPage camera media panel", () => {
     const handlers = setupHandlers();
     renderPage();
 
-    await screen.findByText("Leafy Camera");
+    await screen.findByText(/08:30:00/);
     await user.click(screen.getByRole("button", { name: /^Tao$/i }));
 
     await waitFor(() =>

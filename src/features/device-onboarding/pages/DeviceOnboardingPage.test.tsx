@@ -166,7 +166,7 @@ const registerOnboardingApis = () => {
         data: farmZones,
       });
     }),
-    http.post("*/api/iot/devices/provision", async ({ request }) => {
+    http.post("*/api/iot/devices/connect", async ({ request }) => {
       const body = (await request.json()) as Record<string, unknown>;
       return HttpResponse.json({
         ...device,
@@ -174,20 +174,6 @@ const registerOnboardingApis = () => {
         deviceCode: String(body.deviceCode ?? device.deviceCode),
         deviceName: String(body.deviceName ?? device.deviceName),
         deviceType: String(body.deviceType ?? device.deviceType),
-      });
-    }),
-    http.post("*/api/iot/devices/:deviceId/claim-code", ({ params }) => {
-      return HttpResponse.json({
-        deviceId: String(params.deviceId),
-        claimCode: "CLAIM-123",
-        expiresAt: "2026-04-16T04:00:00Z",
-      });
-    }),
-    http.post("*/api/iot/devices/claim", async ({ request }) => {
-      const body = (await request.json()) as Record<string, unknown>;
-      return HttpResponse.json({
-        ...device,
-        deviceUid: String(body.deviceUid ?? device.deviceUid),
         farmPlotId: String(body.farmPlotId ?? device.farmPlotId),
         zoneId: String(body.zoneId ?? device.zoneId),
       });
@@ -246,25 +232,11 @@ describe("DeviceOnboardingPage", () => {
 
   it("runs the QR onboarding sequence with dropdown farm and zone selection", async () => {
     const user = userEvent.setup();
-    let provisionBody: unknown;
-    let claimBody: unknown;
-    let claimCodeDeviceId = "";
+    let connectBody: unknown;
 
     server.use(
-      http.post("*/api/iot/devices/provision", async ({ request }) => {
-        provisionBody = await request.json();
-        return HttpResponse.json(device);
-      }),
-      http.post("*/api/iot/devices/:deviceId/claim-code", ({ params }) => {
-        claimCodeDeviceId = String(params.deviceId);
-        return HttpResponse.json({
-          deviceId: "device-1",
-          claimCode: "CLAIM-123",
-          expiresAt: "2026-04-16T04:00:00Z",
-        });
-      }),
-      http.post("*/api/iot/devices/claim", async ({ request }) => {
-        claimBody = await request.json();
+      http.post("*/api/iot/devices/connect", async ({ request }) => {
+        connectBody = await request.json();
         return HttpResponse.json(device);
       }),
       http.get("*/api/iot/devices/me", () => {
@@ -320,16 +292,11 @@ describe("DeviceOnboardingPage", () => {
     ).toHaveAttribute("href", "/dashboard/devices/device-1");
 
     await waitFor(() => {
-      expect(provisionBody).toEqual({
+      expect(connectBody).toEqual({
         deviceUid: "LEAFY-ESP32-001",
         deviceCode: "ESP32-001",
         deviceName: "Cảm biến - North Greenhouse",
         deviceType: "ESP32_CAM_SENSOR",
-      });
-      expect(claimCodeDeviceId).toBe("device-1");
-      expect(claimBody).toEqual({
-        deviceUid: "LEAFY-ESP32-001",
-        claimCode: "CLAIM-123",
         farmPlotId: "farm-1",
         zoneId: "zone-1",
       });
@@ -338,21 +305,11 @@ describe("DeviceOnboardingPage", () => {
 
   it("supports manual onboarding without QR", async () => {
     const user = userEvent.setup();
-    let provisionBody: unknown;
+    let connectBody: unknown;
 
     server.use(
-      http.post("*/api/iot/devices/provision", async ({ request }) => {
-        provisionBody = await request.json();
-        return HttpResponse.json(device);
-      }),
-      http.post("*/api/iot/devices/:deviceId/claim-code", () => {
-        return HttpResponse.json({
-          deviceId: "device-1",
-          claimCode: "CLAIM-123",
-          expiresAt: "2026-04-16T04:00:00Z",
-        });
-      }),
-      http.post("*/api/iot/devices/claim", () => {
+      http.post("*/api/iot/devices/connect", async ({ request }) => {
+        connectBody = await request.json();
         return HttpResponse.json(device);
       }),
       http.get("*/api/iot/devices/me", () => {
@@ -395,28 +352,20 @@ describe("DeviceOnboardingPage", () => {
       await screen.findByText("Kết nối thiết bị thành công"),
     ).toBeInTheDocument();
     await waitFor(() => {
-      expect(provisionBody).toEqual({
+      expect(connectBody).toEqual({
         deviceUid: "LEAFY-ESP32-001",
         deviceCode: "ESP32-001",
         deviceName: "North Field Sensor",
         deviceType: "ESP32_CAM_SENSOR",
+        farmPlotId: "farm-1",
+        zoneId: "zone-1",
       });
     });
   });
 
   it("renders a loading state when the backend is slow during refresh", async () => {
     server.use(
-      http.post("*/api/iot/devices/provision", async () => {
-        return HttpResponse.json(device);
-      }),
-      http.post("*/api/iot/devices/:deviceId/claim-code", () => {
-        return HttpResponse.json({
-          deviceId: "device-1",
-          claimCode: "CLAIM-123",
-          expiresAt: "2026-04-16T04:00:00Z",
-        });
-      }),
-      http.post("*/api/iot/devices/claim", () => {
+      http.post("*/api/iot/devices/connect", async () => {
         return HttpResponse.json(device);
       }),
       http.get("*/api/iot/devices/me", async () => {
