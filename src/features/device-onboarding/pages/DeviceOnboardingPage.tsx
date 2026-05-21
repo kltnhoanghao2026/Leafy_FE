@@ -528,25 +528,15 @@ export function DeviceOnboardingPage() {
 
     try {
       setConnectionStage("provision");
-      const provisionedResponse = await collectorApi.provisionDevice({
+      const connectedResponse = await collectorApi.connectDevice({
         deviceUid: payload.deviceUid,
         deviceCode: payload.deviceCode,
         deviceName: payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
         deviceType: payload.deviceType,
-      });
-      const provisioned = provisionedResponse.data;
-
-      setConnectionStage("claim-code");
-      const claimCodeResponse = await collectorApi.generateClaimCode(provisioned.id);
-
-      setConnectionStage("claim");
-      const claimedResponse = await collectorApi.claimDevice({
-        deviceUid: provisioned.deviceUid,
-        claimCode: claimCodeResponse.data.claimCode,
         farmPlotId: payload.farmPlotId,
         zoneId: payload.zoneId,
       });
-      const claimed = claimedResponse.data;
+      const claimed = connectedResponse.data;
 
       setConnectionStage("refresh");
       await queryClient.invalidateQueries({
@@ -559,24 +549,23 @@ export function DeviceOnboardingPage() {
         sortDir: "desc",
       });
       const ownedDevice = ownedDevicesResponse.data.items.find(
-        (item) => item.deviceUid === provisioned.deviceUid,
+        (item) => item.deviceUid === claimed.deviceUid,
       );
 
       setSuccess({
-        deviceId: claimed.id || provisioned.id || ownedDevice?.id || "",
-        deviceUid: claimed.deviceUid || provisioned.deviceUid,
-        deviceCode: claimed.deviceCode || provisioned.deviceCode,
+        deviceId: claimed.id || ownedDevice?.id || "",
+        deviceUid: claimed.deviceUid,
+        deviceCode: claimed.deviceCode,
         deviceName:
-          claimed.deviceName || provisioned.deviceName || payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
-        deviceType: claimed.deviceType || provisioned.deviceType,
+          claimed.deviceName || payload.deviceName || buildSuggestedDeviceName(t, payload.zoneName || payload.zoneId),
+        deviceType: claimed.deviceType,
         farmPlotId: claimed.farmPlotId || payload.farmPlotId,
         zoneId: claimed.zoneId || payload.zoneId,
         farmPlotName: payload.farmPlotName || "",
         zoneName: payload.zoneName || "",
-        status: claimed.status ?? provisioned.status ?? ownedDevice?.status ?? null,
+        status: claimed.status ?? ownedDevice?.status ?? null,
         provisioningStatus:
           claimed.provisioningStatus ??
-          provisioned.provisioningStatus ??
           ownedDevice?.provisioningStatus ??
           null,
       });
@@ -859,10 +848,10 @@ export function DeviceOnboardingPage() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 className="text-[30px] font-black tracking-tight text-slate-900">
-            {t(currentTitle.title)}
+            {t(currentTitle.title) as string}
           </h2>
           <p className="mt-1 max-w-3xl text-[15px] font-semibold text-slate-500">
-            {t(currentTitle.description)}
+            {t(currentTitle.description) as string}
           </p>
         </div>
         <WizardProgress step={step} />

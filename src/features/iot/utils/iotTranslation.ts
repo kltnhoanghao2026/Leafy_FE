@@ -36,7 +36,7 @@ export type IoTMediaStatus = DeviceMediaEventStatus;
 
 export type IoTChartRange = "H1" | "D1" | "D7" | "M1";
 
-export type IoTCameraScheduleRecurrence = "DAILY" | "WEEKLY" | "NONE";
+export type IoTCameraScheduleRecurrence = "DAILY" | "WEEKLY" | "MONTHLY" | "NONE";
 
 export type IoTDeviceType =
   | "ESP32_CAM_SENSOR"
@@ -120,6 +120,7 @@ const chartRangeLabelKeys = {
 const scheduleRecurrenceLabelKeys = {
   DAILY: "iot.cameraSchedules.recurrenceDaily",
   WEEKLY: "iot.cameraSchedules.recurrenceWeekly",
+  MONTHLY: "iot.cameraSchedules.recurrenceMonthly",
   NONE: "iot.cameraSchedules.recurrenceNone",
 } as const satisfies Record<IoTCameraScheduleRecurrence, TranslationKey>;
 

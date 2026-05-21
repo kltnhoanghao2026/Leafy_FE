@@ -53,6 +53,11 @@ const DeviceDetailPage = lazy(() =>
     default: module.DeviceDetailPage,
   })),
 );
+const DeviceCameraSchedulesPage = lazy(() =>
+  import("./features/device-detail/pages/DeviceCameraSchedulesPage").then((module) => ({
+    default: module.DeviceCameraSchedulesPage,
+  })),
+);
 const DeviceIndexRedirect = lazy(() =>
   import("./features/device-onboarding/pages/DeviceIndexRedirect").then((module) => ({
     default: module.DeviceIndexRedirect,
@@ -343,6 +348,14 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <DeviceDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="devices/:deviceId/camera-schedules"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <DeviceCameraSchedulesPage />
                   </Suspense>
                 }
               />

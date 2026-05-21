@@ -57,13 +57,14 @@ export type DeviceMediaEventStatus =
   | "FAILED"
   | "TIMEOUT";
 
-export type CameraScheduleRecurrence = "DAILY" | "WEEKLY" | "NONE";
+export type CameraScheduleRecurrence = "DAILY" | "WEEKLY" | "MONTHLY" | "NONE";
 
 export type CameraScheduleTriggerType = "MANUAL" | "SCHEDULED";
 
 export interface CameraCaptureRequest {
   quality?: "LOW" | "MEDIUM" | "HIGH";
-  resolution?: "QVGA" | "VGA";
+  resolution?: "QVGA" | "VGA" | "HD";
+  uploadEndpoint?: string;
 }
 
 export interface CameraCaptureResponse {
@@ -141,7 +142,7 @@ export interface AdminCameraUploadResponse {
 }
 
 export interface DeviceCameraScheduleRequest {
-  deviceUid: string;
+  deviceUid?: string;
   enabled?: boolean;
   triggerType?: CameraScheduleTriggerType;
   timeOfDay: string;
@@ -153,6 +154,7 @@ export interface DeviceCameraScheduleRequest {
 
 export interface DeviceCameraScheduleResponse {
   id: string;
+  scheduleId?: string | null;
   deviceId?: string | null;
   deviceUid: string;
   enabled: boolean;
@@ -164,6 +166,9 @@ export interface DeviceCameraScheduleResponse {
   uploadEndpoint?: string | null;
   lastRunAt: string | null;
   nextRunAt: string | null;
+  status?: string | null;
+  lastMediaThumbnail?: string | null;
+  lastMediaStatus?: DeviceMediaEventStatus | string | null;
   lastMediaEvent?: DeviceMediaEventResponse | null;
 }
 
@@ -335,7 +340,14 @@ export interface ProvisionDeviceRequest {
   deviceCode: string;
   deviceName: string;
   deviceType: string;
+  farmPlotId?: string;
+  zoneId?: string;
 }
+
+export type ConnectDeviceRequest = ProvisionDeviceRequest & {
+  farmPlotId: string;
+  zoneId: string;
+};
 
 export interface ClaimDeviceRequest {
   deviceUid: string;
