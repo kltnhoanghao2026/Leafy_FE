@@ -29,6 +29,7 @@ import {
 import { CompareChart } from "../../metrics-view/components/CompareChart";
 import { SensorChartModal } from "../../metrics-view/components/SensorChartModal";
 import { useAlertEvents } from "../../alerts/queries";
+import { ModalShell } from "../../../components/ui/ModalShell";
 import { MediaImage } from "../../community/components/MediaImage";
 import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { useTranslation } from "../../../i18n";
@@ -424,11 +425,22 @@ function DeviceMediaPanel({
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
   );
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const selectedMedia = mediaEvents.find((event) => event.id === selectedMediaId) ?? null;
+  const selectedMediaSource =
+    selectedMedia?.analysis?.fileUrl ?? selectedMedia?.fileId ?? null;
+  const selectedAnalysis = selectedMedia?.analysis;
   const isWaiting = isCapturing || isPolling || isMediaWaiting(latestMedia);
   const failedLatest =
     latestMedia?.status === "FAILED" || latestMedia?.status === "TIMEOUT"
       ? latestMedia
       : null;
+
+  useEffect(() => {
+    if (selectedMediaId && !mediaEvents.some((event) => event.id === selectedMediaId)) {
+      setSelectedMediaId(null);
+    }
+  }, [mediaEvents, selectedMediaId]);
 
   const resetScheduleForm = () => {
     setScheduleTime("08:30");
@@ -725,40 +737,192 @@ function DeviceMediaPanel({
               {t("iot.devices.media.noEvents")}
             </p>
           ) : null}
-          {mediaEvents.slice(0, 6).map((event) => (
-            <div
+          {mediaEvents.map((event) => (
+            <button
               key={event.id}
-              className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+              type="button"
+              onClick={() => setSelectedMediaId(event.id)}
+              className={`w-full rounded-2xl border px-4 py-3 text-left transition hover:border-[#245A34]/40 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#245A34]/30 ${
+                selectedMedia?.id === event.id
+                  ? "border-[#245A34]/50 bg-white shadow-sm"
+                  : "border-slate-100 bg-slate-50"
+              }`}
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className={badgeClass(statusTone(event.status))}>
-                  {formatMediaStatusLabel(t, event.status)}
-                </span>
-                <span className="text-xs font-bold text-slate-500">
-                  {formatDateTime(event.uploadedAt || event.requestedAt)}
-                </span>
-              </div>
-              <p className="mt-2 text-xs font-semibold text-slate-500">
-                {event.fileId
-                  ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
-                  : event.error || event.requestId || t("iot.devices.media.waitingForUpload")}
-              </p>
-              {event.analysis ? (
-                <div className={`mt-2 text-xs font-black ${event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
-                  {event.analysis.diseaseDetected
-                    ? `Disease detected: ${event.analysis.diseaseType ?? event.analysis.diseaseName ?? "unknown"}${event.analysis.severity ? ` · ${event.analysis.severity}` : ""}`
-                    : event.analysis.status}
-                  {event.analysis.alertEventId ? (
-                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
-                      Alert
-                    </span>
-                  ) : null}
+              <div className="flex items-start gap-3">
+                <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                  {event.fileId || event.analysis?.fileUrl ? (
+                    <MediaImage
+                      source={event.analysis?.fileUrl ?? event.fileId ?? ""}
+                      alt={t("iot.devices.media.latestImageAlt")}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-slate-400">
+                      <ImageOff className="h-5 w-5" strokeWidth={2.5} />
+                    </div>
+                  )}
                 </div>
-              ) : null}
-            </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={badgeClass(statusTone(event.status))}>
+                      {formatMediaStatusLabel(t, event.status)}
+                    </span>
+                    <span className="shrink-0 text-xs font-bold text-slate-500">
+                      {formatDateTime(event.uploadedAt || event.capturedAt || event.requestedAt)}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-slate-500">
+                    {event.fileId
+                      ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
+                      : event.error || event.requestId || t("iot.devices.media.waitingForUpload")}
+                  </p>
+                  {event.analysis ? (
+                    <div className={`mt-2 text-xs font-black ${event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
+                      {event.analysis.diseaseDetected
+                        ? `Disease detected: ${event.analysis.diseaseType ?? event.analysis.diseaseName ?? "unknown"}${event.analysis.severity ? ` · ${event.analysis.severity}` : ""}`
+                        : event.analysis.status}
+                      {event.analysis.alertEventId ? (
+                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
+                          Alert
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs font-black text-slate-400">No disease analysis yet</p>
+                  )}
+                </div>
+              </div>
+            </button>
           ))}
         </div>
       </div>
+
+      {selectedMedia ? (
+        <ModalShell
+          title="Media detail"
+          titleId="device-media-detail-title"
+          subtitle={
+            <p className="mt-1 text-sm font-semibold text-slate-500">
+              {formatDateTime(
+                selectedMedia.uploadedAt || selectedMedia.capturedAt || selectedMedia.requestedAt,
+              )}
+            </p>
+          }
+          icon={<ScanSearch className="h-5 w-5 text-[#245A34]" strokeWidth={2.5} />}
+          maxWidth="sm:max-w-5xl"
+          onClose={() => setSelectedMediaId(null)}
+        >
+          <div className="grid gap-5 p-5 lg:grid-cols-[1.4fr_1fr]">
+            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+              {selectedMediaSource ? (
+                <MediaImage
+                  source={selectedMediaSource}
+                  alt={t("iot.devices.media.latestImageAlt")}
+                  className="max-h-[70vh] w-full object-contain"
+                />
+              ) : (
+                <div className="flex h-[420px] flex-col items-center justify-center gap-3 text-slate-500">
+                  <ImageOff className="h-8 w-8" strokeWidth={2.5} />
+                  <span className="text-sm font-bold">{t("iot.devices.media.noUploadedImage")}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={badgeClass(statusTone(selectedMedia.status))}>
+                    {formatMediaStatusLabel(t, selectedMedia.status)}
+                  </span>
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
+                    {selectedMedia.triggerType}
+                  </span>
+                </div>
+                <dl className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between gap-4">
+                    <dt className="font-bold text-slate-500">Captured</dt>
+                    <dd className="text-right font-black text-slate-700">{formatDateTime(selectedMedia.capturedAt)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="font-bold text-slate-500">Uploaded</dt>
+                    <dd className="text-right font-black text-slate-700">{formatDateTime(selectedMedia.uploadedAt)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="font-bold text-slate-500">Size</dt>
+                    <dd className="text-right font-black text-slate-700">
+                      {selectedMedia.width ?? "-"}x{selectedMedia.height ?? "-"} · {formatNumber(selectedMedia.sizeBytes)} bytes
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="font-bold text-slate-500">Request</dt>
+                    <dd className="break-all text-right font-black text-slate-700">{selectedMedia.requestId ?? "-"}</dd>
+                  </div>
+                </dl>
+                {selectedMedia.error ? (
+                  <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600">
+                    {selectedMedia.error}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                  Disease analysis
+                </h4>
+                {selectedAnalysis ? (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={badgeClass(selectedAnalysis.diseaseDetected ? "red" : "green")}>
+                        {selectedAnalysis.diseaseDetected ? "Disease detected" : selectedAnalysis.status}
+                      </span>
+                      {selectedAnalysis.alertEventId ? (
+                        <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700">
+                          Alert
+                        </span>
+                      ) : null}
+                    </div>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <dt className="font-bold text-slate-500">Disease</dt>
+                        <dd className="text-right font-black text-slate-700">
+                          {selectedAnalysis.diseaseName ?? selectedAnalysis.diseaseType ?? "-"}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="font-bold text-slate-500">Severity</dt>
+                        <dd className="text-right font-black text-slate-700">{selectedAnalysis.severity ?? "-"}</dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="font-bold text-slate-500">Confidence</dt>
+                        <dd className="text-right font-black text-slate-700">
+                          {selectedAnalysis.confidence === null ? "-" : `${formatNumber(selectedAnalysis.confidence * 100)}%`}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="font-bold text-slate-500">Analyzed</dt>
+                        <dd className="text-right font-black text-slate-700">{formatDateTime(selectedAnalysis.analyzedAt)}</dd>
+                      </div>
+                    </dl>
+                    {selectedAnalysis.notes || selectedAnalysis.error ? (
+                      <p className={`rounded-xl px-3 py-2 text-sm font-bold ${
+                        selectedAnalysis.error
+                          ? "bg-red-50 text-red-600"
+                          : "bg-slate-50 text-slate-600"
+                      }`}>
+                        {selectedAnalysis.error ?? selectedAnalysis.notes}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500">
+                    No disease analysis yet
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </ModalShell>
+      ) : null}
     </section>
   );
 }
@@ -910,10 +1074,10 @@ export function DeviceDetailPage() {
   const deviceDetailQuery = useDeviceDetail(resolvedDeviceId, !!deviceId);
   const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
   const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
-  const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId);
+  const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId, 10_000);
   const device = deviceDetailQuery.data;
   const deviceUid = device?.deviceUid;
-  const cameraSchedulesQuery = useDeviceSchedulesQuery(deviceUid, !!deviceUid);
+  const cameraSchedulesQuery = useDeviceSchedulesQuery(deviceUid, !!deviceUid, 10_000);
   const alertEventsQuery = useAlertEvents(
     {
       deviceId: resolvedDeviceId,

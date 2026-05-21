@@ -1,8 +1,21 @@
-export const formatDateTime = (value?: string | null): string => {
-  if (!value) return "Never";
+const parseDateTimeValue = (value?: string | number | null): Date | null => {
+  if (!value) return null;
+
+  if (typeof value === "number") {
+    const millis = Math.abs(value) < 10_000_000_000 ? value * 1000 : value;
+    const date = new Date(millis);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
 
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+export const formatDateTime = (value?: string | number | null): string => {
+  if (!value) return "Never";
+
+  const date = parseDateTimeValue(value);
+  if (!date) return String(value);
 
   return new Intl.DateTimeFormat("en", {
     month: "short",
