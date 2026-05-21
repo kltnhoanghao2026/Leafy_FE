@@ -38,6 +38,7 @@ import {
   formatDeviceStatusLabel,
   formatDeviceTypeLabel,
   formatMediaStatusLabel,
+  formatScheduleRecurrenceLabel,
   formatSensorLabel,
 } from "../../iot/utils/iotTranslation";
 import {
@@ -64,9 +65,11 @@ import {
   useUpdateDeviceConfig,
 } from "../queries";
 import {
-  useCameraSchedulesQuery,
+  useDeviceSchedulesQuery,
   useCreateDeviceCameraScheduleMutation,
-  useRunCameraScheduleNowMutation,
+  useDeleteDeviceScheduleMutation,
+  useRunScheduledCameraMutation,
+  useUpdateDeviceScheduleMutation,
 } from "../../admin/iot-camera-schedules/cameraSchedules.queries";
 import { useDiseaseDetectMutation } from "../../admin/camera-batch-upload/cameraBatchUpload.queries";
 import { ROUTES } from "../../../lib/routes";
@@ -115,6 +118,17 @@ const SENSOR_CONFIG = [
     iconBgClass: "bg-[#FEFCE8]",
   },
 ] as const;
+
+const isHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+const getScheduleId = (schedule: DeviceCameraScheduleResponse) =>
+  schedule.scheduleId ?? schedule.id;
 
 interface SensorSnapshot {
   sensorCode: string;
@@ -357,6 +371,7 @@ interface DeviceMediaPanelProps {
   isDetectingDisease: boolean;
   onCapture: () => Promise<void>;
   onRunScheduleNow: () => Promise<void>;
+  onRunSchedule: (schedule: DeviceCameraScheduleResponse) => Promise<void>;
   onCreateSchedule: (payload: {
     timeOfDay: string;
     recurrence: CameraScheduleRecurrence;
@@ -364,6 +379,18 @@ interface DeviceMediaPanelProps {
     quality: "LOW" | "MEDIUM" | "HIGH";
     uploadEndpoint?: string;
   }) => Promise<void>;
+  onUpdateSchedule: (
+    schedule: DeviceCameraScheduleResponse,
+    payload: {
+      enabled: boolean;
+      timeOfDay: string;
+      recurrence: CameraScheduleRecurrence;
+      resolution: "QVGA" | "VGA" | "HD";
+      quality: "LOW" | "MEDIUM" | "HIGH";
+      uploadEndpoint?: string;
+    },
+  ) => Promise<void>;
+  onDeleteSchedule: (schedule: DeviceCameraScheduleResponse) => Promise<void>;
   onDetectLatest: (media: DeviceMediaEventResponse) => Promise<void>;
 }
 
@@ -379,7 +406,10 @@ function DeviceMediaPanel({
   isDetectingDisease,
   onCapture,
   onRunScheduleNow,
+  onRunSchedule,
   onCreateSchedule,
+  onUpdateSchedule,
+  onDeleteSchedule,
   onDetectLatest,
 }: DeviceMediaPanelProps) {
   const { t } = useTranslation();
@@ -388,6 +418,8 @@ function DeviceMediaPanel({
   const [scheduleResolution, setScheduleResolution] = useState<"QVGA" | "VGA" | "HD">("VGA");
   const [scheduleQuality, setScheduleQuality] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
   const [uploadEndpoint, setUploadEndpoint] = useState("");
+  const [scheduleError, setScheduleError] = useState<string | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const latestMedia = mediaEvents[0];
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
@@ -397,6 +429,56 @@ function DeviceMediaPanel({
     latestMedia?.status === "FAILED" || latestMedia?.status === "TIMEOUT"
       ? latestMedia
       : null;
+
+  const resetScheduleForm = () => {
+    setScheduleTime("08:30");
+    setScheduleRecurrence("DAILY");
+    setScheduleResolution("VGA");
+    setScheduleQuality("MEDIUM");
+    setUploadEndpoint("");
+    setEditingScheduleId(null);
+  };
+
+  const startEditSchedule = (schedule: DeviceCameraScheduleResponse) => {
+    setEditingScheduleId(getScheduleId(schedule));
+    setScheduleTime(schedule.timeOfDay?.slice(0, 5) || "08:30");
+    setScheduleRecurrence(schedule.recurrence as CameraScheduleRecurrence);
+    setScheduleResolution((schedule.resolution as "QVGA" | "VGA" | "HD") || "VGA");
+    setScheduleQuality((schedule.quality as "LOW" | "MEDIUM" | "HIGH") || "MEDIUM");
+    setUploadEndpoint(schedule.uploadEndpoint ?? "");
+    setScheduleError(null);
+  };
+
+  const submitSchedule = async () => {
+    if (uploadEndpoint.trim() && !isHttpUrl(uploadEndpoint.trim())) {
+      setScheduleError(t("iot.cameraSchedules.validation.uploadEndpoint"));
+      return;
+    }
+
+    setScheduleError(null);
+    const payload = {
+      enabled: true,
+      timeOfDay: scheduleTime.length === 5 ? `${scheduleTime}:00` : scheduleTime,
+      recurrence: scheduleRecurrence,
+      resolution: scheduleResolution,
+      quality: scheduleQuality,
+      uploadEndpoint: uploadEndpoint.trim() || undefined,
+    };
+
+    const editingSchedule = editingScheduleId
+      ? deviceSchedules.find((schedule) => getScheduleId(schedule) === editingScheduleId)
+      : null;
+
+    if (editingSchedule) {
+      await onUpdateSchedule(editingSchedule, {
+        ...payload,
+        enabled: editingSchedule.enabled,
+      });
+    } else {
+      await onCreateSchedule(payload);
+    }
+    resetScheduleForm();
+  };
 
   return (
     <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
@@ -458,10 +540,10 @@ function DeviceMediaPanel({
           </div>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {deviceSchedules.map((schedule) => (
-              <div key={schedule.id} className="rounded-xl border border-emerald-100 bg-white px-3 py-2">
+              <div key={getScheduleId(schedule)} className="rounded-xl border border-emerald-100 bg-white px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-black text-slate-800">
-                    {schedule.timeOfDay} · {schedule.recurrence}
+                    {schedule.timeOfDay} · {formatScheduleRecurrenceLabel(t, schedule.recurrence)}
                   </span>
                   <span className={badgeClass(schedule.enabled ? "green" : "slate")}>
                     {schedule.enabled ? t("iot.cameraSchedules.enabled") : t("iot.cameraSchedules.disabled")}
@@ -473,6 +555,34 @@ function DeviceMediaPanel({
                 <p className="text-xs font-semibold text-slate-500">
                   {t("iot.cameraSchedules.lastRunAt")}: {formatDateTime(schedule.lastRunAt)}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void onRunSchedule(schedule)}
+                    disabled={!canCapture || isRunningSchedule}
+                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                  >
+                    {t("iot.cameraSchedules.runNow")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => startEditSchedule(schedule)}
+                    className="rounded-lg border border-emerald-200 px-3 py-1.5 text-xs font-bold text-emerald-700"
+                  >
+                    {t("iot.cameraSchedules.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(t("iot.cameraSchedules.deleteConfirm"))) {
+                        void onDeleteSchedule(schedule);
+                      }
+                    }}
+                    className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white"
+                  >
+                    {t("iot.cameraSchedules.delete")}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -484,13 +594,7 @@ function DeviceMediaPanel({
           className="mt-5 grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[0.7fr_0.7fr_0.7fr_0.7fr_1fr_auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            void onCreateSchedule({
-              timeOfDay: scheduleTime.length === 5 ? `${scheduleTime}:00` : scheduleTime,
-              recurrence: scheduleRecurrence,
-              resolution: scheduleResolution,
-              quality: scheduleQuality,
-              uploadEndpoint: uploadEndpoint.trim() || undefined,
-            });
+            void submitSchedule();
           }}
         >
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
@@ -511,11 +615,11 @@ function DeviceMediaPanel({
             >
               <option value="DAILY">{t("iot.cameraSchedules.recurrenceDaily")}</option>
               <option value="WEEKLY">{t("iot.cameraSchedules.recurrenceWeekly")}</option>
-              <option value="NONE">{t("iot.cameraSchedules.recurrenceNone")}</option>
+              <option value="MONTHLY">{t("iot.cameraSchedules.recurrenceMonthly")}</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-            Resolution
+            {t("iot.cameraSchedules.resolution")}
             <select
               value={scheduleResolution}
               onChange={(event) => setScheduleResolution(event.target.value as "QVGA" | "VGA" | "HD")}
@@ -527,7 +631,7 @@ function DeviceMediaPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-            Quality
+            {t("iot.cameraSchedules.quality")}
             <select
               value={scheduleQuality}
               onChange={(event) => setScheduleQuality(event.target.value as "LOW" | "MEDIUM" | "HIGH")}
@@ -539,22 +643,38 @@ function DeviceMediaPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-            Upload endpoint
+            {t("iot.cameraSchedules.uploadEndpoint")}
             <input
               value={uploadEndpoint}
               onChange={(event) => setUploadEndpoint(event.target.value)}
-              placeholder="default"
+              placeholder={t("iot.cameraSchedules.uploadEndpointPlaceholder")}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
             />
           </label>
+          {scheduleError ? (
+            <p className="md:col-span-full text-sm font-bold text-red-600">{scheduleError}</p>
+          ) : null}
           <button
             type="submit"
             disabled={isCreatingSchedule}
             className="inline-flex items-center justify-center self-end rounded-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
           >
             <CalendarPlus className="mr-2 h-4 w-4" />
-            {isCreatingSchedule ? t("iot.cameraSchedules.loading") : t("iot.cameraSchedules.create")}
+            {isCreatingSchedule
+              ? t("iot.cameraSchedules.loading")
+              : editingScheduleId
+                ? t("iot.cameraSchedules.save")
+                : t("iot.cameraSchedules.create")}
           </button>
+          {editingScheduleId ? (
+            <button
+              type="button"
+              onClick={resetScheduleForm}
+              className="inline-flex items-center justify-center self-end rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600"
+            >
+              {t("common.cancel")}
+            </button>
+          ) : null}
         </form>
       ) : null}
 
@@ -791,7 +911,9 @@ export function DeviceDetailPage() {
   const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
   const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
   const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId);
-  const cameraSchedulesQuery = useCameraSchedulesQuery(!!deviceId);
+  const device = deviceDetailQuery.data;
+  const deviceUid = device?.deviceUid;
+  const cameraSchedulesQuery = useDeviceSchedulesQuery(deviceUid, !!deviceUid);
   const alertEventsQuery = useAlertEvents(
     {
       deviceId: resolvedDeviceId,
@@ -804,8 +926,10 @@ export function DeviceDetailPage() {
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
-  const runScheduleNowMutation = useRunCameraScheduleNowMutation();
+  const runScheduleNowMutation = useRunScheduledCameraMutation(deviceUid);
   const createScheduleMutation = useCreateDeviceCameraScheduleMutation();
+  const updateScheduleMutation = useUpdateDeviceScheduleMutation(deviceUid);
+  const deleteScheduleMutation = useDeleteDeviceScheduleMutation(deviceUid);
   const detectDiseaseMutation = useDiseaseDetectMutation();
 
   useEffect(() => {
@@ -824,16 +948,9 @@ export function DeviceDetailPage() {
     return () => window.clearInterval(intervalId);
   }, [configQuery, deviceId]);
 
-  const device = deviceDetailQuery.data;
-  const deviceUid = device?.deviceUid;
   const config = configQuery.data;
   const mediaEvents = useMemo(() => mediaQuery.data ?? [], [mediaQuery.data]);
-  const deviceSchedules = useMemo(() => {
-    if (!deviceUid) return null;
-    return (cameraSchedulesQuery.data ?? []).filter(
-      (schedule) => schedule.deviceUid === deviceUid,
-    );
-  }, [cameraSchedulesQuery.data, deviceUid]);
+  const deviceSchedules = useMemo(() => cameraSchedulesQuery.data ?? [], [cameraSchedulesQuery.data]);
   const deviceSchedule = deviceSchedules?.[0] ?? null;
   const watchedCaptureEvent = useMemo(
     () =>
@@ -967,7 +1084,14 @@ export function DeviceDetailPage() {
 
   const handleRunScheduleNow = async () => {
     if (!deviceSchedule) return;
-    const response = await runScheduleNowMutation.mutateAsync(deviceSchedule.id);
+    await handleRunSchedule(deviceSchedule);
+  };
+
+  const handleRunSchedule = async (schedule: DeviceCameraScheduleResponse) => {
+    const response = await runScheduleNowMutation.mutateAsync({
+      scheduleId: getScheduleId(schedule),
+      deviceUid,
+    });
     const requestId = response.data.lastMediaEvent?.requestId ?? null;
     completedCaptureRef.current = null;
     setCaptureRequestId(requestId);
@@ -993,6 +1117,35 @@ export function DeviceDetailPage() {
         quality: payload.quality,
         uploadEndpoint: payload.uploadEndpoint,
       },
+    });
+    await cameraSchedulesQuery.refetch();
+  };
+
+  const handleUpdateCameraSchedule = async (
+    schedule: DeviceCameraScheduleResponse,
+    payload: {
+      enabled: boolean;
+      timeOfDay: string;
+      recurrence: CameraScheduleRecurrence;
+      resolution: "QVGA" | "VGA" | "HD";
+      quality: "LOW" | "MEDIUM" | "HIGH";
+      uploadEndpoint?: string;
+    },
+  ) => {
+    if (!deviceUid) return;
+    await updateScheduleMutation.mutateAsync({
+      scheduleId: getScheduleId(schedule),
+      deviceUid,
+      payload,
+    });
+    await cameraSchedulesQuery.refetch();
+  };
+
+  const handleDeleteCameraSchedule = async (schedule: DeviceCameraScheduleResponse) => {
+    if (!deviceUid) return;
+    await deleteScheduleMutation.mutateAsync({
+      scheduleId: getScheduleId(schedule),
+      deviceUid,
     });
     await cameraSchedulesQuery.refetch();
   };
@@ -1340,7 +1493,10 @@ export function DeviceDetailPage() {
             isDetectingDisease={detectDiseaseMutation.isPending}
             onCapture={handleCaptureImage}
             onRunScheduleNow={handleRunScheduleNow}
+            onRunSchedule={handleRunSchedule}
             onCreateSchedule={handleCreateCameraSchedule}
+            onUpdateSchedule={handleUpdateCameraSchedule}
+            onDeleteSchedule={handleDeleteCameraSchedule}
             onDetectLatest={handleDetectLatestMedia}
           />
 

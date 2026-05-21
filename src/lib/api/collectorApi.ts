@@ -15,6 +15,7 @@ import type {
   DiseaseDetectRequest,
   ChartRange,
   ClaimDeviceRequest,
+  ConnectDeviceRequest,
   CreateAlertRuleRequest,
   DashboardOverviewResponse,
   DeviceConfigResponse,
@@ -44,6 +45,11 @@ const cleanParams = <T extends object>(params: T): Partial<T> => {
 const currentUserHeaders = () => {
   const userId = useAuthStore.getState().user?.id;
   return userId ? { "X-User-Id": userId } : {};
+};
+
+const isNotFoundError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.includes("404") || message.toLowerCase().includes("not found");
 };
 
 export const collectorApi = {
@@ -141,6 +147,11 @@ export const collectorApi = {
       API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
     ),
 
+  getDeviceSchedules: (deviceUid: string) =>
+    apiClient.get<DeviceCameraScheduleResponse[]>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE_SCHEDULE(deviceUid),
+    ),
+
   createCameraSchedule: (payload: DeviceCameraScheduleRequest) =>
     apiClient.post<DeviceCameraScheduleResponse>(
       API_ENDPOINTS.IOT.CAMERA_SCHEDULES,
@@ -173,6 +184,26 @@ export const collectorApi = {
     apiClient.post<DeviceCameraScheduleResponse>(
       API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE_SCHEDULE(deviceUid),
       payload,
+    ),
+
+  updateDeviceSchedule: (
+    deviceUid: string,
+    scheduleId: string,
+    payload: Pick<DeviceCameraScheduleRequest, "enabled" | "timeOfDay" | "recurrence" | "resolution" | "quality" | "uploadEndpoint">,
+  ) =>
+    apiClient.put<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE_SCHEDULE_ITEM(deviceUid, scheduleId),
+      payload,
+    ),
+
+  deleteDeviceSchedule: (deviceUid: string, scheduleId: string) =>
+    apiClient.delete<void>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_CAPTURE_SCHEDULE_ITEM(deviceUid, scheduleId),
+    ),
+
+  runScheduledCamera: (deviceUid: string, scheduleId: string) =>
+    apiClient.post<DeviceCameraScheduleResponse>(
+      API_ENDPOINTS.IOT.DEVICE_CAMERA_RUN_SCHEDULED(deviceUid, scheduleId),
     ),
 
   detectCameraDisease: (deviceUid: string, payload: DiseaseDetectRequest) =>
@@ -249,6 +280,29 @@ export const collectorApi = {
 
   provisionDevice: (payload: ProvisionDeviceRequest) =>
     apiClient.post<DeviceResponse>(API_ENDPOINTS.IOT.DEVICE_PROVISION, payload),
+
+  connectDevice: async (payload: ConnectDeviceRequest) => {
+    try {
+      return await apiClient.post<DeviceResponse>(
+        API_ENDPOINTS.IOT.DEVICE_CONNECT,
+        payload,
+        { headers: currentUserHeaders() },
+      );
+    } catch (error) {
+      if (!isNotFoundError(error)) {
+        throw error;
+      }
+
+      const provisioned = await collectorApi.provisionDevice(payload);
+      const claimCode = await collectorApi.generateClaimCode(provisioned.data.id);
+      return collectorApi.claimDevice({
+        deviceUid: provisioned.data.deviceUid,
+        claimCode: claimCode.data.claimCode,
+        farmPlotId: payload.farmPlotId,
+        zoneId: payload.zoneId,
+      });
+    }
+  },
 
   generateClaimCode: (deviceId: string) =>
     apiClient.post<GenerateClaimCodeResponse>(

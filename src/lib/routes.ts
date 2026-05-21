@@ -377,6 +377,7 @@ export const API_ENDPOINTS = {
     DEVICE: (id: string) => `/iot/devices/${id}`,
     MY_DEVICES: "/iot/devices/me",
     DEVICE_PROVISION: "/iot/devices/provision",
+    DEVICE_CONNECT: "/iot/devices/connect",
     DEVICE_CLAIM: "/iot/devices/claim",
     DEVICE_CLAIM_CODE: (deviceId: string) =>
       `/iot/devices/${deviceId}/claim-code`,
@@ -397,6 +398,10 @@ export const API_ENDPOINTS = {
       `/iot/camera-schedules/${scheduleId}/run-now`,
     DEVICE_CAMERA_CAPTURE_SCHEDULE: (deviceUid: string) =>
       `/iot/devices/${deviceUid}/camera/capture-schedule`,
+    DEVICE_CAMERA_CAPTURE_SCHEDULE_ITEM: (deviceUid: string, scheduleId: string) =>
+      `/iot/devices/${deviceUid}/camera/capture-schedule/${scheduleId}`,
+    DEVICE_CAMERA_RUN_SCHEDULED: (deviceUid: string, scheduleId: string) =>
+      `/iot/devices/${deviceUid}/camera/run-scheduled/${scheduleId}`,
     DEVICE_CAMERA_DETECT: (deviceUid: string) =>
       `/iot/devices/${deviceUid}/camera/detect`,
     ADMIN_CAMERA_UPLOAD_FOLDER: "/admin/camera/upload-folder",
