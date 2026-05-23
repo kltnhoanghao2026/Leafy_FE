@@ -22,6 +22,7 @@ import type {
   DeviceCameraScheduleResponse,
   DeviceMediaEventResponse,
 } from "../../../types/iot";
+import { formatDateTime } from "../../metrics-view/utils/format";
 import {
   useCameraSchedulesQuery,
   useCreateCameraScheduleMutation,
@@ -36,16 +37,6 @@ type EnabledFilter = "all" | "enabled" | "disabled";
 const recurrenceOptions: CameraScheduleRecurrence[] = ["DAILY", "WEEKLY", "NONE"];
 const resolutionOptions = ["QVGA", "VGA", "HD"] as const;
 const qualityOptions = ["LOW", "MEDIUM", "HIGH"] as const;
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
-};
 
 const formatBytes = (value?: number | null) =>
   value == null ? "-" : new Intl.NumberFormat("vi-VN").format(value);

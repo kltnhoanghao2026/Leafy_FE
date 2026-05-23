@@ -219,4 +219,19 @@ describe("DeviceDetailPage camera media panel", () => {
       }),
     );
   });
+
+  it("opens a media detail dialog from the history item", async () => {
+    const user = userEvent.setup();
+    setupHandlers();
+    renderPage();
+
+    await screen.findByText("Leafy Camera");
+    await user.click(screen.getByRole("button", { name: /Disease detected: coffee-rust/i }));
+
+    expect(screen.getByRole("dialog", { name: /Media detail/i })).toBeInTheDocument();
+    expect(screen.getByText("Disease analysis")).toBeInTheDocument();
+    expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(1);
+    expect(screen.getByText(/86%/)).toBeInTheDocument();
+    expect(screen.getByText("Detected")).toBeInTheDocument();
+  });
 });

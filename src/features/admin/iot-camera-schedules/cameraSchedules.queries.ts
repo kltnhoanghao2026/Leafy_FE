@@ -39,20 +39,26 @@ const updateScheduleCache = (
   return current;
 };
 
-export const useCameraSchedulesQuery = (enabled = true) =>
+export const useCameraSchedulesQuery = (enabled = true, refetchInterval?: number | false) =>
   useQuery({
     queryKey: cameraScheduleKeys.all,
     queryFn: () => collectorApi.getCameraSchedules(),
     select: (response) => response.data,
     enabled,
+    refetchInterval,
   });
 
-export const useDeviceSchedulesQuery = (deviceUid?: string, enabled = true) =>
+export const useDeviceSchedulesQuery = (
+  deviceUid?: string,
+  enabled = true,
+  refetchInterval?: number | false,
+) =>
   useQuery({
     queryKey: cameraScheduleKeys.device(deviceUid),
     queryFn: () => collectorApi.getDeviceSchedules(deviceUid as string),
     select: (response) => response.data,
     enabled: enabled && Boolean(deviceUid),
+    refetchInterval,
   });
 
 export const useCreateCameraScheduleMutation = () => {

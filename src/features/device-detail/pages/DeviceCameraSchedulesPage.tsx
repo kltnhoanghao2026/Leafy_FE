@@ -5,6 +5,7 @@ import { MediaImage } from "../../community/components/MediaImage";
 import { useTranslation } from "../../../i18n";
 import { formatMediaStatusLabel, formatScheduleRecurrenceLabel } from "../../iot/utils/iotTranslation";
 import { useDeviceDetail } from "../queries";
+import { formatDateTime } from "../../metrics-view/utils/format";
 import type { DeviceCameraScheduleRequest, DeviceCameraScheduleResponse } from "../../../types/iot";
 import {
   useCreateDeviceCameraScheduleMutation,
@@ -30,13 +31,6 @@ const toInputTime = (value?: string | null) => value?.slice(0, 5) ?? "08:30";
 const normalizeTime = (value: string) => (value.length === 5 ? `${value}:00` : value);
 const getScheduleId = (schedule: DeviceCameraScheduleResponse) =>
   schedule.scheduleId ?? schedule.id;
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
-};
 
 function validate(payload: DeviceCameraScheduleRequest, t: ReturnType<typeof useTranslation>["t"]) {
   if (!payload.timeOfDay) return t("iot.cameraSchedules.validation.timeOfDay");
