@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Award,
@@ -7,7 +6,6 @@ import {
   XCircle,
   RefreshCw,
   ArrowRight,
-  Loader2,
   ShieldOff,
   ShieldCheck,
   CalendarDays,
@@ -77,7 +75,6 @@ function RequestCard({
 }) {
   const config = STATUS_CONFIG[request.status];
   const Icon = config.icon;
-  const isPending = request.status === "PENDING";
   const certCount = request.certificates?.length ?? 0;
 
   const submittedAt = request.createdAt

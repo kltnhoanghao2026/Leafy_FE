@@ -1,5 +1,5 @@
 import type { PlantEventResponse } from '../../shared/types';
-import { toLocalDateOnly } from '../../shared/utils/dateOnly';
+import { addLocalDays, toLocalDateOnly } from '../../shared/utils/dateOnly';
 
 /** Format a date string as DD/MM for compact display. */
 export function fmtShortDate(val?: string | null): string | null {
@@ -16,10 +16,15 @@ export function buildEventsByDate(
   const map = new Map<string, PlantEventResponse[]>();
   for (const evt of events) {
     const start = evt.calculatedStartDate;
-    const end = evt.calculatedEndDate ?? start;
     if (!start) continue;
+    // Use durationDays to derive the inclusive end date, matching hover/event-row logic.
+    // calculatedEndDate may be computed as start + durationDays (inclusive), so subtract 1
+    // when durationDays is available to get the correct visual span.
+    const end = evt.durationDays != null && evt.durationDays > 0
+      ? addLocalDays(start, evt.durationDays - 1)
+      : (evt.calculatedEndDate ?? start);
     const startD = new Date(start + 'T00:00:00');
-    const endD = new Date((end ?? start) + 'T00:00:00');
+    const endD = new Date(end + 'T00:00:00');
     for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
       const key = toLocalDateOnly(d);
       if (!map.has(key)) map.set(key, []);

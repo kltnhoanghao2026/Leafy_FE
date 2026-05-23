@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { History, Info, Leaf, UploadCloud, X, AlertTriangle, CheckCircle, ImageIcon, LoaderCircle, MousePointerClick, Crop } from "lucide-react";
+import { History, Info, UploadCloud, X, AlertTriangle, CheckCircle, ImageIcon, LoaderCircle, MousePointerClick, Crop } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import {
   DiagnosisPlantSelector,
   type DiagnosisPlantContext,
 } from "../components/DiagnosisPlantSelector";
 import { PredictionResultCard } from "../components/PredictionResultCard";
-import { usePredictDiseaseMutation, usePredictHealth, useDetectLeafMutation } from "../queries";
+import { usePredictDiseaseMutation, useDetectLeafMutation } from "../queries";
 import apiClient from "../../../lib/apiClient";
 import type { DiseasePrediction, PredictResponse, LeafDetectionResponse, LeafDetection, BoundingBox } from "../types";
 import { validateDiagnosisImage } from "../utils/fileValidation";
@@ -62,7 +62,6 @@ export function DiseaseDiagnosisPage() {
   const navigate = useNavigate();
   const detectLeafMutation = useDetectLeafMutation();
   const predictMutation = usePredictDiseaseMutation();
-  const healthQuery = usePredictHealth();
 
   useEffect(() => {
     return () => {
@@ -174,7 +173,7 @@ export function DiseaseDiagnosisPage() {
   };
 
   const renderBoundingBoxes = () => {
-    if (step !== "SELECT" || !detectionResult || !imgRef.current) return null;
+    if (step !== "SELECT" || !detectionResult) return null;
     const { imageWidth, imageHeight, detections } = detectionResult;
     
     return detections.map((det, i) => {
@@ -216,8 +215,8 @@ export function DiseaseDiagnosisPage() {
     let imageUrl: string | undefined = undefined;
     if (result?.fileId) {
       try {
-        const { data } = await apiClient.get<any>(`/api/v1/files/presigned-url/${result.fileId}`);
-        imageUrl = data?.data || data?.result || data;
+        const { data } = await apiClient.get<Record<string, unknown>>(`/api/v1/files/presigned-url/${result.fileId}`);
+        imageUrl = (data?.data || data?.result || data) as string;
       } catch (e) {
         console.warn("Failed to get presigned URL for image assessment", e);
       }

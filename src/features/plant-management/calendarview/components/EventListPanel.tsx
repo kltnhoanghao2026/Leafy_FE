@@ -1,6 +1,7 @@
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
 import { GroupedEventList } from './GroupedEventList';
 import type { PlantEventResponse } from '../../shared/types';
+import { isEventDone } from '../schemas/eventUtils';
 import { useTranslation } from '../../../../i18n';
 import type { EventListPanelProps } from '../schemas/calendar.types';
 
@@ -47,10 +48,7 @@ export function EventListPanel({
   const countDone = (events: PlantEventResponse[]): number => {
     let c = 0;
     for (const e of events) {
-      const isDone = e.trackingGranularity && e.trackingGranularity !== 'NONE'
-        ? (e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal)
-        : e.completed;
-      if (isDone) c += 1;
+      if (isEventDone(e)) c += 1;
       if (e.children?.length) c += countDone(e.children);
     }
     return c;

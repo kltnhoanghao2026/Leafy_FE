@@ -18,11 +18,13 @@ import { getInitialMonthBounds, applyLabel } from '../utils/dateUtils';
 import type { PlantEventResponse, PlantEventCreateRequest } from '../../shared/types';
 import { Filter, Plus } from 'lucide-react';
 import { useCreatePlantEventMutation } from '../queries/plant-event.queries';
+import { useTranslation } from '../../../../i18n';
 
 // ── PlantEventsCalendarPage ───────────────────────────────────────────────────
 
 export function PlantEventsCalendarPage() {
   const location = useLocation();
+  const { t } = useTranslation();
   const routeFilters = (location.state as {
     filters?: { plantId?: string; farmPlotId?: string; farmZoneId?: string };
   } | null)?.filters;
@@ -34,7 +36,7 @@ export function PlantEventsCalendarPage() {
   const [eventType,        setEventType]        = useState('');
   const [selectedApplyId, setSelectedApplyId] = useState('');
 
-  const initialBounds = useMemo(getInitialMonthBounds, []);
+  const initialBounds = useMemo(() => getInitialMonthBounds(), []);
   const [dateRange, setDateRange] = useState<CalendarDateRange>({
     startDate: initialBounds.startDate,
     endDate:   initialBounds.endDate,
@@ -106,8 +108,8 @@ export function PlantEventsCalendarPage() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#245A34]">Plant events</p>
-          <h2 className="mt-0.5 text-xl font-black tracking-tight text-slate-900">Lịch chăm sóc</h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.24em] text-[#245A34]">{t('plantManagement.calendar.pageTag')}</p>
+          <h2 className="mt-0.5 text-xl font-black tracking-tight text-slate-900">{t('plantManagement.calendar.pageTitle')}</h2>
         </div>
 
         <div className="flex items-center gap-3">
@@ -117,7 +119,7 @@ export function PlantEventsCalendarPage() {
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#245A34] rounded-xl hover:bg-[#1e4a2c] transition-all"
           >
             <Plus className="h-4 w-4" />
-            <span>Tạo lịch</span>
+            <span>{t('plantManagement.calendar.createEvent')}</span>
           </button>
 
           {/* Filter button */}
@@ -126,7 +128,7 @@ export function PlantEventsCalendarPage() {
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
           >
             <Filter className="h-4 w-4" />
-            <span>Lọc</span>
+            <span>{t('plantManagement.calendar.filter')}</span>
             {activeFilterCount > 0 && (
               <span className="flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-[#245A34] rounded-full">
                 {activeFilterCount}

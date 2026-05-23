@@ -206,7 +206,6 @@ export function DiagnosisRequestDetailDialog({
             </div>
           ) : null}
       </div>
-        </div>
     </ModalShell>
   );
 }

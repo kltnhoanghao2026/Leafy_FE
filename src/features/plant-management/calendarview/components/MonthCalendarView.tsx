@@ -4,7 +4,6 @@ import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/d
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 import { buildCalendarGrid, buildEventsByDate } from '../utils/dateUtils';
 import { CALENDAR_LEGEND } from '../utils/colorUtils';
-import { useTranslation } from '../../../../i18n';
 import type { PlantEventResponse } from '../../shared/types';
 import { VI_WEEKDAY_HEADER, SELECTED_COLOR } from '../utils/colorUtils';
 

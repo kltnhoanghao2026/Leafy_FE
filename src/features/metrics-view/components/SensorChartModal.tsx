@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { ChartStatisticsPanel } from "./ChartStatisticsPanel";
 import {
-  CHART_TYPE_LABEL_KEYS,
-  CHART_TYPES,
   IoTMetricCard,
   type MetricData,
   type SensorChartType,
 } from "./IoTMetricCard";
+import {
+  CHART_TYPE_LABEL_KEYS,
+  CHART_TYPES,
+} from "../utils/chartHelpers";
 import {
   calculateStatistics,
   type AnalyticsPoint,
@@ -88,9 +90,13 @@ export function SensorChartModal({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
+  // Reset window when range/trend changes — deferred to avoid cascading renders
   useEffect(() => {
-    setWindowStart(0);
-    setWindowEnd(1);
+    const timer = setTimeout(() => {
+      setWindowStart(0);
+      setWindowEnd(1);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [range, data.trend]);
 
   const visibleData = useMemo(() => {
@@ -112,7 +118,7 @@ export function SensorChartModal({
       calculateStatistics(visibleData as AnalyticsPoint[], {
         thresholds,
       }),
-    [analyticsEnabled, thresholds, visibleData],
+    [thresholds, visibleData],
   );
 
   const zoomIn = () => {

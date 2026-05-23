@@ -97,4 +97,12 @@ export const communityApi = {
     >(API_ENDPOINTS.COMMUNITY.VOTES_BY_POST(postId), { params: { type, ...params } });
     return unwrapApiData(response.data);
   },
+
+  markPostsViewed: async (postIds: string[]) => {
+    const response = await apiClient.post<ApiEnvelope<void> | void>(
+      API_ENDPOINTS.FEED.MARK_VIEWED,
+      postIds,
+    );
+    return response.data ? unwrapApiData(response.data) : undefined;
+  },
 };

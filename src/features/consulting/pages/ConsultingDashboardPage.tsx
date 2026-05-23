@@ -88,23 +88,10 @@ function FarmersTab() {
   const [searchTerm, setSearchTerm] = useState('');
   const { data: farmers, isLoading, isError } = useConsultingFarmers();
 
-  const farmerList = (farmers ?? []) as ConsultationRequestResponse[];
+  const farmerList = useMemo(() => (farmers ?? []) as ConsultationRequestResponse[], [farmers]);
   const farmerIds = farmerList.map((f) => f.followerId).filter(Boolean);
 
   const { data: summaryMap } = useConsultingFarmerSummaryBulk(farmerIds, farmerIds.length > 0);
-
-  const totals = useMemo(() => {
-    return farmerIds.reduce(
-      (acc, id) => {
-        const summary = summaryMap?.[id];
-        acc.plots += summary?.plotCount ?? 0;
-        acc.zones += summary?.zoneCount ?? 0;
-        acc.plants += summary?.plantCount ?? 0;
-        return acc;
-      },
-      { plots: 0, zones: 0, plants: 0 },
-    );
-  }, [farmerIds, summaryMap]);
 
   const filteredFarmers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -267,9 +254,9 @@ function RequestsTab() {
     queryKey: ['profiles', 'consulting', 'pending', page, pageSize],
     queryFn: async () => {
       const res = await profilesApi.getPendingConsultations({ page, size: pageSize });
-      const d = (res as any).data;
+      const d = res.data;
       if (d && typeof d === 'object' && 'data' in d) {
-        return toPageResponse<ConsultationRequestResponse>((d as any).data);
+        return toPageResponse<ConsultationRequestResponse>(d.data);
       }
       return { content: [] as ConsultationRequestResponse[], totalPages: 0, totalElements: 0 };
     },

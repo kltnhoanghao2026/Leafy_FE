@@ -30,18 +30,21 @@ export const plantManagementVi = {
     PHENOLOGY: 'Giai đoạn sinh trưởng',
     REPOT: 'Chuyển chậu',
     HARVEST: 'Thu hoạch',
+    ALERT_TRIGGERED: 'Cảnh báo',
   },
 
   category: {
     ROUTINE_CARE: 'Chăm sóc định kỳ',
     HEALTH_MEDICAL: 'Sức khỏe & Y tế',
     GROWTH_LIFECYCLE: 'Sinh trưởng',
+    ALERTS: 'Cảnh báo',
   },
 
   categoryShort: {
     ROUTINE_CARE: 'Chăm sóc',
     HEALTH_MEDICAL: 'Sức khỏe',
     GROWTH_LIFECYCLE: 'Sinh trưởng',
+    ALERTS: 'Cảnh báo',
   },
 
   severity: {
@@ -283,6 +286,8 @@ export const plantManagementVi = {
   calendar: {
     pageTitle: 'Lịch chăm sóc',
     pageTag: 'Plant events',
+    createEvent: 'Tạo lịch',
+    filter: 'Lọc',
     filterFarm: 'Vườn',
     filterZone: 'Khu vực',
     filterPlant: 'Cây',
@@ -321,9 +326,20 @@ export const plantManagementVi = {
     taskCompleted: 'Đánh dấu chưa hoàn thành',
     taskIncomplete: 'Đánh dấu hoàn thành',
     taskDoneShort: 'Đánh dấu chưa xong',
+    markDone: 'Đánh dấu hoàn thành',
+    markUndone: 'Đánh dấu chưa hoàn thành',
+    detailButton: 'Chi tiết',
     progressByZone: 'Tiến độ theo vùng',
     progressByPlant: 'Tiến độ theo cây',
     plannedBadge: 'Đã lên kế hoạch',
+    ppeRequired: 'Thiết bị bảo hộ (PPE)',
+    mrlNote: 'Ghi chú MRL',
+    attachmentsLabel: 'Tệp đính kèm',
+    plant: 'Cây',
+    zone: 'Khu vực',
+    farm: 'Vườn',
+    plan: 'Kế hoạch',
+    track: 'Theo dõi',
     // MonthCalendarView / WeekStripView legend
     legendCare: 'Chăm sóc',
     legendHealth: 'Sức khỏe',
@@ -333,6 +349,95 @@ export const plantManagementVi = {
     eventEmptyDefault: 'Chưa có lịch chăm sóc.',
     eventPlanned: 'Đã lên lịch',
     eventRecorded: 'Đã ghi nhận',
+  },
+
+  // ── PlantEventCreateDialog ────────────────────────────────────────────────
+  eventCreate: {
+    title: 'Tạo lịch chăm sóc mới',
+    scopeSection: 'Phạm vi áp dụng',
+    targetTypeFarm: 'Toàn vườn',
+    targetTypeZone: 'Khu vực',
+    targetTypePlant: 'Cây cụ thể',
+    selectFarm: 'Chọn vườn',
+    selectZone: 'Chọn khu vực',
+    selectPlant: 'Chọn cây',
+    loadingZones: 'Đang tải khu vực...',
+    noZones: 'Vườn này chưa có khu vực nào.',
+    loadingPlants: 'Đang tải cây trồng...',
+    noPlants: 'Chưa có cây trồng nào.',
+    scopeFarm: 'Vườn',
+    scopeZone: 'Khu vực',
+    scopePlant: 'Cây',
+    dateSection: 'Ngày tháng',
+    eventSection: 'Thông tin sự kiện',
+    validationEventType: 'Vui lòng chọn loại sự kiện.',
+    validationNote: 'Vui lòng nhập tiêu đề/note cho lịch chăm sóc.',
+    validationDateRange: 'Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.',
+    validationNumber: 'Trường số không hợp lệ.',
+  },
+
+  // ── DeleteEventModal ─────────────────────────────────────────────────────
+  deleteEvent: {
+    title: 'Xóa lịch chăm sóc',
+    deletingEventLabel: 'Sự kiện đang xóa',
+    confirmDeleteSubtitle: 'Sự kiện này có sự kiện con đã hoàn thành. Bạn có chắc muốn xóa không?',
+    cancel: 'Hủy',
+    confirmDelete: 'Xóa',
+    deleting: 'Đang xóa...',
+    loadChildrenError: 'Không thể tải danh sách sự kiện con.',
+    childrenCountLabel: '{{count}} sự kiện con đã hoàn thành cũng sẽ bị xóa:',
+    noChildrenToDelete: 'Không có sự kiện con nào đã hoàn thành để xóa.',
+    completed: 'Hoàn thành',
+  },
+
+  // ── SuccessPromptModal ────────────────────────────────────────────────────
+  successPrompt: {
+    title: 'Kết thúc kế hoạch',
+    subtitle: 'Bạn đã hoàn thành sự kiện cuối cùng. Kế hoạch này có thành công không?',
+    hint: 'Chọn Thành công nếu cây đã hồi phục sau điều trị, hoặc Thất bại nếu kế hoạch không đạt kết quả mong muốn.',
+    success: 'Thành công',
+    failure: 'Thất bại',
+  },
+
+  // ── FilterModal ───────────────────────────────────────────────────────────
+  filterModal: {
+    title: 'Bộ lọc',
+    targetTypeSection: 'Phạm vi',
+    targetTypeAll: 'Tất cả',
+    targetTypeFarm: 'Theo vườn',
+    targetTypeZone: 'Theo khu vực',
+    targetTypePlant: 'Theo cây',
+    selectFarm: 'Chọn vườn',
+    selectZone: 'Chọn khu vực',
+    selectPlant: 'Chọn cây',
+    selectPlan: 'Chọn kế hoạch',
+    allFarms: 'Tất cả vườn',
+    allZones: 'Tất cả khu vực',
+    allPlants: 'Tất cả cây',
+    allPlans: 'Tất cả kế hoạch',
+    selectFarmFirst: 'Chọn vườn trước',
+    eventTypeSection: 'Loại sự kiện',
+    allEventTypes: 'Tất cả loại sự kiện',
+    apply: 'Áp dụng',
+    clear: 'Xóa bộ lọc',
+    loadingZones: 'Đang tải khu vực...',
+    loadingPlants: 'Đang tải cây trồng...',
+  },
+
+  // ── PlantSelectModal ──────────────────────────────────────────────────────
+  plantSelect: {
+    title: 'Chọn cây',
+    selected: 'Đã chọn',
+    plantingDate: 'Ngày trồng',
+    batch: 'Lô',
+    searchPlaceholder: 'Tìm kiếm cây trồng...',
+    clearSelection: 'Xóa chọn',
+    cancel: 'Hủy',
+    noPlants: 'Không có cây trồng nào.',
+    noPlantsInScope: 'Không có cây trồng trong phạm vi đã chọn.',
+    statusActive: 'Hoạt động',
+    statusInactive: 'Không hoạt động',
+    statusArchived: 'Đã lưu trữ',
   },
 
   // ── PlantEventEditDialog ───────────────────────────────────────────────────
@@ -399,6 +504,33 @@ export const plantManagementVi = {
     trackProgressLabel: 'Theo dõi',
     plantFallback: 'Cây #{{id}}',
     zoneFallback: 'Khu {{id}}',
+    // Tracking granularity
+    trackingGranularityLabel: 'Theo dõi tiến độ',
+    trackingGranularity: {
+      none: 'Không theo dõi',
+      zone: 'Theo vùng (khu)',
+      plant: 'Theo cây',
+      farmHint: 'ZONE: theo dõi theo khu vực. PLANT: theo dõi theo cây.',
+      zoneHint: 'PLANT: theo dõi tiến độ theo từng cây.',
+    },
+    // ChildEventNode & ChildEventTree
+    markAsComplete: 'Đánh dấu hoàn thành',
+    markAsIncomplete: 'Đánh dấu chưa hoàn thành',
+    editNote: 'Sửa ghi chú',
+    hideTasks: 'Ẩn công việc',
+    showTasks: 'Hiện công việc',
+    // ProgressRow
+    saveNote: 'Lưu',
+    cancelNote: 'Hủy',
+    addNotePlaceholder: 'Nhập ghi chú...',
+    notePlaceholder: 'Thêm ghi chú...',
+    // Modal headers
+    eventDetailsTitle: 'Chi tiết sự kiện',
+    closeModal: 'Đóng',
+    // Status labels
+    planned: 'Đã lên lịch',
+    recorded: 'Đã ghi nhận',
+    inProgress: 'Đang thực hiện',
     // ── Dashboard / Stats ──
     pageTag: 'Agriculture command center',
     pageTitle: 'Tổng quan nông nghiệp',

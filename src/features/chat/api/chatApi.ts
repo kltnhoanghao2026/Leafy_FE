@@ -147,7 +147,7 @@ export interface MessageResponse {
     content: string | null;
     type: string;
   } | null;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   attachments?: AttachmentInfoResponse[];
   linkPreview?: LinkPreviewResponse | null;
   reactions?: Record<string, string[]> | null;
@@ -181,7 +181,7 @@ export interface ChatNotification {
   isEdited: boolean;
   isFromMe: boolean;
   status: MessageStatus;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   attachments?: AttachmentInfoResponse[];
   linkPreview?: LinkPreviewResponse | null;
   reactions?: Record<string, string[]> | null;

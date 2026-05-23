@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   X,
@@ -7,7 +7,6 @@ import {
   ListChecks,
   Sprout,
   MapPin,
-  RefreshCw,
   CalendarDays,
   ChevronRight,
   Leaf,
@@ -22,23 +21,18 @@ import {
 import { ROUTES } from "../../../../lib/routes";
 import {
   usePlantEvent,
-  useEventProgress,
   useToggleTaskMutation,
   useUpdatePlantEventMutation,
-  useUpdateEventProgressMutation,
-  useGenerateEventProgressMutation,
 } from "../..";
-import { useMyPlants } from "../..";
-import { useFarmZones } from "../../../farm-management/queries";
-import type { PlantEventResponse, EventProgressResponse, PageResponse } from "../../shared/types";
+import type { PlantEventResponse } from "../../shared/types";
 import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_ICONS,
   EVENT_CATEGORY_MAP,
   CATEGORY_DOT_COLORS,
-  TARGET_TYPE_LABELS,
-  TARGET_TYPE_ICONS,
 } from "../../shared/components/displayUtils";
+import { useTranslation } from "../../../../i18n";
+import type { TFunction } from "../../../../i18n/context";
 
 interface PlantEventProgressModalProps {
   event: PlantEventResponse;
@@ -125,151 +119,6 @@ function CircleProgress({
   );
 }
 
-// ── ProgressRow ───────────────────────────────────────────────────────────────
-
-function ProgressRow({
-  entry,
-  label,
-  index,
-  onToggle,
-  onEditNote,
-  isToggling,
-}: {
-  entry: EventProgressResponse;
-  label: string;
-  index: number;
-  onToggle: (progressId: string, completed: boolean) => void;
-  onEditNote: (progressId: string, note: string) => void;
-  isToggling: boolean;
-}) {
-  const [editingNote, setEditingNote] = useState(false);
-  const [noteValue, setNoteValue] = useState(entry.note ?? "");
-
-  const handleNoteSave = () => {
-    setEditingNote(false);
-    if (noteValue !== entry.note) {
-      onEditNote(entry.id, noteValue);
-    }
-  };
-
-  const handleNoteKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") handleNoteSave();
-    if (e.key === "Escape") {
-      setNoteValue(entry.note ?? "");
-      setEditingNote(false);
-    }
-  };
-
-  return (
-    <div
-      className={`group flex flex-col gap-2 rounded-2xl border px-4 py-3 transition-all duration-200 ${
-        entry.completed
-          ? "border-emerald-100 bg-linear-to-r from-emerald-50 to-white shadow-sm"
-          : "border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm"
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        {/* Index badge */}
-        <span
-          className={`shrink-0 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-black ${
-            entry.completed
-              ? "bg-emerald-100 text-emerald-600"
-              : "bg-slate-100 text-slate-500"
-          }`}
-        >
-          {entry.completed ? "✓" : index + 1}
-        </span>
-
-        {/* Toggle button */}
-        <button
-          type="button"
-          disabled={isToggling}
-          onClick={() => onToggle(entry.id, !entry.completed)}
-          className="shrink-0 transition-all hover:scale-110 disabled:opacity-40"
-          title={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
-          aria-label={entry.completed ? "Đánh dấu chưa thực hiện" : "Đánh dấu đã thực hiện"}
-        >
-          {entry.completed ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
-          ) : (
-            <Circle className="h-5 w-5 text-slate-300 group-hover:text-slate-400" strokeWidth={2} />
-          )}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p
-              className={`text-sm font-semibold truncate leading-tight ${
-                entry.completed ? "text-slate-400 line-through" : "text-slate-700"
-              }`}
-            >
-              {label}
-            </p>
-            {entry.completedAt && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-500">
-                <CheckCircle2 className="h-2.5 w-2.5 shrink-0" />
-                {new Date(entry.completedAt).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
-              </span>
-            )}
-          </div>
-
-          {/* Note — editable inline */}
-          {editingNote ? (
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <input
-                type="text"
-                autoFocus
-                value={noteValue}
-                onChange={(e) => setNoteValue(e.target.value)}
-                onBlur={handleNoteSave}
-                onKeyDown={handleNoteKeyDown}
-                className="flex-1 rounded-lg border border-blue-200 bg-white px-2 py-1 text-xs text-slate-600 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none"
-                placeholder="Nhập ghi chú..."
-              />
-              <button
-                type="button"
-                onClick={handleNoteSave}
-                className="shrink-0 rounded-lg bg-blue-500 px-2 py-1 text-[10px] font-bold text-white hover:bg-blue-600"
-              >
-                Lưu
-              </button>
-              <button
-                type="button"
-                onClick={() => { setNoteValue(entry.note ?? ""); setEditingNote(false); }}
-                className="shrink-0 rounded-lg border border-slate-200 px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-50"
-              >
-                Hủy
-              </button>
-            </div>
-          ) : (
-            <div
-              className="mt-0.5 flex items-center gap-1.5"
-              onClick={() => { setNoteValue(entry.note ?? ""); setEditingNote(true); }}
-            >
-              <p className={`text-xs truncate cursor-text ${entry.note ? "text-slate-400" : "text-slate-300 italic"}`}>
-                {entry.note || "Thêm ghi chú..."}
-              </p>
-              <button
-                type="button"
-                className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-slate-600"
-                title="Sửa ghi chú"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {entry.targetType === "PLANT" ? (
-          <Leaf className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
-        ) : (
-          <LayoutGrid className={`shrink-0 h-3.5 w-3.5 ${entry.completed ? "text-emerald-300" : "text-slate-300"}`} />
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── ChildEventTree ────────────────────────────────────────────────────────────
 
 function ChildEventNode({
@@ -281,6 +130,7 @@ function ChildEventNode({
   onEdit,
   onDelete,
   onToggleTask,
+  t,
 }: {
   event: PlantEventResponse;
   dotColor: string;
@@ -290,13 +140,12 @@ function ChildEventNode({
   onEdit?: (event: PlantEventResponse) => void;
   onDelete?: (event: PlantEventResponse) => void;
   onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  t: TFunction;
 }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(depth === 0);
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const hasChildren = event.children && event.children.length > 0;
-  const TargetIcon = event.targetType ? TARGET_TYPE_ICONS[event.targetType] : null;
-  const targetLabel = event.targetType ? TARGET_TYPE_LABELS[event.targetType] : null;
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Sprout;
 
   const tasks = event.tasks ?? [];
@@ -323,7 +172,7 @@ function ChildEventNode({
           type="button"
           onClick={() => onToggleComplete(event.id, !event.completed)}
           className="mt-2 shrink-0 transition-all hover:scale-110"
-          title={event.completed ? "Đánh dấu chưa hoàn thành" : "Đánh dấu hoàn thành"}
+          title={event.completed ? t('plantManagement.overview.markAsIncomplete') : t('plantManagement.overview.markAsComplete')}
         >
           {event.completed ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -339,7 +188,7 @@ function ChildEventNode({
               type="button"
               onClick={() => onEdit(event)}
               className="rounded-lg p-1 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              title="Chỉnh sửa"
+              title={t('common.edit')}
             >
               <Pencil className="h-4 w-4" />
             </button>
@@ -349,7 +198,7 @@ function ChildEventNode({
               type="button"
               onClick={() => onDelete(event)}
               className="rounded-lg p-1 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-              title="Xóa"
+              title={t('plantManagement.deleteEvent.confirmDelete')}
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -375,15 +224,6 @@ function ChildEventNode({
             >
               {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
             </span>
-            {targetLabel && (
-              <span
-                className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold"
-                style={{ backgroundColor: `rgba(${dotColorRgb},0.1)`, color: dotColor }}
-              >
-                {TargetIcon && <TargetIcon className="h-3 w-3 shrink-0" />}
-                {targetLabel}
-              </span>
-            )}
             <span
               className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold"
               style={{
@@ -392,7 +232,7 @@ function ChildEventNode({
                 borderColor: event.planned ? `${dotColor}44` : "#e2e8f0",
               }}
             >
-              {event.planned ? "Đã lên lịch" : "Đã ghi nhận"}
+              {event.planned ? t('plantManagement.overview.planned') : t('plantManagement.overview.recorded')}
             </span>
           </div>
 
@@ -492,7 +332,7 @@ function ChildEventNode({
                 type="button"
                 onClick={() => setTasksExpanded((v) => !v)}
                 className="ml-1 rounded p-0.5 text-slate-400 hover:bg-slate-100 transition-colors"
-                aria-label={tasksExpanded ? "Ẩn công việc" : "Hiện công việc"}
+                aria-label={tasksExpanded ? t('plantManagement.overview.hideTasks') : t('plantManagement.overview.showTasks')}
               >
                 {tasksExpanded ? (
                   <ChevronUp className="h-3 w-3" />
@@ -514,12 +354,12 @@ function ChildEventNode({
                     key={idx}
                     className="flex items-start gap-2 rounded-lg border border-slate-100 bg-slate-50 px-2 py-1.5"
                   >
-                    <button
-                      type="button"
-                      title={task.completed ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
-                      onClick={() => onToggleTask?.(event, idx)}
-                      className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
-                    >
+              <button
+                type="button"
+                title={task.completed ? t('plantManagement.eventEdit.taskMarkUndone') : t('plantManagement.eventEdit.taskMarkDone')}
+                onClick={() => onToggleTask?.(event, idx)}
+                className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
+              >
                       {task.completed ? (
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                       ) : (
@@ -616,6 +456,7 @@ function ChildEventNode({
             onEdit={onEdit}
             onDelete={onDelete}
             onToggleTask={onToggleTask}
+            t={t}
           />
         </div>
       )}
@@ -632,6 +473,7 @@ function ChildEventTree({
   onEdit,
   onDelete,
   onToggleTask,
+  t,
 }: {
   children: PlantEventResponse[];
   dotColor: string;
@@ -641,6 +483,7 @@ function ChildEventTree({
   onEdit?: (event: PlantEventResponse) => void;
   onDelete?: (event: PlantEventResponse) => void;
   onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  t: TFunction;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -655,6 +498,7 @@ function ChildEventTree({
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleTask={onToggleTask}
+          t={t}
         />
       ))}
     </div>
@@ -670,6 +514,8 @@ export function PlantEventProgressModal({
   onDelete,
   onToggleTask,
 }: PlantEventProgressModalProps) {
+  const { t } = useTranslation();
+  
   // Always fetch live data so toggling reflects immediately
   const { data: liveEvent } = usePlantEvent(initialEvent.id, true);
   const event = liveEvent ?? initialEvent;
@@ -679,99 +525,22 @@ export function PlantEventProgressModal({
   const dotColorRgb = hexToRgb(dotColor);
 
   const hasFarmScope = !!(event.farmZoneId || event.farmPlotId);
-  const isZoneScope = !!event.farmZoneId;
-
-  // Progress entries
-  const progressQuery = useEventProgress(event.id, 0, true);
-  const progressPage = progressQuery.data as PageResponse<EventProgressResponse> | undefined;
-  const progressEntries: EventProgressResponse[] = progressPage?.content ?? [];
-
-  // Target name lookups
-  const needPlantLookup =
-    hasFarmScope && progressEntries.some((e) => e.targetType === "PLANT");
-
-  const plantsQueryEnabled = useMyPlants(
-    needPlantLookup
-      ? {
-          farmZoneId: event.farmZoneId ?? undefined,
-          farmPlotId: !event.farmZoneId ? (event.farmPlotId ?? undefined) : undefined,
-          size: 200,
-        }
-      : {},
-  );
-
-  const zonesQuery = useFarmZones(
-    event.farmPlotId ?? "",
-    hasFarmScope &&
-      !isZoneScope &&
-      progressEntries.some((e) => e.targetType === "ZONE"),
-  );
-
-  const plantMap = useMemo(() => {
-    const map = new Map<string, string>();
-    (plantsQueryEnabled.data?.content ?? []).forEach((p) => {
-      map.set(
-        p.id,
-        p.nickName || p.plantNumber || `Cây #${p.id.slice(-6)}`,
-      );
-    });
-    return map;
-  }, [plantsQueryEnabled.data]);
-
-  const zoneMap = useMemo(() => {
-    const map = new Map<string, string>();
-    (zonesQuery.data ?? []).forEach((z) => {
-      map.set(z.id, z.zoneName || `Khu ${z.id.slice(-6)}`);
-    });
-    return map;
-  }, [zonesQuery.data]);
-
-  const resolveTargetLabel = (entry: EventProgressResponse): string => {
-    if (entry.targetType === "PLANT") {
-      return plantMap.get(entry.targetId) ?? `Cây #${entry.targetId.slice(-6)}`;
-    }
-    return zoneMap.get(entry.targetId) ?? `Khu ${entry.targetId.slice(-6)}`;
-  };
 
   // Mutations
   const toggleTask = useToggleTaskMutation();
   const updateChildEvent = useUpdatePlantEventMutation();
-  const updateProgress = useUpdateEventProgressMutation();
-  const generateProgress = useGenerateEventProgressMutation();
 
   const tasks = event.tasks ?? [];
   const taskDone = tasks.filter((t) => t.completed).length;
   const taskPct = tasks.length > 0 ? Math.round((taskDone / tasks.length) * 100) : 0;
 
-  // Progress tracking: prefer children completion count when children exist
+  // Progress is always computed from the child event hierarchy
   const directChildren = event.children ?? [];
-  const hasChildHierarchy = directChildren.length > 0;
   const childrenDone = directChildren.filter((c) => c.completed).length;
-
-  const progressTotal = hasChildHierarchy
-    ? directChildren.length
-    : (event.progressTotal ?? progressEntries.length);
-  const progressCompleted = hasChildHierarchy
-    ? childrenDone
-    : (event.progressCompleted ?? progressEntries.filter((e) => e.completed).length);
+  const progressTotal = directChildren.length;
+  const progressCompleted = childrenDone;
   const progressPct =
     progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
-
-  const handleToggleProgress = (progressId: string, completed: boolean) => {
-    void updateProgress.mutateAsync({
-      eventId: event.id,
-      progressId,
-      payload: { completed },
-    });
-  };
-
-  const handleEditNote = (progressId: string, note: string) => {
-    void updateProgress.mutateAsync({
-      eventId: event.id,
-      progressId,
-      payload: { note },
-    });
-  };
 
   const handleToggleChildComplete = (childEventId: string, completed: boolean) => {
     void updateChildEvent.mutateAsync({
@@ -780,7 +549,7 @@ export function PlantEventProgressModal({
     });
   };
 
-  const showSummaryCards = tasks.length > 0 || (hasFarmScope && progressTotal > 0) || hasChildHierarchy;
+  const showSummaryCards = tasks.length > 0 || progressTotal > 0;
 
   return (
     <div
@@ -814,7 +583,7 @@ export function PlantEventProgressModal({
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                 </span>
                 <h3 className="mt-2 text-xl font-black text-slate-900 leading-tight">
-                  {event.note ?? "Chi tiết sự kiện"}
+                  {event.note ?? t('plantManagement.overview.eventDetailsTitle')}
                 </h3>
                 {event.description && (
                   <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{event.description}</p>
@@ -826,7 +595,7 @@ export function PlantEventProgressModal({
                     type="button"
                     onClick={() => onEdit(event)}
                     className="rounded-full p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
-                    title="Chỉnh sửa"
+                    title={t('common.edit')}
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
@@ -836,7 +605,7 @@ export function PlantEventProgressModal({
                     type="button"
                     onClick={() => onDelete(event)}
                     className="rounded-full p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                    title="Xóa"
+                    title={t('plantManagement.deleteEvent.confirmDelete')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -845,7 +614,7 @@ export function PlantEventProgressModal({
                   type="button"
                   onClick={onClose}
                   className="shrink-0 -mt-0.5 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                  aria-label="Đóng"
+                  aria-label={t('plantManagement.overview.closeModal')}
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -867,12 +636,12 @@ export function PlantEventProgressModal({
               {event.completed ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-black text-emerald-600">
                   <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  Hoàn thành
+                  {t('plantManagement.overview.completedBadge')}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-3 py-1 text-xs font-black text-amber-600">
                   <Clock className="h-3.5 w-3.5" />
-                  Đang thực hiện
+                  {t('plantManagement.overview.inProgress')}
                 </span>
               )}
             </div>
@@ -888,8 +657,8 @@ export function PlantEventProgressModal({
                     <CircleProgress
                       pct={taskPct}
                       color={dotColor}
-                      label="Công việc"
-                      sublabel={`${taskDone}/${tasks.length} hoàn thành`}
+                      label={t('plantManagement.overview.taskProgressLabel')}
+                      sublabel={`${taskDone}/${tasks.length} ${t('plantManagement.overview.tasksDone')}`}
                     />
                   </div>
                 )}
@@ -901,8 +670,8 @@ export function PlantEventProgressModal({
                     <CircleProgress
                       pct={progressPct}
                       color={dotColor}
-                      label="Theo dõi"
-                      sublabel={`${progressCompleted}/${progressTotal} hoàn thành`}
+                      label={t('plantManagement.overview.trackProgressLabel')}
+                      sublabel={`${progressCompleted}/${progressTotal} ${t('plantManagement.overview.tasksDone')}`}
                     />
                   </div>
                 )}
@@ -920,7 +689,7 @@ export function PlantEventProgressModal({
                     <ListChecks className="h-3.5 w-3.5" style={{ color: dotColor }} />
                   </div>
                   <p className="text-sm font-black text-slate-700">
-                    Danh sách công việc
+                    {t('plantManagement.overview.taskSectionTitle')}
                   </p>
                   <span className="ml-auto text-xs font-semibold text-slate-400 tabular-nums">
                     {taskDone}/{tasks.length}
@@ -969,7 +738,7 @@ export function PlantEventProgressModal({
                             void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
                           }
                           className="mt-0.5 shrink-0 transition-all hover:scale-110 disabled:opacity-40"
-                          aria-label={task.completed ? "Đánh dấu chưa xong" : "Đánh dấu hoàn thành"}
+                          aria-label={task.completed ? t('plantManagement.eventEdit.taskMarkUndone') : t('plantManagement.eventEdit.taskMarkDone')}
                         >
                           {task.completed ? (
                             <CheckCircle2 className="h-5 w-5 text-emerald-500" strokeWidth={2.5} />
@@ -1004,102 +773,6 @@ export function PlantEventProgressModal({
               </section>
             )}
 
-            {/* ── Divider ── */}
-            {tasks.length > 0 && hasFarmScope && !hasChildHierarchy && (
-              <div className="border-t border-dashed border-slate-100" />
-            )}
-
-            {/* ── Progress tracking section (legacy — hidden when children hierarchy exists) ── */}
-            {hasFarmScope && !hasChildHierarchy && (
-              <section>
-                <div className="mb-3 flex items-center gap-2">
-                  <div
-                    className="flex items-center justify-center h-6 w-6 rounded-lg"
-                    style={{ backgroundColor: `rgba(${dotColorRgb},0.12)` }}
-                  >
-                    <Sprout className="h-3.5 w-3.5" style={{ color: dotColor }} />
-                  </div>
-                  <p className="text-sm font-black text-slate-700">
-                    Theo dõi thực hiện
-                  </p>
-                  {progressTotal > 0 && (
-                    <span className="ml-auto text-xs font-semibold text-slate-400 tabular-nums">
-                      {progressCompleted}/{progressTotal}
-                    </span>
-                  )}
-                </div>
-
-                {progressTotal > 0 && (
-                  <div className="mb-3 h-1 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-1 rounded-full transition-all duration-700"
-                      style={{
-                        width: `${progressPct}%`,
-                        backgroundColor:
-                          progressCompleted === progressTotal ? "#10B981" : dotColor,
-                      }}
-                    />
-                  </div>
-                )}
-
-                {progressQuery.isLoading ? (
-                  <div className="flex flex-col gap-2">
-                    {[0, 1, 2].map((i) => (
-                      <div
-                        key={i}
-                        className="h-14 animate-pulse rounded-2xl bg-slate-100"
-                        style={{ animationDelay: `${i * 100}ms` }}
-                      />
-                    ))}
-                  </div>
-                ) : progressEntries.length === 0 ? (
-                  <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100">
-                      <MapPin className="h-5 w-5 text-slate-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-600">
-                        Chưa có dữ liệu theo dõi
-                      </p>
-                      <p className="mt-1 text-xs text-slate-400 leading-relaxed max-w-55 mx-auto">
-                        {isZoneScope
-                          ? "Khởi tạo để theo dõi từng cây trong khu vực này."
-                          : "Khởi tạo để theo dõi từng cây / khu vực trong vườn."}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={generateProgress.isPending}
-                      onClick={() => void generateProgress.mutateAsync(event.id)}
-                      className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:shadow-md active:scale-95 disabled:opacity-60"
-                      style={{ backgroundColor: dotColor }}
-                    >
-                      {generateProgress.isPending ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Sprout className="h-4 w-4" />
-                      )}
-                      Khởi tạo theo dõi
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {progressEntries.map((entry, idx) => (
-                      <ProgressRow
-                        key={entry.id}
-                        entry={entry}
-                        label={resolveTargetLabel(entry)}
-                        index={idx}
-                        onToggle={handleToggleProgress}
-                        onEditNote={handleEditNote}
-                        isToggling={updateProgress.isPending}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-
             {/* ── Child event hierarchy tree ── */}
             {event.children && event.children.length > 0 && (
               <section>
@@ -1111,7 +784,7 @@ export function PlantEventProgressModal({
                     <GitBranch className="h-3.5 w-3.5" style={{ color: dotColor }} />
                   </div>
                   <p className="text-sm font-black text-slate-700">
-                    Theo dõi thực hiện
+                    {t('plantManagement.overview.trackSectionTitle')}
                   </p>
                   <span className="ml-auto text-xs font-semibold text-slate-400 tabular-nums">
                     {progressCompleted}/{progressTotal}
@@ -1131,7 +804,7 @@ export function PlantEventProgressModal({
                   </div>
                 )}
 
-                <ChildEventTree children={event.children} dotColor={dotColor} dotColorRgb={dotColorRgb} depth={0} onToggleComplete={handleToggleChildComplete} onEdit={onEdit} onDelete={onDelete} onToggleTask={onToggleTask} />
+                <ChildEventTree children={event.children} dotColor={dotColor} dotColorRgb={dotColorRgb} depth={0} onToggleComplete={handleToggleChildComplete} onEdit={onEdit} onDelete={onDelete} onToggleTask={onToggleTask} t={t} />
               </section>
             )}
 
@@ -1139,7 +812,7 @@ export function PlantEventProgressModal({
             {event.completed && (
               <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" strokeWidth={2.5} />
-                <p className="text-sm font-bold text-emerald-700">Sự kiện đã được hoàn thành</p>
+                <p className="text-sm font-bold text-emerald-700">{t('plantManagement.overview.completedBanner')}</p>
               </div>
             )}
 

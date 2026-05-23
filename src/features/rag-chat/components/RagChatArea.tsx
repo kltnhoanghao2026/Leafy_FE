@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Info,
   LoaderCircle,
-  MapPin,
   MessageCircle,
   RefreshCcw,
   Search,
@@ -157,14 +156,6 @@ export function RagChatArea({
   textareaRef,
   bottomRef,
   isInfoOpen,
-  plots,
-  zones,
-  selectedPlotId,
-  selectedZoneId,
-  isLoadingPlots,
-  isLoadingZones,
-  onPlotChange,
-  onZoneChange,
   onSubmit,
   onQuestionChange,
   onKeyDown,
@@ -350,7 +341,7 @@ export function RagChatArea({
       {/* ── Input footer ── */}
       <div className="shrink-0 border-t border-gray-200/60 bg-white px-3 py-3">
         {/* Farm context selector row */}
-        <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+        {/* <div className="flex items-center gap-2 mb-2.5 flex-wrap">
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
             <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
             <select
@@ -392,7 +383,7 @@ export function RagChatArea({
               Ngữ cảnh đã chọn
             </span>
           )}
-        </div>
+        </div> */}
 
         {/* Route selector row */}
         <div className="flex items-center gap-2 mb-2.5 flex-wrap text-[11px] font-medium">

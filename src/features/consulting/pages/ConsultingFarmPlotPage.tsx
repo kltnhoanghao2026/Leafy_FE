@@ -1,28 +1,15 @@
 ﻿import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, FlaskConical, LayoutGrid, List, MapPin, Sprout, Tag } from 'lucide-react';
+import { ArrowLeft, FlaskConical, LayoutGrid, List, MapPin, Sprout } from 'lucide-react';
 import { ROUTES } from '../../../lib/routes';
 import {
   useConsultingFarmPlot,
   useConsultingFarmZones,
   useConsultingPlants,
 } from '../queries/consulting.queries';
-import type { PlantStatus } from '../../plant-management/shared/types';
 
 import { PlantCard } from '../../plant-management/plant/components/PlantCard';
 import { useSpecies } from '../../plant-management';
-
-const plantStatusLabel: Record<PlantStatus, string> = {
-  ACTIVE: 'Đang phát triển',
-  INACTIVE: 'Ngừng hoạt động',
-  ARCHIVED: 'Đã lưu trữ',
-};
-
-const plantStatusColor: Record<PlantStatus, string> = {
-  ACTIVE: 'bg-green-100 text-green-700',
-  INACTIVE: 'bg-slate-100 text-slate-500',
-  ARCHIVED: 'bg-amber-100 text-amber-600',
-};
 
 export function ConsultingFarmPlotPage() {
   const { farmerProfileId, farmPlotId } = useParams<{

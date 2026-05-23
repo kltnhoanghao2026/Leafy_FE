@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, Database, Tag, Hash, BookOpen, Star, X, Loader2 } from "lucide-react";
+import { FileText, Database, Tag, Hash, BookOpen, Star, Loader2 } from "lucide-react";
 import { ModalShell } from "../../../../components/ui/ModalShell";
 import { ragApi, type ChunkDetail } from "../api/plan.api";
 import type { SourceDocument } from "../../shared/types";
@@ -14,41 +14,37 @@ export function SourceDocumentModal({
   onClose,
 }: SourceDocumentModalProps) {
   const [chunkDetail, setChunkDetail] = useState<ChunkDetail | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Reset state synchronously via browser timer to avoid cascading renders
   useEffect(() => {
-    if (!sourceDocument.pointId) {
+    const timer = setTimeout(() => {
       setChunkDetail(null);
+      setError(null);
+    }, 0);
+
+    if (!sourceDocument.pointId) {
+      clearTimeout(timer);
       return;
     }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
 
     ragApi
       .getChunksByPointIds([sourceDocument.pointId])
       .then((results) => {
-        if (!cancelled && results.length > 0) {
+        if (results.length > 0) {
           setChunkDetail(results[0]);
-        } else if (!cancelled) {
+        } else {
           setError("Không tìm thấy nội dung chunk tương ứng.");
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Lỗi khi tải nội dung.");
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        setError(err instanceof Error ? err.message : "Lỗi khi tải nội dung.");
       });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => clearTimeout(timer);
   }, [sourceDocument.pointId]);
+
+  const loading = Boolean(sourceDocument.pointId) && !chunkDetail && !error;
 
   const metadata = sourceDocument.metadata ?? {};
   const sourceFile =

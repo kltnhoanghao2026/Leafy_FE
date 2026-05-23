@@ -1,49 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useTranslation } from '../../../../i18n';
-import type { PlantEventResponse } from '../../shared/types';
-import {
-  type EventCategory,
-  EVENT_CATEGORY_MAP,
-  CATEGORY_LABELS,
-} from '../../shared/components/displayUtils';
+import { CATEGORY_LABELS } from '../../shared/components/displayUtils';
 import { EventRow } from './EventRow';
 import { CATEGORY_ACCENT_STYLES } from '../schemas/eventAccent';
 import type { GroupedEventListProps } from '../schemas/calendar.types';
-
-const CATEGORY_ORDER: EventCategory[] = ['ROUTINE_CARE', 'HEALTH_MEDICAL', 'GROWTH_LIFECYCLE', 'ALERTS'];
-
-/** Recursively count all events (including nested children). */
-function countAllEvents(events: PlantEventResponse[]): number {
-  let count = 0;
-  for (const e of events) {
-    count += 1;
-    if (e.children && e.children.length > 0) {
-      count += countAllEvents(e.children);
-    }
-  }
-  return count;
-}
-
-/** Check if a single event is considered done. */
-function isEventDone(e: PlantEventResponse): boolean {
-  if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
-    return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
-  }
-  return e.completed;
-}
-
-/** Recursively count done events (including nested children). */
-function countDoneEvents(events: PlantEventResponse[]): number {
-  let count = 0;
-  for (const e of events) {
-    if (isEventDone(e)) count += 1;
-    if (e.children && e.children.length > 0) {
-      count += countDoneEvents(e.children);
-    }
-  }
-  return count;
-}
+import { CATEGORY_ORDER, countAllEvents, countDoneEvents, groupEventsByCategory } from '../schemas/eventUtils';
+import { useTranslation } from '../../../../i18n';
 
 
 // ── CategorySection ───────────────────────────────────────────────────────────
@@ -119,27 +81,18 @@ function CategorySection({ category, events, onEdit, onDelete, onEventHover, onT
 // ── GroupedEventList (public API) ─────────────────────────────────────────────
 
 export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction, hideHeader }: GroupedEventListProps) {
-  const grouped: Record<EventCategory, PlantEventResponse[]> = {
-    ROUTINE_CARE: [],
-    HEALTH_MEDICAL: [],
-    GROWTH_LIFECYCLE: [],
-    ALERTS: [],
-  };
-
-  for (const evt of events) {
-    const cat = EVENT_CATEGORY_MAP[evt.eventType] ?? 'ROUTINE_CARE';
-    grouped[cat].push(evt);
-  }
+  const { t } = useTranslation();
+  const grouped = groupEventsByCategory(events);
 
   const hasAny = CATEGORY_ORDER.some((cat) => grouped[cat].length > 0);
   if (!hasAny) return (
     <div className="flex flex-col gap-3">
       {!hideHeader && (
         <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <span className="text-sm font-semibold text-slate-700">{t('plantManagement.calendar.eventListTitle')}</span>
           <div className="flex items-center gap-2">
             {headerAction}
-            <span className="text-xs text-slate-400">0 sự kiện</span>
+            <span className="text-xs text-slate-400">{t('plantManagement.calendar.zeroEvents')}</span>
           </div>
         </div>
       )}
@@ -156,10 +109,10 @@ export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onTog
       {/* List header */}
       {!hideHeader && (
         <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <span className="text-sm font-semibold text-slate-700">{t('plantManagement.calendar.eventListTitle')}</span>
           <div className="flex items-center gap-2">
             {headerAction}
-            <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+            <span className="text-xs text-slate-400">{t('plantManagement.calendar.eventCount', { count: totalCount })}</span>
           </div>
         </div>
       )}

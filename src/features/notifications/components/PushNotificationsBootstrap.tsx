@@ -175,6 +175,12 @@ export function PushNotificationsBootstrap() {
     }
 
     const unsubscribe = subscribeToForegroundMessages((payload) => {
+      const notificationType = payload.data?.type;
+
+      if (notificationType === 'DIRECT_MESSAGE') {
+        return;
+      }
+
       const title = payload.notification?.title || "Thong bao moi";
       const body = payload.notification?.body;
 

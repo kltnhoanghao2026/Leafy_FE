@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
-import { useTranslation } from '../../../../i18n';
 import type { PlantEventResponse } from '../../shared/types';
 import { VI_WEEKDAY_SHORT, SELECTED_COLOR, CALENDAR_LEGEND } from '../utils/colorUtils';
 

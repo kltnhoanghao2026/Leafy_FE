@@ -25,6 +25,7 @@ import { EventProgressBar } from './EventProgressBar';
 import { ScopeProgressBar } from './ScopeProgressBar';
 import { EventBadgeRow } from './EventBadgeRow';
 import type { EventAccentStyle } from '../schemas/eventAccent';
+import { useTranslation } from '../../../../i18n';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const EVENT_TYPE_ICONS: Record<PlantEventType, React.ComponentType<{ className?: string; size?: number }>> = {
@@ -69,6 +70,7 @@ export function EventRow({
   onToggleTask,
   onSelectEvent,
 }: EventRowProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [hovered, setHovered] = useState(false);
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Droplets;
@@ -102,25 +104,15 @@ export function EventRow({
     return <EventProgressBar done={done} total={event.tasks.length} dotColor={accent.dotColor} />;
   })();
 
-  // ── Inline progress: children or ZONE/PLANT tracking ──────────────────────
+  // ── Inline progress: children ──────────────────────────────────────────────
   const childProgress = (() => {
     const directChildren = event.children ?? [];
-    const hasChildren = directChildren.length > 0;
-    const hasLegacyProgress =
-      event.trackingGranularity && event.trackingGranularity !== 'NONE' &&
-      event.progressTotal != null && event.progressTotal > 0;
+    if (directChildren.length === 0) return null;
 
-    if (!hasChildren && !hasLegacyProgress) return null;
-
-    const total = hasChildren ? directChildren.length : event.progressTotal!;
-    const done = hasChildren
-      ? directChildren.filter(c => c.completed).length
-      : (event.progressCompleted ?? 0);
-    const isZone = hasChildren
-      ? event.targetType === 'FARM'
-      : event.trackingGranularity === 'ZONE';
+    const done = directChildren.filter(c => c.completed).length;
+    const isZone = event.targetType === 'FARM';
     return (
-      <ScopeProgressBar done={done} total={total} isZone={isZone} dotColor={accent.dotColor} />
+      <ScopeProgressBar done={done} total={directChildren.length} isZone={isZone} dotColor={accent.dotColor} />
     );
   })();
 
@@ -152,7 +144,7 @@ export function EventRow({
           {onToggleComplete && (
             <button
               type="button"
-              title={event.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
+              title={event.completed ? t('plantManagement.calendar.taskCompleted') : t('plantManagement.calendar.taskIncomplete')}
               onClick={() => onToggleComplete(event)}
               className="shrink-0 transition-colors hover:opacity-70"
             >
@@ -203,14 +195,14 @@ export function EventRow({
             {childProgress}
           </div>
 
-          {/* Chi tiết button */}
+          {/* Details button */}
           <button
             type="button"
             onClick={() => hasDetails && setExpanded(v => !v)}
             style={{ cursor: hasDetails ? 'pointer' : 'default' }}
             className="shrink-0 flex items-center gap-0.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50"
           >
-            Chi tiết
+            {t('plantManagement.calendar.detailLabel')}
             {hasDetails
               ? expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
               : <ChevronRight className="h-3 w-3" />}
@@ -230,11 +222,11 @@ export function EventRow({
               <Icon className="h-3.5 w-3.5" />
             </span>
             <span className="text-[11px] font-semibold" style={{ color: accent.dotColor }}>
-              Chi tiết sự kiện
+              {t('plantManagement.calendar.eventDetailTitle')}
             </span>
             {event.planned && (
               <span className="ml-auto rounded-full bg-blue-100 px-2 py-0.5 text-[9px] font-semibold text-blue-600">
-                Đã lên kế hoạch
+                {t('plantManagement.calendar.plannedBadge')}
               </span>
             )}
           </div>

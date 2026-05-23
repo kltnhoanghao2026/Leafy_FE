@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { ProfileSettingsCard } from '../components/ProfileSettingsCard'
+import { CertificateSettingsCard } from '../components/CertificateSettingsCard'
 import { DisplaySettingsCard } from '../components/DisplaySettingsCard'
 import { PrivacySettingsCard } from '../components/PrivacySettingsCard'
 import { NotificationSettingsCard } from '../components/NotificationSettingsCard'
-import { User, Monitor, Shield, Bell } from 'lucide-react'
+import { ConsultingRequestsSettingsCard } from '../components/ConsultingRequestsSettingsCard'
+import { User, Monitor, Shield, Bell, Inbox } from 'lucide-react'
 import { useTranslation } from '../../../i18n/useTranslation'
 
-type TabId = 'account' | 'display' | 'privacy' | 'notifications'
+type TabId = 'account' | 'display' | 'privacy' | 'notifications' | 'consulting'
 
 export function SettingsView() {
   const { t } = useTranslation()
@@ -17,6 +19,7 @@ export function SettingsView() {
     { id: 'display', label: t('settings.tabs.display'), icon: <Monitor className="w-4 h-4" /> },
     { id: 'privacy', label: t('settings.tabs.privacy'), icon: <Shield className="w-4 h-4" /> },
     { id: 'notifications', label: t('settings.tabs.notifications'), icon: <Bell className="w-4 h-4" /> },
+    { id: 'consulting', label: t('settings.tabs.consulting'), icon: <Inbox className="w-4 h-4" /> },
   ] as const
 
   return (
@@ -52,6 +55,7 @@ export function SettingsView() {
           {activeTab === 'account' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <ProfileSettingsCard />
+              <CertificateSettingsCard />
             </div>
           )}
           
@@ -70,6 +74,12 @@ export function SettingsView() {
           {activeTab === 'notifications' && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <NotificationSettingsCard />
+            </div>
+          )}
+
+          {activeTab === 'consulting' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <ConsultingRequestsSettingsCard />
             </div>
           )}
         </div>

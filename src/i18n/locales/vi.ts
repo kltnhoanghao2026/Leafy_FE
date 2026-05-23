@@ -24,6 +24,11 @@ export const vi = {
     delete: "Xóa",
     search: "Tìm kiếm",
     unknown: "Không xác định",
+    required: "Bắt buộc",
+    ok: "OK",
+    submit: "Gửi",
+    previousPage: "Trang trước",
+    nextPage: "Trang sau",
   },
 
   auth: {
@@ -53,7 +58,7 @@ export const vi = {
     devices: "Thiết bị",
     admin: "Quản trị",
     home: "Trang chủ",
-    diseaseSearch: "Tra cứu bệnh",
+    search: "Tìm kiếm",
     diseasePrediction: "Chẩn đoán hình ảnh",
     monitor: "Theo dõi",
     alertRules: "Quy tắc",

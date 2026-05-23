@@ -4,18 +4,19 @@ import {
   Clock,
   DollarSign,
   ShieldAlert,
-  Info,
-  Pencil,
-  Trash2,
+  CheckCircle2,
+  Circle,
   Leaf,
   MapPin,
+  Info,
+  Trash2,
+  Pencil,
 } from 'lucide-react';
-import { CheckCircle2, Circle } from 'lucide-react';
 import { ROUTES } from '../../../../lib/routes';
 import type { PlantEventResponse } from '../../shared/types';
-import { TARGET_TYPE_LABELS, TARGET_TYPE_ICONS } from '../../shared/components/displayUtils';
 import { FileThumbnail } from './FileThumbnail';
 import type { EventAccentStyle } from '../../schemas/eventAccent';
+import { useTranslation } from '../../../../i18n';
 
 interface EventExpandedDetailsProps {
   event: PlantEventResponse;
@@ -27,12 +28,12 @@ interface EventExpandedDetailsProps {
   onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
   startLabel?: string | null;
   endLabel?: string | null;
-  durationEndLabel?: string | null;
 }
 
 export function EventExpandedDetails({
   event,
   accent,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Icon,
   onEdit,
   onDelete,
@@ -40,8 +41,8 @@ export function EventExpandedDetails({
   onToggleTask,
   startLabel,
   endLabel,
-  durationEndLabel,
 }: EventExpandedDetailsProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2.5 bg-slate-50/60 px-3 py-3">
       {/* Description */}
@@ -50,15 +51,13 @@ export function EventExpandedDetails({
       )}
 
       {/* Metric cards */}
-      {(startLabel || endLabel || event.durationDays != null || event.estimatedCost != null || event.phiDays != null
-        || (event.trackingGranularity && event.trackingGranularity !== 'NONE' && event.progressTotal != null && event.progressTotal > 0)
-      ) && (
+      {(startLabel || endLabel || event.durationDays != null || event.estimatedCost != null || event.phiDays != null) && (
         <div className="grid grid-cols-2 gap-1.5">
           {startLabel && (
             <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
               <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
               <div>
-                <p className="text-[10px] text-slate-400">Bắt đầu</p>
+                <p className="text-[10px] text-slate-400">{t('plantManagement.calendar.startLabel')}</p>
                 <p className="text-xs font-semibold text-slate-700">{startLabel}</p>
               </div>
             </div>
@@ -67,7 +66,7 @@ export function EventExpandedDetails({
             <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
               <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
               <div>
-                <p className="text-[10px] text-slate-400">Kết thúc</p>
+                <p className="text-[10px] text-slate-400">{t('plantManagement.calendar.endLabel')}</p>
                 <p className="text-xs font-semibold text-slate-700">{endLabel}</p>
               </div>
             </div>
@@ -76,8 +75,8 @@ export function EventExpandedDetails({
             <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
               <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
               <div>
-                <p className="text-[10px] text-slate-400">Thời lượng</p>
-                <p className="text-xs font-semibold text-slate-700">{event.durationDays} ngày</p>
+                <p className="text-[10px] text-slate-400">{t('plantManagement.calendar.durationLabel')}</p>
+                <p className="text-xs font-semibold text-slate-700">{event.durationDays} {t('plantManagement.calendar.durationUnit')}</p>
               </div>
             </div>
           )}
@@ -85,7 +84,7 @@ export function EventExpandedDetails({
             <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
               <DollarSign className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
               <div>
-                <p className="text-[10px] text-slate-400">Chi phí</p>
+                <p className="text-[10px] text-slate-400">{t('plantManagement.calendar.costLabel')}</p>
                 <p className="text-xs font-semibold text-slate-700">{event.estimatedCost}</p>
               </div>
             </div>
@@ -94,33 +93,11 @@ export function EventExpandedDetails({
             <div className="flex items-start gap-2 rounded-lg border border-slate-100 bg-white px-2.5 py-2">
               <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
               <div>
-                <p className="text-[10px] text-slate-400">PHI (ngày cách ly)</p>
-                <p className="text-xs font-semibold text-slate-700">{event.phiDays} ngày</p>
+                <p className="text-[10px] text-slate-400">{t('plantManagement.calendar.phiLabel')}</p>
+                <p className="text-xs font-semibold text-slate-700">{event.phiDays} {t('plantManagement.calendar.durationUnit')}</p>
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {/* Scope badge */}
-      {event.targetType && (
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm" aria-hidden>
-            {(() => {
-              const TargetIcon = TARGET_TYPE_ICONS[event.targetType];
-              return TargetIcon ? <TargetIcon className="h-3.5 w-3.5" /> : null;
-            })()}
-          </span>
-          <span
-            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold tracking-wide"
-            style={{
-              borderColor: `${accent.dotColor}40`,
-              color: accent.dotColor,
-              backgroundColor: `${accent.dotColor}10`,
-            }}
-          >
-            {TARGET_TYPE_LABELS[event.targetType] ?? event.targetType}
-          </span>
         </div>
       )}
 
@@ -130,7 +107,7 @@ export function EventExpandedDetails({
           {event.plant && (
             <EntityCard
               icon={<Leaf className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />}
-              label="Cây"
+              label={t('plantManagement.calendar.plant')}
               primaryText={event.plant.nickName || event.plant.plantNumber || event.plant.tagCode || event.plant.id}
               secondaryText={event.plant.tagCode ? `(${event.plant.tagCode})` : undefined}
               href={ROUTES.DASHBOARD.PLANT_DETAIL(event.plantId)}
@@ -140,7 +117,7 @@ export function EventExpandedDetails({
           {event.farmPlot && (
             <EntityCard
               icon={<MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />}
-              label="Vườn"
+              label={t('plantManagement.calendar.farm')}
               primaryText={event.farmPlot.name || event.farmPlot.code || event.farmPlot.id}
               secondaryText={event.farmPlot.addressLine}
               href={ROUTES.DASHBOARD.FARM_PLOT_DETAIL(event.farmPlotId ?? '')}
@@ -150,7 +127,7 @@ export function EventExpandedDetails({
           {event.farmZone && (
             <EntityCard
               icon={<MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-blue-500" />}
-              label="Khu vực"
+              label={t('plantManagement.calendar.zone')}
               primaryText={event.farmZone.zoneName || event.farmZone.zoneCode || event.farmZone.id}
               href={ROUTES.DASHBOARD.FARM_ZONE_DETAIL(event.farmPlotId ?? '', event.farmZoneId ?? '')}
               borderColor="blue"
@@ -159,7 +136,7 @@ export function EventExpandedDetails({
           {event.planApply && (
             <EntityCard
               icon={<CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-purple-500" />}
-              label="Kế hoạch"
+              label={t('plantManagement.calendar.plan')}
               primaryText={event.planApply.planName || `...${event.planApply.planId?.slice(-6)}`}
               secondaryText={event.planApply.diseaseName}
               badge={event.planApply.status}
@@ -175,7 +152,7 @@ export function EventExpandedDetails({
         <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-2">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
           <div>
-            <p className="text-[10px] font-semibold text-amber-600">Thiết bị bảo hộ (PPE)</p>
+            <p className="text-[10px] font-semibold text-amber-600">{t('plantManagement.calendar.ppeRequired')}</p>
             <p className="text-xs text-amber-700">{event.ppeRequired}</p>
           </div>
         </div>
@@ -186,7 +163,7 @@ export function EventExpandedDetails({
         <div className="flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 px-2.5 py-2">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
           <div>
-            <p className="text-[10px] font-semibold text-red-600">Ghi chú MRL</p>
+            <p className="text-[10px] font-semibold text-red-600">{t('plantManagement.calendar.mrlNote')}</p>
             <p className="text-xs text-red-700">{event.mrlNote}</p>
           </div>
         </div>
@@ -196,7 +173,7 @@ export function EventExpandedDetails({
       {event.attachmentIds != null && event.attachmentIds.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-            Tệp đính kèm ({event.attachmentIds.length})
+            {t('plantManagement.calendar.attachmentsLabel')} ({event.attachmentIds.length})
           </p>
           <div className="grid grid-cols-3 gap-2">
             {event.attachmentIds.map((fileId, idx) => (
@@ -209,7 +186,7 @@ export function EventExpandedDetails({
       {/* Task checklist */}
       {event.tasks != null && event.tasks.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Công việc</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{t('plantManagement.calendar.tasksLabel')}</p>
           {event.tasks.map((task, idx) => (
             <div
               key={idx}
@@ -217,7 +194,7 @@ export function EventExpandedDetails({
             >
               <button
                 type="button"
-                title={task.completed ? 'Đánh dấu chưa xong' : 'Đánh dấu hoàn thành'}
+                title={task.completed ? t('plantManagement.calendar.taskDoneShort') : t('plantManagement.calendar.taskCompleted')}
                 onClick={() => onToggleTask?.(event, idx)}
                 className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
               >
@@ -253,7 +230,7 @@ export function EventExpandedDetails({
               className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100"
             >
               <Trash2 className="h-3 w-3" />
-              Xóa
+              {t('common.delete')}
             </button>
           )}
           {onSelectEvent && (
@@ -263,7 +240,7 @@ export function EventExpandedDetails({
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#245A34] hover:bg-[#245A34]/10 hover:text-[#245A34]"
             >
               <Leaf className="h-3 w-3" />
-              Theo dõi
+              {t('plantManagement.calendar.track')}
             </button>
           )}
           {onEdit && (
@@ -273,7 +250,7 @@ export function EventExpandedDetails({
               className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors ${accent.badgeBg} ${accent.badgeBorder} ${accent.badgeText} hover:opacity-80`}
             >
               <Pencil className="h-3 w-3" />
-              Chỉnh sửa
+              {t('common.edit')}
             </button>
           )}
         </div>

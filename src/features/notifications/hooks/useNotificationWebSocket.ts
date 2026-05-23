@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWebSocketClient } from '../../../providers/WebSocketProvider';
+import { useWebSocketClient } from '../../../providers/wsUtils';
 import { notificationKeys } from '../queries/keys';
 
 export const useNotificationWebSocket = () => {

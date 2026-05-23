@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Plus, X, Check, GripVertical, ListChecks, CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { CalendarViewPanel } from '../../plant-management/calendarview/components/CalendarViewPanel';
 import { GroupedEventList } from '../../plant-management/calendarview/components/GroupedEventList';
@@ -388,12 +388,6 @@ function EventDatePanel({
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [form, setForm] = useState<DraftFormState>(() => makeEmptyForm(selectedDate ?? undefined));
 
-  // Reset to list mode when selected date changes
-  useEffect(() => {
-    setMode('list');
-    setEditingIdx(null);
-  }, [selectedDate]);
-
   const handleFormChange = useCallback((field: keyof DraftFormState, value: string) => {
     if (field === 'tasks') {
       try {
@@ -608,6 +602,7 @@ export function EventCalendarEditor({
       {/* Event date panel */}
       <div className="min-h-0 flex-1 overflow-hidden">
         <EventDatePanel
+          key={selectedDate ?? 'none'}
           selectedDate={selectedDate}
           eventsForDate={selectedDateEvents}
           allEvents={events}

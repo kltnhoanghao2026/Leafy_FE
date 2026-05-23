@@ -7,8 +7,9 @@ import { useCreatePlan } from '../queries/plan.queries';
 import { useFarmPlots } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
 import type { PlanCreateRequest, PlantEventCreateRequest } from '../../shared/types';
-import { PlanInfoSection, emptyForm, emptyEvent } from '../../../consulting/components/PlanInfoSection';
-import type { PlanFormState, PlanInfoErrors } from '../../../consulting/components/PlanInfoSection';
+import { PlanInfoSection, emptyForm, type PlanFormStateCreate } from '../components/PlanInfoSection';
+import type { PlanInfoErrors } from '../components/PlanInfoSection';
+import { emptyEvent } from '../../../consulting/utils/planFormHelpers';
 import { EventScheduleSection } from '../../../consulting/components/EventScheduleSection';
 
 const DRAFT_KEY = 'plan_create_draft';
@@ -21,7 +22,7 @@ export function CreatePlanPage() {
 
   const location = useLocation();
 
-  const [form, setForm] = useState<PlanFormState>(() => {
+  const [form, setForm] = useState<PlanFormStateCreate>(() => {
     if (location.state?.draft?.form) {
       // Merge with emptyForm() so any fields absent from the AI draft (e.g.
       // planName, urgency) are always initialized to a safe default.
@@ -29,7 +30,7 @@ export function CreatePlanPage() {
     }
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return { ...emptyForm(), ...((JSON.parse(raw) as { form: PlanFormState; events: PlantEventCreateRequest[] }).form ?? {}) };
+      if (raw) return { ...emptyForm(), ...((JSON.parse(raw) as { form: PlanFormStateCreate; events: PlantEventCreateRequest[] }).form ?? {}) };
     } catch { /* ignore */ }
     return emptyForm();
   });
@@ -38,7 +39,7 @@ export function CreatePlanPage() {
     if (location.state?.draft?.events) return location.state.draft.events;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) return (JSON.parse(raw) as { form: PlanFormState; events: PlantEventCreateRequest[] }).events ?? [];
+      if (raw) return (JSON.parse(raw) as { form: PlanFormStateCreate; events: PlantEventCreateRequest[] }).events ?? [];
     } catch { /* ignore */ }
     return [];
   });
@@ -63,7 +64,7 @@ export function CreatePlanPage() {
     [farmPlots],
   );
 
-  const updateForm = (field: keyof PlanFormState, value: string | boolean) => {
+  const updateForm = (field: keyof PlanFormStateCreate, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setPlanErrors((prev) => ({ ...prev, [field]: undefined }));
   };

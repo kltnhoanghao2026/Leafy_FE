@@ -12,11 +12,10 @@ export function MonthStatsPanel({
   monthEvents,
   monthCompletedEvents,
   monthPendingEvents,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   monthEventsByType,
 }: MonthStatsPanelProps) {
   const { t } = useTranslation();
-
-  const _entries = Object.entries(monthEventsByType); // reserved for future use
 
   return (
     <div

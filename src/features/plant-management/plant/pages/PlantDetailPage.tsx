@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
-  Clock,
   Image as ImageIcon,
   Microscope,
   Pencil,

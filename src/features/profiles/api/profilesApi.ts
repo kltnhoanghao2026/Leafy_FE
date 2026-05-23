@@ -37,16 +37,30 @@ export interface CertificateDto {
   expired: boolean;
 }
 
+export interface springPageSort {
+  sorted: boolean;
+  unsorted: boolean;
+  empty: boolean;
+}
+
+export interface springPagePageable {
+  pageNumber: number;
+  pageSize: number;
+  offset: number;
+  unpaged: boolean;
+  paged: boolean;
+}
+
 export interface SpringPage<T> {
   content: T[];
-  pageable: any;
+  pageable: springPagePageable;
   last: boolean;
   totalPages: number;
   totalElements: number;
   first: boolean;
   size: number;
   number: number;
-  sort: any;
+  sort: springPageSort;
   numberOfElements: number;
   empty: boolean;
 }
@@ -155,13 +169,21 @@ export const profilesApi = {
       },
     }),
 
-  respondToConsultation: (farmerId: string, accept: boolean) =>
+  respondToConsultation: (farmerProfileId: string, accept: boolean) =>
     apiClient.post<ApiEnvelope<UserConnectionResponse>>(`/profiles/experts/consult/respond`, null, {
-      params: { farmerId, accept },
+      params: { farmerProfileId, accept },
     }),
 
   getFollowersProfiles: (userId: string, params: { page?: number; size?: number } = {}) =>
     apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(`/profiles/users/${userId}/followers/profiles`, {
+      params: {
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+      },
+    }),
+
+  getFollowingProfiles: (userId: string, params: { page?: number; size?: number } = {}) =>
+    apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(`/profiles/users/${userId}/following/profiles`, {
       params: {
         page: params.page ?? 0,
         size: params.size ?? 20,

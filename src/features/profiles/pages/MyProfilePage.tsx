@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Award, MapPin, Camera, ShieldCheck, Loader2, Edit3, Check, X,
-  Users, CalendarDays, ArrowRight, ShieldOff, Clock
+  Users, CalendarDays, ShieldOff, Clock
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Avatar } from '../../../components/ui/Avatar'
@@ -16,6 +16,7 @@ import type { ProfileUpdateRequest } from '../../settings/types'
 import { PostCard } from '../../community/components/PostCard'
 import { mapPostResponseToPost } from '../../community/mappers'
 import { FollowersList } from '../components/FollowersList'
+import { FollowingList } from '../components/FollowingList'
 import { EditProfileModal } from '../components/EditProfileModal'
 
 const ROLE_LABELS: Record<string, string> = { FARMER: 'Nông dân', EXPERT: 'Chuyên gia' }
@@ -134,7 +135,7 @@ export function MyProfilePage() {
   const { data: posts = [] } = useMyPosts(profile?.id)
   const updateMutation = useUpdateProfile()
   const qc = useQueryClient()
-  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'applications'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following' | 'certificates' | 'applications'>('posts')
   const [showEditModal, setShowEditModal] = useState(false)
 
   // Avatar
@@ -272,6 +273,12 @@ export function MyProfilePage() {
                 onClick={() => setActiveTab('posts')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'posts' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Bài viết</button>
               <button
+                onClick={() => setActiveTab('certificates')}
+                className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'certificates' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Chứng chỉ</button>
+              <button
+                onClick={() => setActiveTab('following')}
+                className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'following' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Đang theo dõi</button>
+              <button
                 onClick={() => setActiveTab('followers')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'followers' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Người theo dõi</button>
               <button
@@ -348,26 +355,6 @@ export function MyProfilePage() {
             </div>
           </div>
 
-          {/* Certificates */}
-          {profile.certificates && profile.certificates.length > 0 && (
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-              <h2 className="text-[16px] font-bold text-slate-800 mb-4">Chứng chỉ</h2>
-              <div className="space-y-3">
-                {profile.certificates.map((cert) => (
-                  <div key={cert.id} className="flex gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
-                      <Award className="w-5 h-5 text-slate-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-bold text-slate-800 truncate">{cert.title}</p>
-                      <p className="text-[12px] text-slate-500">{cert.issuedBy}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Contact info */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
             <h2 className="text-[16px] font-bold text-slate-800 mb-4">Thông tin liên hệ</h2>
@@ -436,6 +423,51 @@ export function MyProfilePage() {
           )}
         </div>
       </div>
+      )}
+
+      {activeTab === 'certificates' && (
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h2 className="text-[16px] font-bold text-slate-800 mb-4">Chứng chỉ</h2>
+            {profile.certificates && profile.certificates.length > 0 ? (
+              <div className="space-y-4">
+                {profile.certificates.map((cert) => (
+                  <div key={cert.id} className="flex gap-4 p-4 rounded-xl border border-slate-100 hover:border-[#10B981]/30 transition-colors">
+                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
+                      <Award className="w-6 h-6 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-slate-800">{cert.title}</p>
+                      <p className="text-[13px] text-slate-500 mt-0.5">{cert.issuedBy}</p>
+                      {cert.issueDate && (
+                        <p className="text-[12px] text-slate-400 mt-1">
+                          Ngày cấp: {new Date(cert.issueDate).toLocaleDateString('vi-VN')}
+                          {cert.expired && (
+                            <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-500 font-bold rounded-full text-[11px]">Hết hạn</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <Award className="w-8 h-8 text-slate-300" />
+                </div>
+                <h3 className="text-[16px] font-bold text-slate-800 mb-1">Chưa có chứng chỉ</h3>
+                <p className="text-[14px] text-slate-500">Bạn chưa có chứng chỉ nào được duyệt.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'following' && (
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <FollowingList profileId={profile.id} />
+        </div>
       )}
 
       {activeTab === 'followers' && (

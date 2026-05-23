@@ -1,16 +1,14 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
   BadgeCheck,
   Bot,
-  CalendarDays,
   CheckCircle2,
   Clock,
   DollarSign,
   FlaskConical,
-  Leaf,
   Play,
   RefreshCw,
   ShieldAlert,
@@ -25,20 +23,7 @@ import {
 } from "../../plant-management";
 import { EmbeddedEventList } from "../../plant-management/plan/components/EmbeddedEventList";
 import { ApplyPlanDialog } from "../../plant-management/plan/components/ApplyPlanDialog";
-import {
-  EVENT_TYPE_LABELS,
-  formatDate,
-  TREATMENT_STATUS_LABELS,
-} from "../../plant-management/shared/components/displayUtils";
-import type { TreatmentStatus } from "../../plant-management/shared/types";
-
-const STATUS_STYLE: Record<TreatmentStatus, string> = {
-  PENDING:   "bg-amber-50 text-amber-700 border-amber-200",
-  APPLYING:  "bg-purple-50 text-purple-700 border-purple-200",
-  ACTIVE:    "bg-green-50 text-green-700 border-green-200",
-  COMPLETED: "bg-blue-50 text-blue-700 border-blue-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
+import { formatDate } from "../../plant-management/shared/components/displayUtils";
 
 const SEVERITY_COLOR: Record<string, string> = {
   LOW:      "text-green-600 bg-green-50",
@@ -55,24 +40,6 @@ export function CommunityPlanViewPage() {
   const plan = planQuery.data;
   const applyPlan = useApplyPlanMutation();
   const events = plan?.events ?? [];
-
-  const previewEvents = useMemo(() => {
-    if (!events.length) return [];
-    const anchors = events.map((e) => e.daysFromStart).filter(Boolean) as number[];
-    anchors.sort((a, b) => a - b);
-    const anchorDays = anchors.length ? anchors[0] : 0;
-    return events.map((e) => ({
-      eventType: e.eventType,
-      note: e.note ?? "",
-      description: e.description ?? undefined,
-      daysFromStart: (e.daysFromStart ?? 0) - anchorDays,
-      durationDays: e.durationDays ?? undefined,
-      phiDays: e.phiDays ?? undefined,
-      ppeRequired: e.ppeRequired ?? undefined,
-      mrlNote: e.mrlNote ?? undefined,
-      estimatedCost: e.estimatedCost ?? undefined,
-    }));
-  }, [events]);
 
   if (planQuery.isLoading) {
     return (

@@ -12,7 +12,7 @@ interface SuccessPromptModalProps {
 export function SuccessPromptModal({ applyId, onClose }: SuccessPromptModalProps) {
   const { t } = useTranslation();
   const completeApply = useCompleteApplyMutation();
-  const [selected, setSelected] = useState<boolean | null>(null);
+  const [, setSelected] = useState<boolean | null>(null);
 
   const handleConfirm = async (success: boolean) => {
     setSelected(success);
@@ -29,10 +29,10 @@ export function SuccessPromptModal({ applyId, onClose }: SuccessPromptModalProps
   return (
     <ModalShell
       onClose={onClose}
-      title="Kết thúc kế hoạch"
+      title={t('plantManagement.successPrompt.title')}
       subtitle={
         <p className="text-sm text-slate-500 mt-0.5">
-          Bạn đã hoàn thành sự kiện cuối cùng. Kế hoạch này có thành công không?
+          {t('plantManagement.successPrompt.subtitle')}
         </p>
       }
       footer={
@@ -44,7 +44,7 @@ export function SuccessPromptModal({ applyId, onClose }: SuccessPromptModalProps
             className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 disabled:opacity-50"
           >
             <XCircle className="h-4 w-4" />
-            Thất bại
+            {t('plantManagement.successPrompt.failure')}
           </button>
           <button
             type="button"
@@ -53,7 +53,7 @@ export function SuccessPromptModal({ applyId, onClose }: SuccessPromptModalProps
             className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#2F7F34] px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-[#245A2A] disabled:opacity-50"
           >
             <CheckCircle2 className="h-4 w-4" />
-            Thành công
+            {t('plantManagement.successPrompt.success')}
           </button>
         </div>
       }
@@ -75,8 +75,7 @@ export function SuccessPromptModal({ applyId, onClose }: SuccessPromptModalProps
           </svg>
         </div>
         <p className="text-sm text-slate-600">
-          Chọn <strong>Thành công</strong> nếu cây đã hồi phục sau điều trị,
-          hoặc <strong>Thất bại</strong> nếu kế hoạch không đạt kết quả mong muốn.
+          {t('plantManagement.successPrompt.hint')}
         </p>
       </div>
     </ModalShell>

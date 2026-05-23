@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { CheckCircle2, Circle, Trash2, Plus } from 'lucide-react';
 import type { EventTaskRequest } from '../../shared/types';
 

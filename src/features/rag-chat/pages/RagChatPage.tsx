@@ -42,13 +42,6 @@ const createAssistantMessage = (text: string): RagPageMessage => ({
   createdAt: Date.now(),
 });
 
-const safeString = (value: unknown): string | undefined => {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-};
-
-
 const toTimestamp = (iso: string): number => {
   const parsed = Date.parse(iso);
   return Number.isNaN(parsed) ? Date.now() : parsed;

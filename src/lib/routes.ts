@@ -45,6 +45,8 @@ export const ROUTES = {
     PLANS_GENERATE_PROGRESS: "/dashboard/plans/generate-progress",
     PLAN_DETAIL: (planId: string) =>
       `/dashboard/plans/${planId}`,
+    PLAN_EDIT: (planId: string) =>
+      `/dashboard/plans/${planId}/edit`,
     PLAN_APPLY_DETAIL: (applyId: string) =>
       `/dashboard/plans/applies/${applyId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
@@ -180,14 +182,15 @@ export const API_ENDPOINTS = {
     GET: (profileId: string) => `/profiles/${profileId}`,
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
     PUBLIC_EXPERTS: "/profiles/experts",
+    MY_APPROVAL_REQUESTS: (profileId: string) => `/profiles/${profileId}/approval-requests`,
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
-    PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
-    PROCESSED_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/processed`,
+    PENDING_APPROVAL_REQUESTS: `/admin/certificates/approval-requests/pending`,
+    PROCESSED_APPROVAL_REQUESTS: `/admin/certificates/approval-requests/processed`,
     UPDATE_APPROVAL_STATUS: (profileId: string, requestId: string) =>
-      `/profiles/${profileId}/approval-requests/${requestId}/status`,
+      `/admin/certificates/approval-requests/${profileId}/${requestId}/status`,
     REVOKE_APPROVAL: (profileId: string, requestId: string) =>
-      `/profiles/${profileId}/approval-requests/${requestId}/revoke`,
+      `/admin/certificates/approval-requests/${profileId}/${requestId}/revoke`,
     // Admin-only endpoints
     LIST: "/profiles",
     SEARCH_EXPERTS: "/profiles/search/experts",
@@ -252,6 +255,10 @@ export const API_ENDPOINTS = {
       `/votes/${targetType}/${targetId}`,
   },
 
+  FEED: {
+    MARK_VIEWED: "/feed/viewed",
+  },
+
   FARMS: {
     PLOTS: "/farms/plots",
     PLOT: (id: string) => `/farms/plots/${id}`,
@@ -308,11 +315,6 @@ export const API_ENDPOINTS = {
     BY_FARM_ZONE: (farmZoneId: string) =>
       `/plant-events/farm-zone/${farmZoneId}`,
     CALENDAR: "/plant-events/calendar",
-    PROGRESS: (eventId: string) => `/plant-events/${eventId}/progress`,
-    PROGRESS_ITEM: (eventId: string, progressId: string) =>
-      `/plant-events/${eventId}/progress/${progressId}`,
-    PROGRESS_GENERATE: (eventId: string) =>
-      `/plant-events/${eventId}/progress/generate`,
     DELETABLE_CHILDREN: (eventId: string) =>
       `/plant-events/${eventId}/deletable-children`,
     WITH_CHILDREN: (eventId: string) =>

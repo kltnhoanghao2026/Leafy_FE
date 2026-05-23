@@ -26,6 +26,8 @@ import { ROUTES } from "../lib/routes";
 import { useNotificationState } from "../features/notifications/queries/queries";
 import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 import { useTranslation } from "../i18n";
+import { chatApi } from "../features/chat/api/chatApi";
+import { useQuery } from "@tanstack/react-query";
 
 type SidebarNavItem = {
   name: string;
@@ -44,13 +46,22 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
 
+  // Total unread chat count — uses same queryKey as chat page so WebSocket updates flow through
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => chatApi.getConversations(0, 100),
+    staleTime: 30_000,
+  });
+  const chatUnreadCount = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
+
   const utilityBadgeMap: Record<string, number> = {
     [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
+    [ROUTES.DASHBOARD.CHAT]: chatUnreadCount,
   };
 
   const coreNavItems: SidebarNavItem[] = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
-    { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
+    { name: t('nav.search'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
     { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
@@ -76,14 +87,6 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
-
-  const isSectionActive = (items: SidebarNavItem[]) =>
-    items.some((item) => {
-      const activePath = item.activePath ?? item.path;
-      return item.path === ROUTES.DASHBOARD.ROOT
-        ? location.pathname === ROUTES.DASHBOARD.ROOT || location.pathname.startsWith('/dashboard/metrics')
-        : location.pathname.startsWith(activePath);
-    });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     core: true,

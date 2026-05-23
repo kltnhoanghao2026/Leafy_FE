@@ -9,8 +9,8 @@ import type {
   PlanListParams,
   PublicPlanListParams,
   BulkPlanStatusUpdateRequest,
-  BulkPlanDeleteRequest,
   TreatmentStatus,
+  PlanDto,
 } from "../../shared/types";
 import { plantManagementKeys } from "../../shared/queries/keys";
 
@@ -116,9 +116,7 @@ export const useCreatePlan = () => {
   return useMutation({
     mutationFn: (payload: PlanCreateRequest) =>
       treatmentPlanApi.createPlan(payload),
-    onSuccess: async (plan: any) => {
-      // Wrap in try/catch so cache-invalidation errors don't propagate
-      // back through mutateAsync and get mistaken for creation failures.
+    onSuccess: async (plan: PlanDto) => {
       try {
         await invalidatePlanCaches(queryClient, plan);
       } catch (e) {
@@ -137,7 +135,7 @@ export const useUpdatePlanMutation = () => {
   return useMutation({
     mutationFn: ({ planId, payload }: { planId: string; payload: PlanUpdateRequest }) =>
       treatmentPlanApi.updatePlan(planId, payload),
-    onSuccess: async (plan: any) => {
+    onSuccess: async (plan: PlanDto) => {
       await invalidatePlanCaches(queryClient, plan);
     },
     meta: {
@@ -152,7 +150,7 @@ export const useUpdatePlanVisibilityMutation = () => {
   return useMutation({
     mutationFn: ({ planId }: { planId: string }) =>
       treatmentPlanApi.togglePlanVisibility(planId),
-    onSuccess: async (plan: any) => {
+    onSuccess: async (plan: PlanDto) => {
       await invalidatePlanCaches(queryClient, plan);
     },
     meta: {

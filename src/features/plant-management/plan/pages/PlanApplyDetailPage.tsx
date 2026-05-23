@@ -15,6 +15,7 @@ import {
   RefreshCw,
   ShieldAlert,
   Trash2,
+  XCircle,
 } from "lucide-react";
 import { ROUTES } from "../../../../lib/routes";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
@@ -126,15 +127,6 @@ export function PlanApplyDetailPage() {
                 Theo dõi: {apply.trackingGranularity}
               </span>
             )}
-            {apply.status === "ACTIVE" && apply.canCancel !== false && (
-              <button
-                type="button"
-                onClick={() => setCancelTarget(apply)}
-                className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black text-amber-700 hover:bg-amber-100 transition-colors"
-              >
-                Hủy áp dụng
-              </button>
-            )}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold text-slate-500">
             <span className="flex items-center gap-1.5">
@@ -151,7 +143,58 @@ export function PlanApplyDetailPage() {
               <Clock className="h-4 w-4 text-slate-400" />
               Tạo lúc: {formatDate(apply.createdAt)}
             </span>
+            {apply.appliedByName && (
+              <span className="flex items-center gap-1.5">
+                <Leaf className="h-4 w-4 text-slate-400" />
+                Người áp dụng: {apply.appliedByName}
+              </span>
+            )}
           </div>
+
+          {/* Detailed entity info */}
+          {(apply.farmPlot || apply.farmZone || apply.plant) && (
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {apply.farmPlot && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vườn</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
+                    {apply.farmPlot.name || "—"}
+                  </p>
+                  {apply.farmPlot.code && (
+                    <p className="mt-0.5 text-xs text-slate-500">Mã: {apply.farmPlot.code}</p>
+                  )}
+                  {apply.farmPlot.addressLine && (
+                    <p className="mt-0.5 text-xs text-slate-500">{apply.farmPlot.addressLine}</p>
+                  )}
+                </div>
+              )}
+              {apply.farmZone && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Khu vực</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
+                    {apply.farmZone.zoneName || "—"}
+                  </p>
+                  {apply.farmZone.zoneCode && (
+                    <p className="mt-0.5 text-xs text-slate-500">Mã: {apply.farmZone.zoneCode}</p>
+                  )}
+                </div>
+              )}
+              {apply.plant && (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cây</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
+                    {apply.plant.nickName || apply.plant.plantNumber || "—"}
+                  </p>
+                  {apply.plant.plantNumber && (
+                    <p className="mt-0.5 text-xs text-slate-500">Số: {apply.plant.plantNumber}</p>
+                  )}
+                  {apply.plant.tagCode && (
+                    <p className="mt-0.5 text-xs text-slate-500">Tag: {apply.plant.tagCode}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Link to original plan */}
           <div className="mt-4">
@@ -172,6 +215,19 @@ export function PlanApplyDetailPage() {
               </svg>
             </Link>
           </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {apply.status === "ACTIVE" && apply.canCancel !== false && (
+            <button
+              type="button"
+              onClick={() => setCancelTarget(apply)}
+              className="inline-flex items-center rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+            >
+              <XCircle className="mr-2 h-4 w-4" />
+              Hủy áp dụng
+            </button>
+          )}
         </div>
       </header>
 

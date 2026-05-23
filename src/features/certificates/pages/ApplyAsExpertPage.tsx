@@ -6,12 +6,8 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  Plus,
-  X,
   Loader2,
-  FileText,
-  Image,
-  File,
+  Plus,
   ShieldCheck,
   Sparkles,
   ArrowRight,
@@ -20,12 +16,7 @@ import {
 import toast from "react-hot-toast";
 import { useMyProfile } from "../../settings/queries";
 import { certificatesMutations } from "../queries/certificates.queries";
-import { fileApi } from "../../../lib/api/fileApi";
-import type {
-  CertificateFormEntry,
-  CertificateEntry,
-  CreateApprovalRequestPayload,
-} from "../types";
+import type { CertificateFormEntry, CreateApprovalRequestPayload } from "../types";
 import { WizardProgress } from "../components/WizardProgress";
 import { CertificateEntryForm } from "../components/CertificateEntryForm";
 import { WizardReviewCard } from "../components/WizardReviewCard";
@@ -404,10 +395,8 @@ function ReviewStep({
 }
 
 function SuccessStep({
-  profileId,
   onClose,
 }: {
-  profileId: string;
   onClose: () => void;
 }) {
   return (
@@ -500,7 +489,6 @@ export function ApplyAsExpertPage() {
   const [proposedSpecialty, setProposedSpecialty] = useState("");
   const [certificates, setCertificates] = useState<CertificateFormEntry[]>([]);
 
-  const isLastStep = currentStep === WIZARD_STEPS.length - 1;
   const isSuccess = currentStep === WIZARD_STEPS.length - 1;
 
   const handleNext = useCallback(() => {
@@ -576,7 +564,7 @@ export function ApplyAsExpertPage() {
           />
         );
       case 4:
-        return <SuccessStep profileId={profile?.id ?? ""} onClose={handleCloseSuccess} />;
+        return <SuccessStep onClose={handleCloseSuccess} />;
       default:
         return null;
     }

@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ArrowBigDown,
   ArrowBigUp,
   ChevronDown,
+  Globe,
+  Lock,
   MessageCircle,
   MoreHorizontal,
   Share2,
+  Users,
 } from 'lucide-react'
-import type { CommunityVoteType, Post } from '../types'
+import type { CommunityVoteType, CommunityVisibility, Post } from '../types'
 import { useVotePost } from '../queries'
 import { CommentModal } from './CommentModal'
 import { ShareModal } from './ShareModal'
@@ -18,6 +21,7 @@ import { Link } from 'react-router-dom'
 import { ROUTES } from '../../../lib/routes'
 import { Avatar } from '../../../components/ui/Avatar'
 import { VotersModal } from './VotersModal'
+import { useIntersectionObserver } from '../../../hooks/useIntersectionObserver'
 
 
 // Mirrors the APP's formatStat: 1000+ → "1.0k"
@@ -26,11 +30,18 @@ function formatStat(value: number): string {
   return String(value)
 }
 
-interface PostCardProps {
-  post: Post
+const VISIBILITY_CONFIG: Record<CommunityVisibility, { icon: typeof Globe; label: string; color: string }> = {
+  ALL: { icon: Globe, label: 'Công khai', color: 'text-slate-500' },
+  FOLLOWER: { icon: Users, label: 'Người theo dõi', color: 'text-blue-500' },
+  ONLY_ME: { icon: Lock, label: 'Chỉ mình tôi', color: 'text-slate-400' },
 }
 
-export function PostCard({ post }: PostCardProps) {
+interface PostCardProps {
+  post: Post
+  onView?: (postId: string) => void
+}
+
+export function PostCard({ post, onView }: PostCardProps) {
   // ---------------------------------------------------------------------------
   // Local optimistic vote state — mirrors APP's PostCard pattern exactly
   // ---------------------------------------------------------------------------
@@ -44,6 +55,20 @@ export function PostCard({ post }: PostCardProps) {
   const [votersModal, setVotersModal] = useState<{ open: boolean; tab: CommunityVoteType }>(
     { open: false, tab: 'UPVOTE' },
   )
+
+  // ---------------------------------------------------------------------------
+  // IntersectionObserver for view tracking
+  // ---------------------------------------------------------------------------
+  const handleIntersection = useCallback(() => {
+    if (onView) {
+      onView(post.id)
+    }
+  }, [onView, post.id])
+
+  const setIntersectionRef = useIntersectionObserver(handleIntersection, {
+    threshold: 0.5,
+    rootMargin: '0px',
+  })
 
   const openVoters = (tab: CommunityVoteType) =>
     setVotersModal({ open: true, tab })
@@ -119,8 +144,16 @@ export function PostCard({ post }: PostCardProps) {
   const isShare = post.postType === 'SHARE'
   const isPlanShare = post.postType === 'PLAN_SHARE'
 
+  // Visibility config
+  const visibility = post.visibility || 'ALL'
+  const visibilityConfig = VISIBILITY_CONFIG[visibility]
+  const VisibilityIcon = visibilityConfig.icon
+
   return (
-    <div className="bg-white rounded-[2rem] border border-slate-100/50 shadow-sm mb-6 last:mb-0 overflow-hidden">
+    <div
+      ref={setIntersectionRef}
+      className="bg-white rounded-[2rem] border border-slate-100/50 shadow-sm mb-6 last:mb-0 overflow-hidden"
+    >
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="flex justify-between items-start px-6 pt-6 pb-3">
@@ -140,10 +173,22 @@ export function PostCard({ post }: PostCardProps) {
             >
               {post.author.name}
             </Link>
-            <span className="text-[13px] font-medium text-slate-500 mt-0.5">
-              {post.timestamp}
-              {post.location ? ` • ${post.location}` : ''}
-            </span>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="text-[13px] font-medium text-slate-500">
+                {post.timestamp}
+              </span>
+              {post.location && (
+                <span className="text-[13px] font-medium text-slate-500">
+                  • {post.location}
+                </span>
+              )}
+              {visibility !== 'ALL' && (
+                <span className={`flex items-center gap-1 text-[12px] font-medium ${visibilityConfig.color}`} title={visibilityConfig.label}>
+                  <VisibilityIcon className="w-3 h-3" />
+                  <span>{visibilityConfig.label}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

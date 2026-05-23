@@ -22,16 +22,18 @@ export function NotificationSettingsCard() {
   const [message, setMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
+  // Sync settings from preferences — deferred to avoid cascading renders during effect sync
   useEffect(() => {
-    if (preferences?.notificationSettings) {
+    const timer = setTimeout(() => {
       setSettings({
-        notifyNewMessageFromDirect: preferences.notificationSettings.notifyNewMessageFromDirect ?? true,
-        previewNewMessageFromDirect: preferences.notificationSettings.previewNewMessageFromDirect ?? true,
-        notifyNewMessageFromGroup: preferences.notificationSettings.notifyNewMessageFromGroup ?? true,
-        notifyNewPostFromFriend: preferences.notificationSettings.notifyNewPostFromFriend ?? true,
-        notifyNewMessage: preferences.notificationSettings.notifyNewMessage ?? true,
+        notifyNewMessageFromDirect: preferences?.notificationSettings?.notifyNewMessageFromDirect ?? true,
+        previewNewMessageFromDirect: preferences?.notificationSettings?.previewNewMessageFromDirect ?? true,
+        notifyNewMessageFromGroup: preferences?.notificationSettings?.notifyNewMessageFromGroup ?? true,
+        notifyNewPostFromFriend: preferences?.notificationSettings?.notifyNewPostFromFriend ?? true,
+        notifyNewMessage: preferences?.notificationSettings?.notifyNewMessage ?? true,
       });
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [preferences]);
 
   const handleToggle = async (key: keyof typeof settings) => {

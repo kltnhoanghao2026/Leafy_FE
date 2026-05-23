@@ -26,7 +26,7 @@ export function CertificateEntryForm({
   onRemove,
   canRemove,
 }: CertificateEntryFormProps) {
-  const [uploading, setUploading] = useStateState(false);
+  const [uploading, setUploading] = useState(false);
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -49,7 +49,7 @@ export function CertificateEntryForm({
         e.target.value = "";
       }
     },
-    [onChange],
+    [onChange, setUploading],
   );
 
   const hasProof = entry.proofUrl.trim().length > 0;

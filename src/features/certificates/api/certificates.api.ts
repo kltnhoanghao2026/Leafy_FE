@@ -1,4 +1,5 @@
 import apiClient from "../../../lib/apiClient";
+import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
 import type {
   ApprovalRequestDto,
@@ -16,7 +17,7 @@ export const certificatesApi = {
     payload: CreateApprovalRequestPayload,
   ) =>
     apiClient.post<ApiEnvelope<ApprovalRequestDto>>(
-      `/profiles/${profileId}/approval-requests`,
+      API_ENDPOINTS.PROFILES.APPROVAL_REQUESTS(profileId),
       payload,
     ),
 
@@ -27,6 +28,6 @@ export const certificatesApi = {
    */
   getMyApprovalRequests: (profileId: string) =>
     apiClient.get<ApiEnvelope<ApprovalRequestDto[]>>(
-      `/profiles/${profileId}/approval-requests`,
+      API_ENDPOINTS.PROFILES.MY_APPROVAL_REQUESTS(profileId),
     ),
 };

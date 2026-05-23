@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { AlertCircle, ClipboardList, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
+import { ClipboardList, Image as ImageIcon, MapPin, Send, X } from "lucide-react";
 import { useCreateCommunityPost } from "../queries";
 import { useUploadFileMutation } from "../../settings/queries";
 import { Avatar } from '../../../components/ui/Avatar'
+import { Select } from '../../../components/ui/Select'
 import { useCommunityCurrentUser } from "../hooks/useCommunityCurrentUser";
 import { useMyPlans } from "../../plant-management/plan/queries/plan.queries";
+import type { CommunityVisibility } from "../types";
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -20,18 +22,24 @@ const LOCATIONS = [
   "Gia Nghia",
 ];
 
+const VISIBILITY_OPTIONS = [
+  { value: "ALL" as CommunityVisibility, label: "Công khai" },
+  { value: "FOLLOWER" as CommunityVisibility, label: "Người theo dõi" },
+  { value: "ONLY_ME" as CommunityVisibility, label: "Chỉ mình tôi" },
+];
+
 export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const createPost = useCreateCommunityPost();
   const uploadFile = useUploadFileMutation();
   const currentUser = useCommunityCurrentUser();
   const [content, setContent] = useState("");
   const [location, setLocation] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [postType, setPostType] = useState<"FEED" | "PLAN_SHARE">("FEED");
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [visibility, setVisibility] = useState<CommunityVisibility>("ALL");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const myPlansQuery = useMyPlans();
@@ -62,13 +70,13 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const resetForm = () => {
     setContent("");
     setLocation("");
-    setIsUrgent(false);
     setSelectedFile(null);
     if (previewImage) URL.revokeObjectURL(previewImage);
     setPreviewImage(null);
     setMediaError(null);
     setPostType("FEED");
     setSelectedPlanId(null);
+    setVisibility("ALL");
     uploadFile.reset();
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -98,7 +106,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
       await createPost.mutateAsync({
         content: {
           caption: content.trim(),
-          hashtags: isUrgent ? ["urgent"] : [],
+          hashtags: [],
         },
         media: uploadedMedia
           ? [
@@ -111,7 +119,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
         postType,
         location:
           location && location !== "PICKING" ? { name: location } : null,
-        visibility: "ALL",
+        visibility: visibility,
         planId: postType === "PLAN_SHARE" ? selectedPlanId : null,
       });
 
@@ -251,18 +259,6 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
             ) : null}
 
             <div className="mt-4 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsUrgent(!isUrgent)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[13px] font-bold border transition-all ${
-                  isUrgent
-                    ? "bg-red-50 border-red-200 text-red-500"
-                    : "border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-400"
-                }`}
-              >
-                <AlertCircle className="w-4 h-4" strokeWidth={2.5} />
-                Urgent advice
-              </button>
               {location && location !== "PICKING" ? (
                 <button
                   type="button"
@@ -326,6 +322,19 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                 >
                   <ClipboardList className="w-5 h-5" strokeWidth={2.5} />
                 </button>
+              </div>
+            </div>
+
+            {/* Visibility Selector */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[13px] font-bold text-slate-500">Ai có thể xem:</span>
+              <div className="w-40">
+                <Select
+                  value={visibility}
+                  onChange={(val) => setVisibility(val as CommunityVisibility)}
+                  options={VISIBILITY_OPTIONS}
+                  size="sm"
+                />
               </div>
             </div>
 

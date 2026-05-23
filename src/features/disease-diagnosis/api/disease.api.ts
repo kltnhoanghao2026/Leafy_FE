@@ -148,7 +148,7 @@ export const diseaseApi = {
     language?: string;
     image_url?: string;
   }) => {
-    const response = await apiClient.post<any>(
+    const response = await apiClient.post<Record<string, unknown>>(
       API_ENDPOINTS.RAG.GENERATE_PLAN,
       {
         disease_name: payload.disease_name,
@@ -168,7 +168,7 @@ export const diseaseApi = {
       "result" in envelope &&
       ("code" in envelope || "message" in envelope)
     ) {
-      return envelope.result;
+      return (envelope as { result: unknown }).result;
     }
     return envelope;
   },

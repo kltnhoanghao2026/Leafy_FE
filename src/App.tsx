@@ -113,6 +113,11 @@ const CreatePlanPage = lazy(() =>
     default: module.CreatePlanPage,
   })),
 );
+const EditPlanPage = lazy(() =>
+  import("./features/plant-management/plan/pages/EditPlanPage").then((module) => ({
+    default: module.EditPlanPage,
+  })),
+);
 const PlanGenerationProgressPage = lazy(() =>
   import("./features/plant-management/plan/pages/PlanGenerationProgressPage").then((module) => ({
     default: module.PlanGenerationProgressPage,
@@ -412,6 +417,14 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <PlanGenerationProgressPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="plans/:planId/edit"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <EditPlanPage />
                   </Suspense>
                 }
               />

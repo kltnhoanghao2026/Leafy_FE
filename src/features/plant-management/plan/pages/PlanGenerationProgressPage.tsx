@@ -36,14 +36,6 @@ export interface PlanGenerationState {
 
 type StepStatus = "idle" | "running" | "done" | "error";
 
-interface PipelineStep {
-  id: string;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-  durationMs: number; // approximate simulated minimum display time
-}
-
 /**
  * Pipeline steps mirror the plan_agent graph nodes:
  *

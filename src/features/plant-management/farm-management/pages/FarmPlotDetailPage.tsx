@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
   MapPin,
@@ -23,7 +23,6 @@ function formatArea(val: number | null) {
 
 export function FarmPlotDetailPage() {
   const { farmPlotId = "" } = useParams<{ farmPlotId: string }>();
-  const navigate = useNavigate();
 
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";

@@ -1,52 +1,10 @@
 import { useMemo } from 'react';
-import { ClipboardList, Leaf, Droplets, Sun, CalendarDays, Wheat } from 'lucide-react';
+import { ClipboardList, Droplets, Sun, CalendarDays, Wheat } from 'lucide-react';
 import { Select } from '../../../components/ui/Select';
 import { useSpecies } from '../../plant-management/species/queries/species.queries';
-import type { PlantEventCreateRequest } from '../../plant-management/shared/types';
 import { Field, inputCls, errorInputCls, FieldError } from './FormField';
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface PlanFormState {
-  diseaseName: string;
-  planName: string;
-  farmPlotId: string;
-  speciesId: string;
-  speciesName: string;
-  severityLevel: string;
-  successIndicators: string;
-  estimatedCost: string;
-  requiredInputs: string;
-  safetyWarnings: string;
-  isPublic: boolean;
-}
-
-export const emptyForm = (): PlanFormState => ({
-  diseaseName: '',
-  planName: '',
-  farmPlotId: '',
-  speciesId: '',
-  speciesName: '',
-  severityLevel: '',
-  successIndicators: '',
-  estimatedCost: '',
-  requiredInputs: '',
-  safetyWarnings: '',
-  isPublic: false,
-});
-
-// Shared with EventScheduleSection
-export const emptyEvent = (): PlantEventCreateRequest => ({
-  eventType: '' as PlantEventCreateRequest['eventType'],
-  note: '',
-  description: '',
-  daysFromStart: undefined,
-  durationDays: undefined,
-  estimatedCost: '',
-  phiDays: undefined,
-  ppeRequired: '',
-  mrlNote: '',
-});
+import { InfoChip } from './ConsultingInfoChip';
+export type { PlanFormState } from '../utils/planFormHelpers';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -69,18 +27,6 @@ interface PlanInfoSectionProps {
   updateForm: (field: keyof PlanFormState, value: string | boolean) => void;
   farmPlotOptions: { value: string; label: string }[];
   errors?: PlanInfoErrors;
-}
-
-function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-1.5 rounded-md bg-white/80 px-2 py-1 ring-1 ring-slate-100">
-      <span className="shrink-0 text-slate-400">{icon}</span>
-      <div className="min-w-0">
-        <span className="text-[9px] font-black uppercase tracking-wide text-slate-400 leading-none">{label}</span>
-        <p className="text-[10px] font-bold text-slate-700 truncate leading-tight mt-0.5">{value}</p>
-      </div>
-    </div>
-  );
 }
 
 export function PlanInfoSection({ form, updateForm, farmPlotOptions, errors }: PlanInfoSectionProps) {

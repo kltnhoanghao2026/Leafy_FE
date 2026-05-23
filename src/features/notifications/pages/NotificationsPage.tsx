@@ -6,7 +6,6 @@ import { useNotificationHistory, useNotificationState } from '../queries/queries
 import {
   useMarkNotificationReadMutation,
   useMarkAllReadMutation,
-  useMarkCheckedMutation,
 } from '../queries/mutations';
 import { NotificationItem } from '../components/NotificationItem';
 import { PendingAccessRequests } from '../components/PendingAccessRequests';
@@ -17,7 +16,7 @@ import { useTranslation } from '../../../i18n';
 
 // ─── Routing map — all NotificationType values ────────────────────────────────
 
-const NOTIFICATION_ROUTES: Record<string, (referenceId: string, payload?: Record<string, string>) => string | null> = {
+const NOTIFICATION_ROUTES: Record<string, (referenceId: string, payload?: Record<string, string>) => string | null | { path: string; state?: Record<string, unknown> }> = {
   POST_COMMENT:    (id) => `/dashboard/community?post=${id}`,
   POST_UPVOTE:     (id) => `/dashboard/community?post=${id}`,
   COMMENT_REPLY:   (id) => `/dashboard/community?post=${id}`,
@@ -32,6 +31,10 @@ const NOTIFICATION_ROUTES: Record<string, (referenceId: string, payload?: Record
     payload?.farmerProfileId ? ROUTES.DASHBOARD.PROFILE_VIEW(payload.farmerProfileId) : null,
   CONSULTING_DATA_ACCESS_DENIED: (id, payload) =>
     payload?.farmerProfileId ? ROUTES.DASHBOARD.PROFILE_VIEW(payload.farmerProfileId) : null,
+  DIRECT_MESSAGE: (id, payload) =>
+    payload?.conversationId
+      ? { path: ROUTES.DASHBOARD.CHAT, state: { openConversationId: payload.conversationId } }
+      : null,
   SYSTEM:          () => null,
 };
 
@@ -74,14 +77,17 @@ export function NotificationsPage() {
     isError,
   } = useNotificationHistory(activeTab === 'unread', true);
 
-  const markCheckedMutation = useMarkCheckedMutation();
   const markReadMutation = useMarkNotificationReadMutation();
   const markAllReadMutation = useMarkAllReadMutation();
 
-  // Clear badge on mount
+  // Mark all as read on mount
   useEffect(() => {
     if (unreadCount > 0) {
-      markCheckedMutation.mutate();
+      markAllReadMutation.mutate(undefined, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: notificationKeys.state() });
+        },
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -119,9 +125,13 @@ export function NotificationsPage() {
     if (notification.referenceId && notification.type) {
       const routeFn = NOTIFICATION_ROUTES[notification.type];
       if (routeFn) {
-        const path = routeFn(notification.referenceId, notification.payload ?? undefined);
-        if (path) {
-          navigate(path);
+        const result = routeFn(notification.referenceId, notification.payload ?? undefined);
+        if (result) {
+          if (typeof result === 'string') {
+            navigate(result);
+          } else {
+            navigate(result.path, { state: result.state });
+          }
           return;
         }
       }

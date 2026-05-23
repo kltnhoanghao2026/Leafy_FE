@@ -21,15 +21,17 @@ export function PrivacySettingsCard() {
   const [message, setMessage] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
 
+  // Sync privacy state from preferences — deferred to avoid cascading renders during effect sync
   useEffect(() => {
-    if (preferences?.privacySettings) {
+    const timer = setTimeout(() => {
       setPrivacyState({
-        shareFarmPlotsWithConsultants: preferences.privacySettings.shareFarmPlotsWithConsultants ?? true,
-        sharePlantsWithConsultants: preferences.privacySettings.sharePlantsWithConsultants ?? true,
-        sharePlantEventsWithConsultants: preferences.privacySettings.sharePlantEventsWithConsultants ?? true,
-        sharePlansWithConsultants: preferences.privacySettings.sharePlansWithConsultants ?? true,
+        shareFarmPlotsWithConsultants: preferences?.privacySettings?.shareFarmPlotsWithConsultants ?? true,
+        sharePlantsWithConsultants: preferences?.privacySettings?.sharePlantsWithConsultants ?? true,
+        sharePlantEventsWithConsultants: preferences?.privacySettings?.sharePlantEventsWithConsultants ?? true,
+        sharePlansWithConsultants: preferences?.privacySettings?.sharePlansWithConsultants ?? true,
       });
-    }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [preferences]);
 
   const handlePrivacyChange = async (key: keyof typeof privacyState, value: unknown) => {

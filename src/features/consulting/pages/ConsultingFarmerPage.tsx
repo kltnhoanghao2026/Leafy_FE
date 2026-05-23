@@ -24,7 +24,6 @@ import { PlantsTab } from '../components/PlantsTab';
 import { CalendarTab } from '../components/CalendarTab';
 import { PlanningTab } from '../components/PlanningTab';
 import type { ConsultationRequestResponse } from '../../profiles/api/profilesApi';
-import type { PrivacySettings } from '../../settings/types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

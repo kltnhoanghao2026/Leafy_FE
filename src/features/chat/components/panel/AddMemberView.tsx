@@ -6,8 +6,9 @@ import { chatApi } from '../../api/chatApi';
 import type { ConversationResponse } from '../../api/chatApi';
 import { Avatar } from '../../../../components/ui/Avatar';
 import { Spinner } from './PanelShared';
+import type { ProfileResponse } from '../../../profiles/api/profilesApi';
 
-interface Profile { id: string; userId: string; fullName: string; avatar: string; role: string; }
+type Profile = ProfileResponse;
 
 export function AddMemberView({ conversation }: { conversation: ConversationResponse }) {
   const [search, setSearch] = useState('');
@@ -17,8 +18,8 @@ export function AddMemberView({ conversation }: { conversation: ConversationResp
   const { data: results = [], isLoading } = useQuery({
     queryKey: ['panel-search', search],
     queryFn: async () => {
-      const res = await apiClient.get<any>(API_ENDPOINTS.PROFILES.SEARCH, { params: { searchTerm: search, page: 0, size: 20 } });
-      return (res.data?.data?.content || res.data?.content || []) as Profile[];
+      const res = await apiClient.get<{ data?: { content?: Profile[] }; content?: Profile[] }>(API_ENDPOINTS.PROFILES.SEARCH, { params: { searchTerm: search, page: 0, size: 20 } });
+      return res.data?.data?.content || res.data?.content || [];
     },
     enabled: search.trim().length > 0,
   });

@@ -27,6 +27,11 @@ export const en: TranslationDict = {
     delete: "Delete",
     search: "Search",
     unknown: "Unknown",
+    required: "Required",
+    ok: "OK",
+    submit: "Submit",
+    previousPage: "Previous page",
+    nextPage: "Next page",
   },
 
   auth: {
@@ -56,7 +61,7 @@ export const en: TranslationDict = {
     devices: "Devices",
     admin: "Admin",
     home: "Home",
-    diseaseSearch: "Disease Search",
+    search: "Search",
     diseasePrediction: "Image Diagnosis",
     monitor: "Monitor",
     alertRules: "Alert Rules",

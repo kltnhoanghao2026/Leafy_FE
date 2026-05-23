@@ -15,7 +15,6 @@ import { DeleteEventModal } from '../../calendarview/components/DeleteEventModal
 import {
   useUpdatePlantEventMutation,
   useToggleTaskMutation,
-  useDeletePlantEventMutation,
 } from '../../calendarview/queries';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 
@@ -38,7 +37,6 @@ export function AgricultureOverviewPage() {
   const toggleComplete = useUpdatePlantEventMutation();
   const toggleTask = useToggleTaskMutation();
   const updateMutation = useUpdatePlantEventMutation();
-  const deleteMutation = useDeletePlantEventMutation();
 
   const handleToggleComplete = (event: PlantEventResponse) => {
     void toggleComplete.mutateAsync({

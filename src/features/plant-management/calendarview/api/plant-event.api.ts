@@ -7,8 +7,6 @@ import type {
   PlantEventsCalendarParams,
   PlantEventUpdateRequest,
   PlantEventCreateRequest,
-  EventProgressResponse,
-  EventProgressUpdateRequest,
 } from '../../shared/types';
 import { unwrapApiData, unwrapPageContent } from '../../shared/api/apiUtils';
 
@@ -104,30 +102,5 @@ export const plantEventApi = {
       ApiEnvelope<PlantEventResponse> | PlantEventResponse
     >(`${API_ENDPOINTS.PLANT_EVENTS.ITEM(eventId)}/tasks/${taskIndex}/toggle`);
     return unwrapApiData(response.data);
-  },
-
-  getEventProgress: async (eventId: string, page = 0, size = 50) => {
-    const response = await apiClient.get<
-      ApiEnvelope<PageResponse<EventProgressResponse>> | PageResponse<EventProgressResponse>
-    >(API_ENDPOINTS.PLANT_EVENTS.PROGRESS(eventId), { params: { page, size } });
-    return unwrapApiData(response.data);
-  },
-
-  updateEventProgress: async (
-    eventId: string,
-    progressId: string,
-    payload: EventProgressUpdateRequest,
-  ) => {
-    const response = await apiClient.patch<
-      ApiEnvelope<EventProgressResponse> | EventProgressResponse
-    >(API_ENDPOINTS.PLANT_EVENTS.PROGRESS_ITEM(eventId, progressId), payload);
-    return unwrapApiData(response.data);
-  },
-
-  generateEventProgress: async (eventId: string) => {
-    const response = await apiClient.post<
-      ApiEnvelope<EventProgressResponse[]> | EventProgressResponse[]
-    >(API_ENDPOINTS.PLANT_EVENTS.PROGRESS_GENERATE(eventId));
-    return unwrapApiData(response.data) as EventProgressResponse[];
   },
 };

@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { certificatesApi } from "../api/certificates.api";
-import type {
-  ApprovalRequestDto,
-  CreateApprovalRequestPayload,
-} from "../types";
+import type { CreateApprovalRequestPayload } from "../types";
 
 export const certificateKeys = {
   all: ["certificates"] as const,

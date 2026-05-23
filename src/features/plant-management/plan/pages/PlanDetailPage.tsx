@@ -7,7 +7,6 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
-  Circle,
   Clock,
   Cpu,
   DollarSign,
@@ -19,7 +18,6 @@ import {
   Leaf,
   Lock,
   MapPin,
-  Pencil,
   Play,
   RefreshCw,
   ShieldAlert,
@@ -27,41 +25,28 @@ import {
   Trash2,
   User,
   UserCheck,
+  XCircle,
 } from "lucide-react";
 import { PlanPreviewCalendar } from "../../../consulting/components/PlanPreviewCalendar";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
 import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
 import { ROUTES } from "../../../../lib/routes";
-import { PlantEventEditDialog } from "../../calendarview/components/PlantEventEditDialog";
 import {
   useApplyPlanMutation,
   useDeletePlanMutation,
   usePlant,
   useTreatmentPlanDetail,
-  useUpdateApplyStatusMutation,
   useUpdatePlanVisibilityMutation,
 } from "../..";
-import { useUpdatePlanMutation } from "../queries/plan.queries";
 import { useMyProfile } from "../../../settings/queries";
-import type { PlantEventResponse, PlanApplyResponse, SourceDocument, TreatmentStatus } from "../../shared/types";
+import type { PlanApplyResponse, SourceDocument, TreatmentStatus } from "../../shared/types";
 import {
-  EVENT_TYPE_LABELS,
   formatDate,
   TREATMENT_STATUS_LABELS,
 } from "../../shared/components/displayUtils";
-import { Select } from "../../../../components/ui/Select";
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
-import { EditPlanDialog } from "../components/EditPlanDialog";
 import { EmbeddedEventList } from "../components/EmbeddedEventList";
 import { SourceDocumentModal } from "../components/SourceDocumentModal";
-
-const STATUS_OPTIONS: TreatmentStatus[] = [
-  "PENDING",
-  "APPLYING",
-  "ACTIVE",
-  "COMPLETED",
-  "CANCELLED",
-];
 
 const STATUS_STYLE: Record<TreatmentStatus, string> = {
   PENDING:   "bg-amber-50 text-amber-700 border-amber-200",
@@ -78,18 +63,6 @@ const SEVERITY_COLOR: Record<string, string> = {
   CRITICAL: "text-red-600 bg-red-50",
 };
 
-function InfoChip({ label, value, icon: Icon, color = "slate" }: { label: string; value: string; icon?: React.ElementType; color?: string }) {
-  return (
-    <div className={`flex flex-col gap-1 rounded-2xl bg-${color}-50 p-4`}>
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon className={`w-3.5 h-3.5 text-${color}-400`} strokeWidth={2.5} />}
-        <p className={`text-[10px] font-black uppercase tracking-widest text-${color}-400`}>{label}</p>
-      </div>
-      <p className={`text-sm font-bold text-${color}-800`}>{value}</p>
-    </div>
-  );
-}
-
 export function PlanDetailPage() {
   const { planId = "" } = useParams();
   const location = useLocation();
@@ -98,12 +71,10 @@ export function PlanDetailPage() {
   const navigate = useNavigate();
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
   const [applyPlanOpen, setApplyPlanOpen] = useState(false);
-  const [editPlanOpen, setEditPlanOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<SourceDocument | null>(null);
 
   const planQuery = useTreatmentPlanDetail(activePlanId);
   const plan = planQuery.data;
-  const sourcePlanId = plan?.id || "";
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   // Derive latest apply for status/scope display
@@ -124,11 +95,9 @@ export function PlanDetailPage() {
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const zonesQuery = useFarmZones(latestApply?.farmPlotId ?? "", Boolean(latestApply?.farmPlotId));
   const plantQuery = usePlant(latestApply?.plantId ?? "", Boolean(latestApply?.plantId));
-  const updateApplyStatus = useUpdateApplyStatusMutation();
   const updateVisibility = useUpdatePlanVisibilityMutation();
-  const updatePlan = useUpdatePlanMutation();
-  const deletePlan = useDeletePlanMutation();
   const applyPlan = useApplyPlanMutation();
+  const deletePlan = useDeletePlanMutation();
 
   const plotById = useMemo(
     () => new Map((plotsQuery.data ?? []).map((plot) => [plot.id, plot])),
@@ -189,7 +158,6 @@ export function PlanDetailPage() {
   const zoneName = latestApply?.farmZoneId
     ? (zonesQuery.data ?? []).find((z) => z.id === latestApply.farmZoneId)?.zoneName || latestApply.farmZoneId
     : null;
-  const applyStatus: TreatmentStatus | null = latestApply?.status ?? null;
   const severityStyle = plan.severityLevel ? (SEVERITY_COLOR[plan.severityLevel.toUpperCase()] ?? "text-slate-600 bg-slate-50") : "";
   const confidencePct = plan.confidenceScore != null ? Math.round(plan.confidenceScore * 100) : null;
 
@@ -228,14 +196,13 @@ export function PlanDetailPage() {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {isOwner && (
-            <button
-              type="button"
-              onClick={() => setEditPlanOpen(true)}
+            <Link
+              to={ROUTES.DASHBOARD.PLAN_EDIT(plan.id)}
               className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
             >
               <Edit2 className="mr-2 h-4 w-4" />
               Sửa
-            </button>
+            </Link>
           )}
 
           {isOwner && (
@@ -335,6 +302,38 @@ export function PlanDetailPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Số sự kiện</p>
                 <p className="mt-1 text-sm font-black text-slate-800">{plan.events?.length ?? 0}</p>
               </div>
+
+              {/* Success stats */}
+              {(plan.successApplyCount ?? 0) > 0 && (
+                <div className="rounded-2xl bg-green-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                    Thành công
+                  </p>
+                  <p className="mt-1 text-sm font-black text-green-700">{plan.successApplyCount}</p>
+                </div>
+              )}
+
+              {(plan.failedApplyCount ?? 0) > 0 && (
+                <div className="rounded-2xl bg-red-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-500 flex items-center gap-1">
+                    <XCircle className="w-3 h-3" strokeWidth={2.5} />
+                    Thất bại
+                  </p>
+                  <p className="mt-1 text-sm font-black text-red-600">{plan.failedApplyCount}</p>
+                </div>
+              )}
+
+              {/* Total applies (when no success/failed yet) */}
+              {(plan.applyCount ?? 0) > 0 && (plan.successApplyCount ?? 0) === 0 && (plan.failedApplyCount ?? 0) === 0 && (
+                <div className="rounded-2xl bg-blue-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1">
+                    <Play className="w-3 h-3" strokeWidth={2.5} />
+                    Tổng áp dụng
+                  </p>
+                  <p className="mt-1 text-sm font-black text-blue-700">{plan.applyCount}</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -512,7 +511,7 @@ export function PlanDetailPage() {
                           onClick={() => setSelectedDoc(doc)}
                           className="w-full text-left rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100 hover:border-[#245A34]/40 hover:bg-green-50/40 transition-all cursor-pointer"
                         >
-                          <p className="font-bold text-slate-800 text-sm mb-1">{doc.title || (doc.metadata as any)?.source_file || "Tài liệu"}</p>
+                          <p className="font-bold text-slate-800 text-sm mb-1">{doc.title || (doc.metadata as Record<string, unknown>)?.source_file || "Tài liệu"}</p>
                           {doc.contentSnippet ? (
                             <p className="text-xs text-slate-500 line-clamp-2">{doc.contentSnippet}</p>
                           ) : (
@@ -638,6 +637,22 @@ export function PlanDetailPage() {
               Thông tin các lần kế hoạch này được áp dụng
             </p>
           </div>
+          {(plan.successApplyCount ?? 0) > 0 || (plan.failedApplyCount ?? 0) > 0 ? (
+            <div className="flex items-center gap-3">
+              {(plan.successApplyCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700 ring-1 ring-green-200">
+                  <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  {plan.successApplyCount} thành công
+                </span>
+              )}
+              {(plan.failedApplyCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600 ring-1 ring-red-200">
+                  <XCircle className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  {plan.failedApplyCount} thất bại
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-3">
@@ -717,19 +732,6 @@ export function PlanDetailPage() {
           onClose={() => setApplyPlanOpen(false)}
           onSubmit={(payload) =>
             void applyPlan.mutateAsync({ planId: plan.id, payload }).then(() => setApplyPlanOpen(false))
-          }
-        />
-      )}
-
-      {editPlanOpen && (
-        <EditPlanDialog
-          plan={plan}
-          isSubmitting={updatePlan.isPending}
-          onClose={() => setEditPlanOpen(false)}
-          onSubmit={(payload) =>
-            void updatePlan
-              .mutateAsync({ planId: plan.id, payload })
-              .then(() => setEditPlanOpen(false))
           }
         />
       )}

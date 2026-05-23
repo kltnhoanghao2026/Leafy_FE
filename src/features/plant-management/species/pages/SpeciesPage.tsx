@@ -1,6 +1,4 @@
-import { Link } from "react-router-dom";
-import { Leaf, Droplets, Sun, CalendarDays, Wheat, Search, Loader2 } from "lucide-react";
-import { ROUTES } from "../../../../lib/routes";
+import { Leaf, Droplets, Sun, CalendarDays, Wheat, Loader2 } from "lucide-react";
 import { useSpecies } from "../queries/species.queries";
 
 function SpeciesCard({ species }: { species: { id: string; commonName: string | null; cultivarName: string | null; lightRequirements: string | null; waterFrequencyDays: number | null; daysToMaturity: number | null; expectedYieldKg: number | null; plantingSeason: string | null; commonDiseaseIds: string[] | null; idealEnv: Record<string, unknown> | null } }) {

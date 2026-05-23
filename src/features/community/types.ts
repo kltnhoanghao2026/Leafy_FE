@@ -1,5 +1,5 @@
 export type CommunityPostType = "FEED" | "SHARE" | "PLAN_SHARE";
-export type CommunityVisibility = "FRIEND" | "ALL" | "ONLY_ME";
+export type CommunityVisibility = "FOLLOWER" | "ALL" | "ONLY_ME";
 export type CommunityVoteType = "UPVOTE" | "DOWNVOTE";
 export type CommunityVoteTargetType = "POST" | "COMMENT";
 export type CommunityTreatmentStatus = "PENDING" | "APPLYING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
@@ -70,6 +70,8 @@ export interface Post {
   planId?: string | null;
   /** Embedded plan snapshot — present when the backend hydrates it */
   planInfo?: CommunityPlanInfo | null;
+  /** Visibility setting — ALL, FOLLOWER, or ONLY_ME */
+  visibility?: CommunityVisibility;
 }
 
 export interface SharedPostSnapshot {

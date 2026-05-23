@@ -8,6 +8,7 @@ export const settingsVi = {
     display: "Hiển thị",
     privacy: "Quyền riêng tư",
     notifications: "Thông báo",
+    consulting: "Tư vấn",
   },
 
   display: {
@@ -82,11 +83,44 @@ export const settingsVi = {
     previewMessageDesc: "Hiển thị nội dung tin nhắn trong thông báo.",
     groupMessage: "Tin nhắn nhóm",
     groupMessageDesc: "Nhận thông báo từ các nhóm.",
-    
+
     newPost: "Bài viết mới",
     newPostDesc: "Thông báo khi bạn bè đăng bài mới.",
-    
+
     inAppNotice: "Thông báo trong app",
     inAppNoticeDesc: "Hiển thị thông báo khi đang dùng ứng dụng.",
+  },
+
+  certificate: {
+    title: "Chứng chỉ chuyên gia",
+    noHistory: "Bạn chưa có hồ sơ xác minh nào",
+    verifiedBadge: "Chuyên gia đã xác minh",
+    pendingBadge: "Hồ sơ đang được xem xét",
+    rejectedBadge: "Hồ sơ bị từ chối",
+    submitButton: "Nộp hồ sơ xác minh",
+    viewHistory: "Xem lịch sử hồ sơ",
+  },
+
+  consulting: {
+    title: "Yêu cầu tư vấn",
+    subtitle: "Quản lý yêu cầu tư vấn và yêu cầu truy cập dữ liệu.",
+    loadError: "Không tải được dữ liệu. Vui lòng thử lại.",
+
+    accept: "Chấp nhận",
+    reject: "Từ chối",
+    approve: "Duyệt",
+    deny: "Từ chối",
+
+    consultation: {
+      title: "Yêu cầu tư vấn",
+      empty: "Không có yêu cầu tư vấn nào.",
+      emptyDesc: "Khi có yêu cầu tư vấn mới, chúng sẽ xuất hiện tại đây.",
+    },
+
+    dataAccess: {
+      title: "Yêu cầu truy cập dữ liệu",
+      empty: "Không có yêu cầu truy cập nào.",
+      emptyDesc: "Khi chuyên gia yêu cầu truy cập dữ liệu trang trại, chúng sẽ xuất hiện tại đây.",
+    },
   },
 } as const;

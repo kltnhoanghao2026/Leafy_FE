@@ -11,17 +11,9 @@ import { useMyProfile } from "../../../settings/queries";
 import { EventTaskEditor } from "./EventTaskEditor";
 import { ScopeSelector } from "./ScopeSelector";
 import { ALL_EVENT_TYPES } from "../schemas/eventConstants";
+import { useTranslation } from "../../../../i18n";
 
 type ScopeType = 'FARM' | 'FARM_ZONE' | 'PLANT';
-
-function parseOptionalNumber(value: string, label: string) {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${label} phải là số không âm.`);
-  }
-  return parsed;
-}
 
 interface PlantEventCreateDialogProps {
   isSubmitting?: boolean;
@@ -34,6 +26,7 @@ export function PlantEventCreateDialog({
   onClose,
   onSubmit,
 }: PlantEventCreateDialogProps): React.ReactElement {
+  const { t } = useTranslation();
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
@@ -57,6 +50,7 @@ export function PlantEventCreateDialog({
   const [planned, setPlanned] = useState(true);
   const [attachmentIds, setAttachmentIds] = useState<string[]>([]);
   const [tasks, setTasks] = useState<EventTaskRequest[]>([]);
+  const [trackingGranularity, setTrackingGranularity] = useState<"NONE" | "ZONE" | "PLANT" | "">("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -64,26 +58,26 @@ export function PlantEventCreateDialog({
     setValidationError(null);
 
     if (!eventType) {
-      setValidationError("Vui lòng chọn loại sự kiện.");
+      setValidationError(t('plantManagement.eventCreate.validationEventType'));
       return;
     }
     if (!note.trim()) {
-      setValidationError("Vui lòng nhập tiêu đề/note cho lịch chăm sóc.");
+      setValidationError(t('plantManagement.eventCreate.validationNote'));
       return;
     }
 
     if (calculatedStartDate && calculatedEndDate && calculatedEndDate < calculatedStartDate) {
-      setValidationError("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu.");
+      setValidationError(t('plantManagement.eventCreate.validationDateRange'));
       return;
     }
 
     let parsedDurationDays: number | undefined;
     let parsedPhiDays: number | undefined;
     try {
-      parsedDurationDays = parseOptionalNumber(durationDays, "Số ngày kéo dài");
-      parsedPhiDays = parseOptionalNumber(phiDays, "PHI days");
-    } catch (error) {
-      setValidationError(error instanceof Error ? error.message : "Trường số không hợp lệ.");
+      parsedDurationDays = parseFloat(durationDays) || undefined;
+      parsedPhiDays = parseFloat(phiDays) || undefined;
+    } catch {
+      setValidationError(t('plantManagement.eventCreate.validationNumber'));
       return;
     }
 
@@ -105,6 +99,7 @@ export function PlantEventCreateDialog({
       isPlanned: planned,
       tasks: tasks.map((task, i) => ({ ...task, order: i })),
       attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
+      trackingGranularity: trackingGranularity || undefined,
     };
 
     onSubmit(payload);
@@ -113,10 +108,10 @@ export function PlantEventCreateDialog({
   return (
     <ModalShell
       onClose={onClose}
-      title="Tạo lịch chăm sóc mới"
+      title={t('plantManagement.eventCreate.title')}
       subtitle={
         <p className="text-xs font-black uppercase tracking-[0.2em] text-[#245A34] mt-0.5">
-          Plant event
+          {t('plantManagement.eventEdit.tagLabel')}
         </p>
       }
       maxWidth="sm:max-w-2xl"
@@ -128,7 +123,7 @@ export function PlantEventCreateDialog({
             onClick={onClose}
             className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50"
           >
-            Hủy
+            {t('common.cancel')}
           </button>
           <button
             type="button"
@@ -136,7 +131,7 @@ export function PlantEventCreateDialog({
             disabled={isSubmitting}
             className="rounded-2xl bg-[#245A34] px-5 py-3 text-sm font-bold text-white hover:bg-[#1b432a] disabled:bg-slate-300"
           >
-            {isSubmitting ? "Đang tạo..." : "Tạo lịch"}
+            {isSubmitting ? t('common.saving') : t('plantManagement.calendar.createEvent')}
           </button>
         </div>
       }
@@ -170,14 +165,14 @@ export function PlantEventCreateDialog({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Loại sự kiện
+              {t('plantManagement.eventEdit.typeLabel')}
             </span>
             <Select
               className="mt-2"
               value={eventType}
               onChange={v => setEventType(v as PlantEventType)}
               options={[
-                { value: '', label: '— Chọn loại sự kiện —' },
+                { value: '', label: `— ${t('plantManagement.eventEdit.typeLabel')} —` },
                 ...ALL_EVENT_TYPES.map(type => ({
                   value: type,
                   label: EVENT_TYPE_LABELS[type] ?? type,
@@ -192,7 +187,7 @@ export function PlantEventCreateDialog({
                 checked={planned}
                 onChange={e => setPlanned(e.target.checked)}
               />
-              Đã lên lịch
+              {t('plantManagement.eventEdit.scheduledLabel')}
             </label>
           </div>
         </div>
@@ -200,27 +195,27 @@ export function PlantEventCreateDialog({
         {/* Note */}
         <div>
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-            Tiêu đề/note <span className="text-red-400">*</span>
+            {t('plantManagement.eventEdit.noteLabel')} <span className="text-red-400">*</span>
           </span>
           <input
             value={note}
             onChange={e => setNote(e.target.value)}
             className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
-            placeholder="VD: Tưới nước buổi sáng, Bón phân NPK..."
+            placeholder={t('plantManagement.eventEdit.noteLabel')}
           />
         </div>
 
         {/* Description */}
         <div>
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-            Mô tả
+            {t('plantManagement.eventEdit.descriptionLabel')}
           </span>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
             rows={3}
             className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"
-            placeholder="Mô tả chi tiết (tuỳ chọn)..."
+            placeholder={t('plantManagement.eventEdit.descriptionLabel')}
           />
         </div>
 
@@ -228,24 +223,24 @@ export function PlantEventCreateDialog({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Ngày bắt đầu
+              {t('plantManagement.eventEdit.startDateLabel')}
             </span>
             <DatePicker
               className="mt-2"
               value={calculatedStartDate}
               onChange={setCalculatedStartDate}
-              placeholder="Chọn ngày bắt đầu..."
+              placeholder={t('plantManagement.eventEdit.startDatePlaceholder')}
             />
           </div>
           <div>
             <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-              Ngày kết thúc
+              {t('plantManagement.eventEdit.endDateLabel')}
             </span>
             <DatePicker
               className="mt-2"
               value={calculatedEndDate}
               onChange={setCalculatedEndDate}
-              placeholder="Chọn ngày kết thúc..."
+              placeholder={t('plantManagement.eventEdit.endDatePlaceholder')}
             />
           </div>
         </div>
@@ -256,14 +251,14 @@ export function PlantEventCreateDialog({
           onClick={() => setShowAdvanced(v => !v)}
           className="text-sm font-black text-[#245A34]"
         >
-          {showAdvanced ? "Ẩn thông tin an toàn/nâng cao" : "Thông tin an toàn/nâng cao"}
+          {showAdvanced ? t('plantManagement.eventEdit.advancedToggleHide') : t('plantManagement.eventEdit.advancedToggleShow')}
         </button>
 
         {showAdvanced && (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Số ngày kéo dài
+                {t('plantManagement.eventEdit.durationLabel')}
               </span>
               <input
                 value={durationDays}
@@ -273,7 +268,7 @@ export function PlantEventCreateDialog({
             </div>
             <div>
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                PHI days
+                {t('plantManagement.eventEdit.phiLabel')}
               </span>
               <input
                 value={phiDays}
@@ -283,7 +278,7 @@ export function PlantEventCreateDialog({
             </div>
             <div className="md:col-span-2">
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                PPE required
+                {t('plantManagement.eventEdit.ppeLabel')}
               </span>
               <input
                 value={ppeRequired}
@@ -293,7 +288,7 @@ export function PlantEventCreateDialog({
             </div>
             <div>
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                MRL note
+                {t('plantManagement.eventEdit.mrlLabel')}
               </span>
               <input
                 value={mrlNote}
@@ -303,7 +298,7 @@ export function PlantEventCreateDialog({
             </div>
             <div>
               <span className="text-xs font-black uppercase tracking-wide text-slate-500">
-                Chi phí dự kiến
+                {t('plantManagement.eventEdit.costLabel')}
               </span>
               <input
                 value={estimatedCost}
@@ -311,10 +306,33 @@ export function PlantEventCreateDialog({
                 className="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700"
               />
             </div>
+            {(scopeType === 'FARM' || scopeType === 'FARM_ZONE') && (
+              <div className="md:col-span-2">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">
+                  {t('plantManagement.event.trackingGranularityLabel')}
+                </span>
+                <Select
+                  className="mt-2"
+                  value={trackingGranularity}
+                  onChange={v => setTrackingGranularity(v as "" | "NONE" | "ZONE" | "PLANT")}
+                  options={[
+                    { value: '', label: `— ${t('plantManagement.event.trackingGranularityLabel')} —` },
+                    { value: 'NONE', label: t('plantManagement.event.trackingGranularity.none') },
+                    { value: 'ZONE', label: t('plantManagement.event.trackingGranularity.zone') },
+                    { value: 'PLANT', label: t('plantManagement.event.trackingGranularity.plant') },
+                  ]}
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  {scopeType === 'FARM'
+                    ? t('plantManagement.event.trackingGranularity.farmHint')
+                    : t('plantManagement.event.trackingGranularity.zoneHint')}
+                </p>
+              </div>
+            )}
             <div className="md:col-span-2">
               <ImagePicker
-                label={`Tệp đính kèm (${attachmentIds.length})`}
-                hint="Tải lên ảnh hoặc video cho sự kiện. Tối đa 8 tệp."
+                label={`${t('plantManagement.eventEdit.tasksLabel')} (${attachmentIds.length})`}
+                hint={t('common.required')}
                 value={attachmentIds}
                 onChange={setAttachmentIds}
                 max={8}

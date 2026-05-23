@@ -1,4 +1,4 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
   MapPin,
@@ -23,7 +23,6 @@ export function FarmZoneDetailPage() {
     farmPlotId: string;
     farmZoneId: string;
   }>();
-  const navigate = useNavigate();
 
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";

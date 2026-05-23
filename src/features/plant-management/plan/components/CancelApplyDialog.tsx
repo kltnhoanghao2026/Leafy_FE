@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "../../../../components/ui/ModalShell";
 import type { PlanApplyResponse } from "../../shared/types";
+import { formatDate } from "../shared/utils/planUtils";
 
 interface CancelApplyDialogProps {
   apply: PlanApplyResponse;
@@ -9,18 +10,7 @@ interface CancelApplyDialogProps {
   onConfirm: () => void;
 }
 
-function formatDate(iso: string | null | undefined) {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
+// formatDate is now imported from shared/utils/planUtils
 
 export function CancelApplyDialog({
   apply,

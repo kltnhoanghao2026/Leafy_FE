@@ -5,23 +5,15 @@ import { AdminPagination } from "../../../../components/admin/AdminPagination";
 import toast from "react-hot-toast";
 import {
   useAdminPlans,
-  useUpdatePlanStatus,
   useDeletePlan,
 } from "../api/";
-import type { TreatmentStatus, PlanListParams } from "../types";
+import type { TreatmentStatus, PlanListParams, PlanDto } from "../types";
 
 // ============================================================================
 // Constants
 // ============================================================================
 
 const PAGE_SIZE = 20;
-
-const TREATMENT_STATUS_LABELS: Record<TreatmentStatus, string> = {
-  PENDING: "Chờ duyệt",
-  ACTIVE: "Đang xử lý",
-  COMPLETED: "Hoàn thành",
-  CANCELLED: "Đã hủy",
-};
 
 // ============================================================================
 // Utilities
@@ -77,22 +69,6 @@ function FilterGroup<T extends string>({
   );
 }
 
-function TreatmentStatusBadge({ status }: { status: TreatmentStatus }) {
-  const styles: Record<TreatmentStatus, string> = {
-    PENDING: "bg-amber-50 text-amber-700 ring-amber-200",
-    ACTIVE: "bg-blue-50 text-blue-700 ring-blue-200",
-    COMPLETED: "bg-green-50 text-green-700 ring-green-200",
-    CANCELLED: "bg-slate-100 text-slate-500 ring-slate-200",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ring-1 ${styles[status]}`}
-    >
-      {TREATMENT_STATUS_LABELS[status]}
-    </span>
-  );
-}
-
 function formatDate(iso: string | null | undefined) {
   if (!iso) return "—";
   try {
@@ -118,7 +94,6 @@ function TreatmentPlansPanel() {
   const [statusFilter, setStatusFilter] =
     useState<TreatmentStatusFilter>("all");
 
-  const updateStatusMutation = useUpdatePlanStatus();
   const deleteMutation = useDeletePlan();
 
   const params: PlanListParams = {
@@ -137,16 +112,6 @@ function TreatmentPlansPanel() {
   function handleStatusChange(v: TreatmentStatusFilter) {
     setStatusFilter(v);
     setPage(0);
-  }
-
-  function handleUpdateStatus(planId: string, newStatus: TreatmentStatus) {
-    updateStatusMutation.mutate(
-      { planId, status: newStatus },
-      {
-        onSuccess: () => toast.success("Đã cập nhật trạng thái"),
-        onError: () => toast.error("Cập nhật thất bại"),
-      },
-    );
   }
 
   function handleDelete(id: string, disease: string) {
@@ -210,7 +175,7 @@ function TreatmentPlansPanel() {
         renderSkeleton={() => <SkeletonRow cols={6} />}
         skeletonCount={8}
       >
-        {plans.map((plan: any) => (
+        {plans.map((plan: PlanDto) => (
           <div
             key={plan.id}
             className="grid grid-cols-[1.5fr_80px_100px_100px_110px_120px] gap-4 items-center px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors"

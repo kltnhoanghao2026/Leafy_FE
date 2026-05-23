@@ -23,24 +23,6 @@ export interface IncidentResponse {
   lastModifiedAt: string | null;
 }
 
-export interface EventProgressResponse {
-  id: string;
-  eventId: string;
-  targetType: "ZONE" | "PLANT";
-  targetId: string;
-  farmPlotId?: string | null;
-  farmZoneId?: string | null;
-  plantId?: string | null;
-  completed: boolean;
-  completedAt?: string | null;
-  note?: string | null;
-  createdAt?: string | null;
-}
-
-export interface EventProgressUpdateRequest {
-  completed?: boolean;
-  note?: string;
-}
 export type TreatmentStatus = "PENDING" | "APPLYING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 
 export interface EventTaskResponse {
@@ -177,8 +159,6 @@ export interface PlantEventResponse {
   trackingGranularity?: TrackingGranularity | null;
   excludedPlantIds?: string[] | null;
   excludedFarmZoneIds?: string[] | null;
-  progressTotal?: number | null;
-  progressCompleted?: number | null;
   tasks: EventTaskResponse[] | null;
   /** File IDs (MongoDB _id) of images/videos attached to this event via file-service. */
   attachmentIds?: string[] | null;
@@ -339,6 +319,8 @@ export interface PlanUpdateRequest {
   safetyWarnings?: string[];
   successIndicators?: string;
   estimatedCost?: string;
+  /** Replace the entire event schedule with these events. */
+  schedule?: PlantEventCreateRequest[];
 }
 
 /** One item in a bulk-apply-custom request — each plan gets its own schedule config */
@@ -371,6 +353,7 @@ export interface PlanApplyResponse {
   id: string;
   planId: string;
   appliedById: string | null;
+  appliedByName?: string | null;
   plantId: string | null;
   farmPlotId: string | null;
   farmZoneId: string | null;
@@ -387,6 +370,12 @@ export interface PlanApplyResponse {
   canCancel?: boolean | null;
   createdAt: string | null;
   lastModifiedAt: string | null;
+  /** Denormalized plant info */
+  plant?: PlantSummary | null;
+  /** Denormalized farm plot info */
+  farmPlot?: FarmPlotSummary | null;
+  /** Denormalized farm zone info */
+  farmZone?: FarmZoneSummary | null;
 }
 
 export interface MyAppliesParams {
@@ -414,6 +403,8 @@ export interface PublicPlanListParams {
   sortDir?: "ASC" | "DESC";
   search?: string;
   sourceType?: PlanSourceType;
+  severityLevel?: string;
+  urgency?: string;
 }
 
 export interface PlantListParams {
@@ -515,6 +506,10 @@ export interface PlanResponse {
   events: EmbeddedPlanEventResponse[] | null;
   /** Number of times this plan has been applied (PlanApply count). */
   applyCount: number | null;
+  /** Number of completed applies where success=true. */
+  successApplyCount: number | null;
+  /** Number of completed applies where success=false. */
+  failedApplyCount: number | null;
   /** Inline list of applies — populated in detail views. */
   applies?: PlanApplyResponse[] | null;
   /** Whether this plan is publicly visible to all authenticated users. */
@@ -568,5 +563,37 @@ export interface AgricultureStatsResponse {
   activePlanApplies: number;
   completedPlanApplies: number;
   recentEvents: RecentEventSummary[];
+}
+
+// ── Plan Form State (shared between create/edit) ────────────────────────────────
+
+/** Single-string format used in create mode (requiredInputs / safetyWarnings as plain text) */
+export interface PlanFormStateCreate {
+  diseaseName: string;
+  planName: string;
+  farmPlotId: string;
+  speciesId: string;
+  speciesName: string;
+  severityLevel: string;
+  successIndicators: string;
+  estimatedCost: string;
+  requiredInputs: string;
+  safetyWarnings: string;
+  isPublic: boolean;
+}
+
+/** Array format used in edit mode (requiredInputs / safetyWarnings as string arrays) */
+export interface PlanFormStateEdit {
+  diseaseName: string;
+  planName: string;
+  farmPlotId: string;
+  speciesId: string;
+  speciesName: string;
+  severityLevel: string;
+  successIndicators: string;
+  estimatedCost: string;
+  requiredInputs: string[];
+  safetyWarnings: string[];
+  isPublic: boolean;
 }
 

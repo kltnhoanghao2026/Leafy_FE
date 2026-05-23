@@ -13,6 +13,7 @@ export const settingsEn: SettingsTranslationDict = {
     display: "Display",
     privacy: "Privacy",
     notifications: "Notifications",
+    consulting: "Consulting",
   },
 
   display: {
@@ -93,5 +94,38 @@ export const settingsEn: SettingsTranslationDict = {
     
     inAppNotice: "In-app notifications",
     inAppNoticeDesc: "Show notifications while using the app.",
+  },
+
+  certificate: {
+    title: "Expert Certificate",
+    noHistory: "You haven't submitted any verification requests yet",
+    verifiedBadge: "Verified Expert",
+    pendingBadge: "Application under review",
+    rejectedBadge: "Application rejected",
+    submitButton: "Submit verification request",
+    viewHistory: "View application history",
+  },
+
+  consulting: {
+    title: "Consulting Requests",
+    subtitle: "Manage consulting requests and data access requests.",
+    loadError: "Could not load data. Please try again.",
+
+    accept: "Accept",
+    reject: "Reject",
+    approve: "Approve",
+    deny: "Deny",
+
+    consultation: {
+      title: "Consultation Requests",
+      empty: "No consultation requests.",
+      emptyDesc: "When new consultation requests come in, they will appear here.",
+    },
+
+    dataAccess: {
+      title: "Data Access Requests",
+      empty: "No data access requests.",
+      emptyDesc: "When experts request access to your farm data, they will appear here.",
+    },
   },
 };

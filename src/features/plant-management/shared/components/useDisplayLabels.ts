@@ -14,21 +14,21 @@ export function usePlantManagementLabels() {
 
   return {
     plantStatusLabel: (status: PlantStatus): string =>
-      t(`plantManagement.status.${status}` as any),
+      t(`plantManagement.status.${status}` as string),
 
     treatmentStatusLabel: (status: TreatmentStatus | string): string =>
-      t(`plantManagement.treatmentStatus.${status}` as any) ?? status,
+      t(`plantManagement.treatmentStatus.${status}` as string) ?? status,
 
     eventTypeLabel: (eventType: PlantEventType | string): string =>
-      t(`plantManagement.eventType.${eventType}` as any) ?? eventType,
+      t(`plantManagement.eventType.${eventType}` as string) ?? eventType,
 
     categoryLabel: (category: EventCategory): string =>
-      t(`plantManagement.category.${category}` as any),
+      t(`plantManagement.category.${category}` as string),
 
     categoryShortLabel: (category: EventCategory): string =>
-      t(`plantManagement.categoryShort.${category}` as any),
+      t(`plantManagement.categoryShort.${category}` as string),
 
     severityLabel: (severity: string | null | undefined): string =>
-      severity ? (t(`plantManagement.severity.${severity}` as any) ?? severity) : '—',
+      severity ? (t(`plantManagement.severity.${severity}` as string) ?? severity) : '—',
   };
 }

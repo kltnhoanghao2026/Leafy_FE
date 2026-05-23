@@ -15,7 +15,6 @@ import type {
   PlanListParams,
   PublicPlanListParams,
   PlanResponse,
-  PlanSourceType,
   TreatmentStatus,
 } from "../../shared/types";
 import { unwrapApiData, unwrapPageContent, toPageResponse } from "../../shared/api/apiUtils";
@@ -51,12 +50,14 @@ export const treatmentPlanApi = {
     const response = await apiClient.get<
       | ApiEnvelope<PageResponse<PlanResponse>>
       | PageResponse<PlanResponse>
-    >(API_ENDPOINTS.PLANS.PUBLIC, {
+    >(API_ENDPOINTS.SEARCH.PLANS, {
       params: {
         ...defaultParams,
         ...params,
         search: params.search || undefined,
         sourceType: params.sourceType || undefined,
+        severityLevel: params.severityLevel || undefined,
+        urgency: params.urgency || undefined,
       },
     });
     return toPageResponse(unwrapApiData(response.data));

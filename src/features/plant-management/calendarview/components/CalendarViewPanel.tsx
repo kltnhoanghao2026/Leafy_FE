@@ -3,7 +3,7 @@ import { MonthCalendarView } from './MonthCalendarView';
 import { WeekStripView } from './WeekStripView';
 import { TimelineView } from './TimelineView';
 import { useTranslation } from '../../../../i18n';
-import type { ViewType, HoveredDateRange, CalendarViewPanelProps } from '../schemas/calendar.types';
+import type { CalendarViewPanelProps } from '../schemas/calendar.types';
 
 export function CalendarViewPanel({
   calendarQuery,

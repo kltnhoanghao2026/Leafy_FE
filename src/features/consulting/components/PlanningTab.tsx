@@ -1,23 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ClipboardList, Plus, ShieldOff } from 'lucide-react';
 import { ROUTES } from '../../../lib/routes';
 import { useConsultingPlansByFarmer } from '../queries/consulting.queries';
-import { formatDate, TREATMENT_STATUS_LABELS } from '../../plant-management/shared/components/displayUtils';
+import { formatDate } from '../../plant-management/shared/components/displayUtils';
 import type { PrivacySettings } from '../../settings/types';
 
 interface PlanningTabProps {
   farmerProfileId: string;
   privacySettings?: PrivacySettings | null;
 }
-
-const STATUS_STYLE: Record<string, string> = {
-  PENDING:   'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-  ACTIVE:    'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-  COMPLETED: 'bg-emerald-50 text-[#245A34] ring-1 ring-emerald-200',
-  CANCELLED: 'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
-};
 
 export function PlanningTab({ farmerProfileId, privacySettings }: PlanningTabProps) {
   const navigate = useNavigate();
@@ -57,18 +50,6 @@ export function PlanningTab({ farmerProfileId, privacySettings }: PlanningTabPro
 
   return (
     <div className="flex flex-col gap-4 pt-6">
-      {/* DEBUG: Test button */}
-      <button
-        type="button"
-        onClick={() => {
-          console.log('[DEBUG] Test button clicked');
-          navigate('/dashboard/consulting');
-        }}
-        className="fixed top-20 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded"
-      >
-        DEBUG: Test Navigate
-      </button>
-
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           {!shared && (

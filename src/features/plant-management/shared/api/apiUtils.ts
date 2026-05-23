@@ -14,7 +14,11 @@ export const unwrapApiData = <T>(payload: T | ApiEnvelope<T>): T => {
   return payload as T;
 };
 
-export const unwrapPageContent = <T>(payload: PageResponse<T> | T[]): T[] => {
+export const unwrapPageContent = <T>(payload: PageResponse<T> | T[] | undefined): T[] => {
+  if (!payload) {
+    return [];
+  }
+
   if (Array.isArray(payload)) {
     return payload;
   }

@@ -2,7 +2,7 @@ import { ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ROUTES } from '../../../../lib/routes';
 import type { PlanResponse } from "../../shared/types";
-import { formatDate, TREATMENT_STATUS_LABELS } from "../../shared/components/displayUtils";
+import { formatDate } from "../../shared/components/displayUtils";
 
 interface PlanListProps {
   plans: PlanResponse[];

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { profilesApi } from "../../profiles/api/profilesApi";
 import type { ConsultingDataAccessRequestResponse } from "../../profiles/api/profilesApi";
@@ -18,7 +17,7 @@ interface PendingAccessRequestsProps {
 }
 
 export function PendingAccessRequests({ compact = false }: PendingAccessRequestsProps) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   const queryClient = useQueryClient();
   const isVi = i18n?.language === "vi";
 
@@ -92,7 +91,7 @@ function AccessRequestCard({
   isDenying,
   isVi,
 }: AccessRequestCardProps) {
-  const { t } = useTranslation();
+  useTranslation();
   const config = DATA_TYPE_CONFIG[request.dataType] ?? {
     label: request.dataType,
     labelVi: request.dataType,

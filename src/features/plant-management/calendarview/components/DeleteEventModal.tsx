@@ -3,6 +3,7 @@ import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
 import { ModalShell } from '../../../../components/ui/ModalShell';
 import { useDeletableChildren, useDeleteWithChildrenMutation } from '../queries/plant-event.queries';
 import type { PlantEventResponse } from '../../shared/types';
+import { useTranslation } from '../../../../i18n';
 
 interface DeleteEventModalProps {
   event: PlantEventResponse;
@@ -11,6 +12,7 @@ interface DeleteEventModalProps {
 }
 
 export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalProps) {
+  const { t } = useTranslation();
   const childrenQuery = useDeletableChildren(event.id);
   const deleteMutation = useDeleteWithChildrenMutation();
 
@@ -35,10 +37,10 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
       zIndex={zIndex}
       icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
       iconBg="bg-red-50"
-      title="Xóa lịch chăm sóc"
+      title={t('plantManagement.deleteEvent.title')}
       subtitle={
         <p className="text-sm text-slate-500 mt-0.5">
-          Sự kiện này có sự kiện con đã hoàn thành. Bạn có chắc muốn xóa không?
+          {t('plantManagement.deleteEvent.confirmDeleteSubtitle')}
         </p>
       }
       footer={
@@ -49,7 +51,7 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
             disabled={isLoading}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
           >
-            Hủy
+            {t('plantManagement.deleteEvent.cancel')}
           </button>
           <button
             type="button"
@@ -60,12 +62,12 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Đang xóa...
+                {t('plantManagement.deleteEvent.deleting')}
               </>
             ) : (
               <>
                 <Trash2 className="h-4 w-4" />
-                Xóa
+                {t('plantManagement.deleteEvent.confirmDelete')}
               </>
             )}
           </button>
@@ -78,12 +80,12 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
             <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
           </div>
         ) : childrenQuery.isError ? (
-          <p className="text-sm text-red-500 text-center">Không thể tải danh sách sự kiện con.</p>
+          <p className="text-sm text-red-500 text-center">{t('plantManagement.deleteEvent.loadChildrenError')}</p>
         ) : (
           <>
             {/* Parent event */}
             <div className="rounded-xl border border-red-100 bg-red-50/60 p-3">
-              <p className="text-xs font-semibold text-red-600 mb-1">Sự kiện đang xóa</p>
+              <p className="text-xs font-semibold text-red-600 mb-1">{t('plantManagement.deleteEvent.deletingEventLabel')}</p>
               <p className="text-sm font-semibold text-slate-800">{event.note || event.eventType}</p>
               {event.calculatedStartDate && (
                 <p className="text-xs text-slate-500 mt-0.5">
@@ -97,7 +99,7 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
               <>
                 <div>
                   <p className="text-xs font-semibold text-slate-500 mb-2">
-                    {childrenToDelete.length} sự kiện con đã hoàn thành cũng sẽ bị xóa:
+                    {t('plantManagement.deleteEvent.childrenCountLabel', { count: childrenToDelete.length })}
                   </p>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {childrenToDelete.map(child => (
@@ -118,7 +120,7 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
                           </p>
                         </div>
                         <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-600">
-                          Hoàn thành
+                          {t('plantManagement.deleteEvent.completed')}
                         </span>
                       </div>
                     ))}
@@ -128,7 +130,7 @@ export function DeleteEventModal({ event, onClose, zIndex }: DeleteEventModalPro
             ) : (
               <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
                 <p className="text-sm text-slate-600">
-                  Không có sự kiện con nào đã hoàn thành để xóa.
+                  {t('plantManagement.deleteEvent.noChildrenToDelete')}
                 </p>
               </div>
             )}

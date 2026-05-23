@@ -1,72 +1,15 @@
 import { Link } from "react-router-dom";
 import {
   CalendarDays,
-  CheckCircle2,
-  CircleDashed,
   Leaf,
   LayoutGrid,
-  Loader,
-  Play,
   TreePine,
-  XCircle,
   X,
 } from "lucide-react";
 import type { PlanApplyResponse, TreatmentStatus } from "../../shared/types";
 import { ROUTES } from "../../../../lib/routes";
-
-const STATUS_CONFIG: Record<
-  TreatmentStatus,
-  { label: string; icon: typeof Play; bg: string; text: string; ring: string }
-> = {
-  PENDING: {
-    label: "Chờ xử lý",
-    icon: CircleDashed,
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    ring: "ring-amber-200",
-  },
-  APPLYING: {
-    label: "Đang áp dụng",
-    icon: Loader,
-    bg: "bg-purple-50",
-    text: "text-purple-700",
-    ring: "ring-purple-200",
-  },
-  ACTIVE: {
-    label: "Đang thực hiện",
-    icon: Play,
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    ring: "ring-blue-200",
-  },
-  COMPLETED: {
-    label: "Hoàn thành",
-    icon: CheckCircle2,
-    bg: "bg-emerald-50",
-    text: "text-emerald-700",
-    ring: "ring-emerald-200",
-  },
-  CANCELLED: {
-    label: "Đã hủy",
-    icon: XCircle,
-    bg: "bg-slate-100",
-    text: "text-slate-500",
-    ring: "ring-slate-200",
-  },
-};
-
-function formatDate(iso: string | null | undefined) {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("vi-VN", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
-}
+import { formatDate } from "../shared/utils/planUtils";
+import { STATUS_CONFIG } from "../schemas/display.schema";
 
 interface PlanApplyCardProps {
   apply: PlanApplyResponse;
@@ -152,7 +95,7 @@ export function PlanApplyCard({
           <button
             type="button"
             onClick={() => onCancelApply(apply)}
-            className="flex shrink-0 items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
           >
             <X className="h-3.5 w-3.5" strokeWidth={2.5} />
             Hủy
@@ -242,7 +185,7 @@ export function PlanApplyCard({
             <button
               type="button"
               onClick={() => onCancelApply(apply)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 hover:bg-amber-100 transition-colors"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors"
             >
               <X className="h-3.5 w-3.5" strokeWidth={2.5} />
               Hủy áp dụng

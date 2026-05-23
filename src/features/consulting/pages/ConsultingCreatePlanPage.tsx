@@ -5,10 +5,11 @@ import { PlanPreviewCalendar } from '../components/PlanPreviewCalendar';
 import { ROUTES } from '../../../lib/routes';
 import { useCreateConsultingPlan, useConsultingFarmPlots } from '../queries/consulting.queries';
 import type { PlanCreateRequest, PlantEventCreateRequest } from '../../plant-management/shared/types';
-import { PlanInfoSection, emptyForm } from '../components/PlanInfoSection';
+import { PlanInfoSection } from '../components/PlanInfoSection';
+import { emptyForm } from '../utils/planFormHelpers';
 import type { PlanFormState, PlanInfoErrors } from '../components/PlanInfoSection';
 import { EventScheduleSection } from '../components/EventScheduleSection';
-import { emptyEvent } from '../components/PlanInfoSection';
+import { emptyEvent } from '../utils/planFormHelpers';
 
 export function ConsultingCreatePlanPage() {
   const { farmerProfileId } = useParams<{ farmerProfileId: string }>();

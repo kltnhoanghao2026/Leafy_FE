@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Plus, Trash2, CalendarClock, ChevronDown, ChevronUp, Copy, List, LayoutGrid, ListChecks, CheckCircle2, Circle } from 'lucide-react';
 import { EventCalendarEditor } from './EventCalendarEditor';
 import { Select } from '../../../components/ui/Select';
@@ -414,54 +414,49 @@ export function EventScheduleSection({
   onUpdate,
 }: EventScheduleSectionProps) {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
-  // Expansion state lives here so add/remove/move can keep it in sync
+  // Use useRef + useState hybrid: mutations update ref directly (no re-render),
+  // then we sync state. For events.length changes, we sync immediately.
+  const expandedRef = useRef<boolean[]>([]);
   const [expandedList, setExpandedList] = useState<boolean[]>([]);
 
-  // Keep expandedList in sync when events are mutated from calendar mode
-  useEffect(() => {
-    setExpandedList((prev) => {
-      if (prev.length === events.length) return prev;
-      return Array.from({ length: events.length }, (_, i) => prev[i] ?? false);
-    });
-  }, [events.length]);
+  // Sync state to events.length changes without useEffect
+  if (expandedList.length !== events.length) {
+    const next = Array.from({ length: events.length }, (_, i) => expandedList[i] ?? false);
+    setExpandedList(next);
+  }
 
   const handleAdd = () => {
     onAdd();
-    setExpandedList((prev) => [...prev, true]); // new event auto-expands
+    expandedRef.current.push(true); // new event auto-expands
+    setExpandedList([...expandedRef.current]);
   };
 
   const handleRemove = (index: number) => {
     onRemove(index);
-    setExpandedList((prev) => prev.filter((_, i) => i !== index));
+    expandedRef.current.splice(index, 1);
+    setExpandedList([...expandedRef.current]);
   };
 
   const handleDuplicate = (index: number) => {
     onDuplicate(index);
-    setExpandedList((prev) => {
-      const next = [...prev];
-      next.splice(index + 1, 0, false); // duplicate starts collapsed
-      return next;
-    });
+    expandedRef.current.splice(index + 1, 0, false); // duplicate starts collapsed
+    setExpandedList([...expandedRef.current]);
   };
 
   const handleMoveUp = (index: number) => {
     if (index === 0) return;
     onMove(index, index - 1);
-    setExpandedList((prev) => {
-      const next = [...prev];
-      [next[index], next[index - 1]] = [next[index - 1], next[index]];
-      return next;
-    });
+    const ref = expandedRef.current;
+    [ref[index], ref[index - 1]] = [ref[index - 1], ref[index]];
+    setExpandedList([...ref]);
   };
 
   const handleMoveDown = (index: number) => {
     if (index === events.length - 1) return;
     onMove(index, index + 1);
-    setExpandedList((prev) => {
-      const next = [...prev];
-      [next[index], next[index + 1]] = [next[index + 1], next[index]];
-      return next;
-    });
+    const ref = expandedRef.current;
+    [ref[index], ref[index + 1]] = [ref[index + 1], ref[index]];
+    setExpandedList([...ref]);
   };
 
   const toggleExpanded = (index: number) => {

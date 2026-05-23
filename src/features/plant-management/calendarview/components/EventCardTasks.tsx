@@ -10,12 +10,12 @@ interface EventCardTasksProps {
 
 export function EventCardTasks({ event, stripColor, onToggleTask }: EventCardTasksProps) {
   const tasks = event.tasks ?? [];
-  if (tasks.length === 0) return null;
-
   const [expanded, setExpanded] = useState(false);
   const done = tasks.filter(t => t.completed).length;
   const pct = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
   const allDone = done === tasks.length;
+
+  if (tasks.length === 0) return null;
 
   return (
     <div className="mt-2 border-t border-slate-100 pt-2">

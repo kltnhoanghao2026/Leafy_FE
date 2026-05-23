@@ -156,9 +156,12 @@ export function CalendarWorkspace({
   const hoveredDateRange = useMemo<HoveredDateRange | null>(() => {
     if (!hoveredEvent?.calculatedStartDate) return null;
     const category = getEventCategory(hoveredEvent.eventType);
+    const end = hoveredEvent.durationDays != null && hoveredEvent.durationDays > 0
+      ? addLocalDays(hoveredEvent.calculatedStartDate, hoveredEvent.durationDays - 1)
+      : (hoveredEvent.calculatedEndDate ?? hoveredEvent.calculatedStartDate);
     return {
       start: hoveredEvent.calculatedStartDate,
-      end:   hoveredEvent.calculatedEndDate ?? hoveredEvent.calculatedStartDate,
+      end,
       color: CATEGORY_DOT_COLORS[category],
     };
   }, [hoveredEvent]);
