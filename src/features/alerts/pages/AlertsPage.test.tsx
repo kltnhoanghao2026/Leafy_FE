@@ -158,8 +158,8 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
-    await chooseSelectOption("Severity", "Quan trọng");
-    await chooseSelectOption("Status", "Cần xử lý");
+    await chooseSelectOption("Lọc theo mức độ", "Quan trọng");
+    await chooseSelectOption("Lọc theo trạng thái", "Cần xử lý");
 
     await waitFor(() => {
       expect(seenRequests).toContainEqual({
@@ -196,10 +196,10 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
-    await chooseSelectOption("Farm plot", "North Farm");
-    await chooseSelectOption("Zone", "Coffee Zone A");
-    await chooseSelectOption("Device", "North sensor");
-    await chooseSelectOption("Time range", "24 giờ qua");
+    await chooseSelectOption("Lọc theo vườn", "North Farm");
+    await chooseSelectOption("Lọc theo khu vực", "Coffee Zone A");
+    await chooseSelectOption("Lọc theo thiết bị", "North sensor");
+    await chooseSelectOption("Lọc theo khoảng thời gian", "24 giờ qua");
 
     await waitFor(() => {
       expect(seenRequests).toEqual(
@@ -263,14 +263,14 @@ describe("AlertsPage", () => {
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
     await userEvent.click(
-      screen.getByRole("button", { name: /acknowledge alert/i }),
+      screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     );
 
     await waitFor(() => {
       expect(screen.getAllByText("Đã xác nhận").length).toBeGreaterThan(0);
     });
     expect(
-      screen.getByRole("button", { name: /acknowledge alert/i }),
+      screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     ).toBeDisabled();
   });
 
@@ -306,12 +306,12 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
-    await userEvent.click(screen.getByRole("button", { name: /resolve alert/i }));
+    await userEvent.click(screen.getByRole("button", { name: /Đánh dấu đã xử lý Vượt ngưỡng cao/i }));
 
     await waitFor(() => {
       expect(screen.getAllByText("Đã xử lý").length).toBeGreaterThan(0);
     });
-    expect(screen.getByRole("button", { name: /resolve alert/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Đánh dấu đã xử lý Vượt ngưỡng cao/i })).toBeDisabled();
   });
 
   it("disables lifecycle actions that are invalid for the alert status", async () => {
@@ -335,9 +335,9 @@ describe("AlertsPage", () => {
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
     expect(
-      screen.getByRole("button", { name: /acknowledge alert/i }),
+      screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     ).toBeDisabled();
-    expect(screen.getByRole("button", { name: /resolve alert/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Đánh dấu đã xử lý Vượt ngưỡng cao/i })).toBeDisabled();
   });
 
   it("shows lifecycle mutation errors gracefully", async () => {
@@ -358,7 +358,7 @@ describe("AlertsPage", () => {
 
     await screen.findByText("AIR_TEMP exceeded max threshold");
     await userEvent.click(
-      screen.getByRole("button", { name: /acknowledge alert/i }),
+      screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     );
 
     expect(
@@ -390,7 +390,7 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     expect(await screen.findByText(/Trang 1 \/ 2/)).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText("Next page"));
+    await userEvent.click(screen.getByLabelText("Trang cảnh báo sau"));
 
     expect(await screen.findByText(/Trang 2 \/ 2/)).toBeInTheDocument();
     expect(requestedPages).toContain("1");

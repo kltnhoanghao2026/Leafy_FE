@@ -9,5 +9,7 @@ export {
 export {
   useCaptureDeviceImage,
   usePushDeviceConfig,
+  useReleaseDeviceMutation,
+  useUpdateDeviceMutation,
   useUpdateDeviceConfig,
 } from "./mutations";

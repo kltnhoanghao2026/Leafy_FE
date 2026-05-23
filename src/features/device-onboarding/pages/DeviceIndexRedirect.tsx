@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { Cpu, Plus, RefreshCw, Search } from "lucide-react";
+import { Cpu, LogOut, Plus, RefreshCw, Search, Settings2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Select } from "../../../components/ui/Select";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
@@ -16,6 +17,12 @@ import {
   formatDeviceStatusLabel,
   formatDeviceTypeLabel,
 } from "../../iot/utils/iotTranslation";
+import { EditDeviceModal } from "../../device-detail/components/EditDeviceModal";
+import { ReleaseDeviceConfirmDialog } from "../../device-detail/components/ReleaseDeviceConfirmDialog";
+import {
+  useReleaseDeviceMutation,
+  useUpdateDeviceMutation,
+} from "../../device-detail/queries";
 import { useMyDevices } from "../queries";
 
 const DEVICE_STATUSES: DeviceStatus[] = ["ONLINE", "OFFLINE", "UNKNOWN"];
@@ -62,7 +69,19 @@ function readableDeviceName(
   return device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
 }
 
-function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
+function DeviceCard({
+  device,
+  t,
+  onEdit,
+  onRelease,
+  isActionPending,
+}: {
+  device: DeviceResponse;
+  t: TFunction;
+  onEdit: (device: DeviceResponse) => void;
+  onRelease: (device: DeviceResponse) => void;
+  isActionPending?: boolean;
+}) {
   const deviceName = readableDeviceName(t, device);
 
   return (
@@ -134,6 +153,26 @@ function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
           >
             {t("iot.devices.index.viewDetail")}
           </Link>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <button
+              type="button"
+              onClick={() => onEdit(device)}
+              disabled={isActionPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Settings2 className="h-4 w-4" />
+              {t("iot.devices.actions.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onRelease(device)}
+              disabled={isActionPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 px-3 py-2 text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <LogOut className="h-4 w-4" />
+              {t("iot.devices.actions.release")}
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -147,6 +186,18 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function getDeviceManagementErrorMessage(error: unknown, t: TFunction, action: "edit" | "release") {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("403")) return t("iot.devices.release.forbidden");
+  if (message.includes("404")) {
+    return action === "edit"
+      ? t("iot.devices.edit.notFound")
+      : t("iot.devices.release.notFound");
+  }
+  if (message.includes("400")) return t("iot.devices.edit.invalidName");
+  return message || (action === "edit" ? t("iot.devices.edit.error") : t("iot.devices.release.error"));
+}
+
 export function DeviceIndexRedirect() {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
@@ -155,6 +206,8 @@ export function DeviceIndexRedirect() {
   const [provisioningStatus, setProvisioningStatus] = useState<
     ProvisioningStatus | ""
   >("CLAIMED");
+  const [editingDevice, setEditingDevice] = useState<DeviceResponse | null>(null);
+  const [releasingDevice, setReleasingDevice] = useState<DeviceResponse | null>(null);
 
   const params = useMemo<MyDevicesParams>(
     () => ({
@@ -170,6 +223,8 @@ export function DeviceIndexRedirect() {
   );
 
   const devicesQuery = useMyDevices(params);
+  const updateDeviceMutation = useUpdateDeviceMutation();
+  const releaseDeviceMutation = useReleaseDeviceMutation();
   const devices = devicesQuery.data?.items ?? [];
   const totalItems = devicesQuery.data?.totalItems ?? 0;
   const allOption = useMemo(() => ({ value: "", label: t("iot.devices.index.all") }), [t]);
@@ -193,6 +248,8 @@ export function DeviceIndexRedirect() {
     ],
     [allOption, t],
   );
+  const isActionPending =
+    updateDeviceMutation.isPending || releaseDeviceMutation.isPending;
 
   return (
     <section className="space-y-6">
@@ -325,11 +382,18 @@ export function DeviceIndexRedirect() {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1 text-sm font-bold text-slate-500">
-            <span>{t("iot.devices.index.count", totalItems)}</span>
+            <span>{t("iot.devices.index.count")(totalItems)}</span>
             {devicesQuery.isFetching ? <span>{t("iot.devices.index.updating")}</span> : null}
           </div>
           {devices.map((device) => (
-            <DeviceCard key={device.id} device={device} t={t} />
+            <DeviceCard
+              key={device.id}
+              device={device}
+              t={t}
+              onEdit={setEditingDevice}
+              onRelease={setReleasingDevice}
+              isActionPending={isActionPending}
+            />
           ))}
           <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
@@ -341,8 +405,7 @@ export function DeviceIndexRedirect() {
               {t("iot.devices.index.previousPage")}
             </button>
             <span className="text-sm font-bold text-slate-500">
-              {t(
-                "iot.devices.index.page",
+              {t("iot.devices.index.page")(
                 (devicesQuery.data?.page ?? page) + 1,
                 Math.max(devicesQuery.data?.totalPages ?? 1, 1),
               )}
@@ -358,6 +421,44 @@ export function DeviceIndexRedirect() {
           </div>
         </div>
       )}
+      <EditDeviceModal
+        open={Boolean(editingDevice)}
+        device={editingDevice}
+        onClose={() => setEditingDevice(null)}
+        isSubmitting={updateDeviceMutation.isPending}
+        onSubmit={async (payload) => {
+          if (!editingDevice) return;
+          try {
+            await updateDeviceMutation.mutateAsync({
+              deviceId: editingDevice.id,
+              payload,
+            });
+            toast.success(t("iot.devices.edit.success"));
+            setEditingDevice(null);
+            await devicesQuery.refetch();
+          } catch (error) {
+            toast.error(getDeviceManagementErrorMessage(error, t, "edit"));
+            throw error;
+          }
+        }}
+      />
+      <ReleaseDeviceConfirmDialog
+        open={Boolean(releasingDevice)}
+        deviceName={releasingDevice ? readableDeviceName(t, releasingDevice) : undefined}
+        onClose={() => setReleasingDevice(null)}
+        isSubmitting={releaseDeviceMutation.isPending}
+        onConfirm={async () => {
+          if (!releasingDevice) return;
+          try {
+            await releaseDeviceMutation.mutateAsync({ deviceId: releasingDevice.id });
+            toast.success(t("iot.devices.release.success"));
+            setReleasingDevice(null);
+            await devicesQuery.refetch();
+          } catch (error) {
+            toast.error(getDeviceManagementErrorMessage(error, t, "release"));
+          }
+        }}
+      />
     </section>
   );
 }

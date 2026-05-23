@@ -147,11 +147,11 @@ describe("DeviceCameraSchedulesPage", () => {
     setupHandlers();
     renderPage();
 
-    expect(await screen.findByText("leafy-cam-001")).toBeInTheDocument();
-    expect(await screen.findByText("08:30:00")).toBeInTheDocument();
+    expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
+    expect(await screen.findByText("08:30")).toBeInTheDocument();
     expect(screen.getAllByText("Hang ngay").length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/VGA/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/MEDIUM/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Tiêu chuẩn/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Trung bình/).length).toBeGreaterThan(0);
     expect(await screen.findByRole("img", { name: "Anh chup gan nhat cua thiet bi" })).toHaveAttribute(
       "src",
       "https://files.example.test/file-1.jpg",
@@ -164,7 +164,7 @@ describe("DeviceCameraSchedulesPage", () => {
     const calls = setupHandlers();
     renderPage();
 
-    await screen.findByText("08:30:00");
+    await screen.findByText("08:30");
     await user.click(screen.getAllByRole("button", { name: "Tao lich" })[0]);
     await waitFor(() =>
       expect(calls.create).toMatchObject({
@@ -181,7 +181,7 @@ describe("DeviceCameraSchedulesPage", () => {
     const calls = setupHandlers();
     renderPage();
 
-    await screen.findByText("08:30:00");
+    await screen.findByText("08:30");
     await user.click(screen.getAllByRole("button", { name: "Sua" })[0]);
     expect(await screen.findByText("Sua lich")).toBeInTheDocument();
     expect(calls.runNow).toBe("");
@@ -258,8 +258,8 @@ describe("DeviceCameraSchedulesPage", () => {
     const calls = setupHandlers([]);
     renderPage();
 
-    await screen.findByText("leafy-cam-001");
-    await user.type(screen.getByLabelText("Upload endpoint"), "ftp://invalid");
+    await screen.findByText("Leafy Camera");
+    await user.type(screen.getByLabelText("Nơi tải ảnh lên"), "ftp://invalid");
     await user.click(screen.getByRole("button", { name: "Tao lich" }));
 
     expect(await screen.findByText("Upload endpoint phai la URL HTTP hoac HTTPS hop le.")).toBeInTheDocument();

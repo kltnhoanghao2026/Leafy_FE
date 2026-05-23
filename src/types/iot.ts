@@ -356,6 +356,13 @@ export interface ClaimDeviceRequest {
   zoneId: string;
 }
 
+export interface UpdateDeviceRequest {
+  deviceName?: string;
+  farmPlotId?: string;
+  zoneId?: string;
+  active?: boolean;
+}
+
 export interface GenerateClaimCodeResponse {
   deviceId: string;
   claimCode: string;

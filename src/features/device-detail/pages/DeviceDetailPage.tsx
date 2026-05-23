@@ -1,6 +1,7 @@
 import type { ComponentType, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import {
   AlertCircle,
   CalendarPlus,
@@ -9,11 +10,13 @@ import {
   Cpu,
   Droplet,
   ImageOff,
+  LogOut,
   Play,
   RefreshCw,
   Save,
   ScanSearch,
   Send,
+  Settings2,
   Sun,
   Thermometer,
   WifiOff,
@@ -21,6 +24,7 @@ import {
 } from "lucide-react";
 import {
   CHART_TYPES,
+  CHART_TYPE_LABEL_KEYS,
   IoTMetricCard,
   type MetricData,
   type SensorChartType,
@@ -35,13 +39,19 @@ import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
 import {
+  formatCameraQualityLabel,
+  formatCameraResolutionLabel,
+  formatCameraTriggerLabel,
   formatConfigStatusLabel,
   formatDeviceStatusLabel,
   formatDeviceTypeLabel,
   formatMediaStatusLabel,
-  formatScheduleRecurrenceLabel,
   formatSensorLabel,
 } from "../../iot/utils/iotTranslation";
+import type {
+  DisplayCameraSchedule,
+  DisplayDeviceMediaEvent,
+} from "../../iot/utils/iotDisplay";
 import {
   chartToTrend,
   DISPLAY_CHART_RANGE_OPTIONS,
@@ -63,8 +73,12 @@ import {
   useDeviceMedia,
   useCaptureDeviceImage,
   usePushDeviceConfig,
+  useReleaseDeviceMutation,
+  useUpdateDeviceMutation,
   useUpdateDeviceConfig,
 } from "../queries";
+import { EditDeviceModal } from "../components/EditDeviceModal";
+import { ReleaseDeviceConfirmDialog } from "../components/ReleaseDeviceConfirmDialog";
 import {
   useDeviceSchedulesQuery,
   useCreateDeviceCameraScheduleMutation,
@@ -83,6 +97,7 @@ import type {
   AlertEventItemResponse,
   LatestReadingItemResponse,
   UpdateDeviceConfigRequest,
+  UpdateDeviceRequest,
 } from "../../../types/iot";
 
 const SENSOR_CONFIG = [
@@ -156,6 +171,18 @@ const readableDeviceName = (
   t: TFunction,
   device?: { deviceName?: string | null; deviceCode?: string | null },
 ) => device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
+
+function getDeviceManagementErrorMessage(error: unknown, t: TFunction, action: "edit" | "release") {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("403")) return t("iot.devices.release.forbidden");
+  if (message.includes("404")) {
+    return action === "edit"
+      ? t("iot.devices.edit.notFound")
+      : t("iot.devices.release.notFound");
+  }
+  if (message.includes("400")) return t("iot.devices.edit.invalidName");
+  return message || (action === "edit" ? t("iot.devices.edit.error") : t("iot.devices.release.error"));
+}
 
 const csvDateStamp = () => new Date().toISOString().slice(0, 10);
 
@@ -361,18 +388,18 @@ function DeviceSensorCard({
 }
 
 interface DeviceMediaPanelProps {
-  mediaEvents: DeviceMediaEventResponse[];
+  mediaEvents: DisplayDeviceMediaEvent[];
   canCapture: boolean;
   isCapturing: boolean;
   isPolling: boolean;
-  deviceSchedule?: DeviceCameraScheduleResponse | null;
-  deviceSchedules: DeviceCameraScheduleResponse[];
+  deviceSchedule?: DisplayCameraSchedule | null;
+  deviceSchedules: DisplayCameraSchedule[];
   isRunningSchedule: boolean;
   isCreatingSchedule: boolean;
   isDetectingDisease: boolean;
   onCapture: () => Promise<void>;
   onRunScheduleNow: () => Promise<void>;
-  onRunSchedule: (schedule: DeviceCameraScheduleResponse) => Promise<void>;
+  onRunSchedule: (schedule: DisplayCameraSchedule) => Promise<void>;
   onCreateSchedule: (payload: {
     timeOfDay: string;
     recurrence: CameraScheduleRecurrence;
@@ -381,7 +408,7 @@ interface DeviceMediaPanelProps {
     uploadEndpoint?: string;
   }) => Promise<void>;
   onUpdateSchedule: (
-    schedule: DeviceCameraScheduleResponse,
+    schedule: DisplayCameraSchedule,
     payload: {
       enabled: boolean;
       timeOfDay: string;
@@ -391,8 +418,8 @@ interface DeviceMediaPanelProps {
       uploadEndpoint?: string;
     },
   ) => Promise<void>;
-  onDeleteSchedule: (schedule: DeviceCameraScheduleResponse) => Promise<void>;
-  onDetectLatest: (media: DeviceMediaEventResponse) => Promise<void>;
+  onDeleteSchedule: (schedule: DisplayCameraSchedule) => Promise<void>;
+  onDetectLatest: (media: DisplayDeviceMediaEvent) => Promise<void>;
 }
 
 function DeviceMediaPanel({
@@ -534,7 +561,7 @@ function DeviceMediaPanel({
               className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-bold text-white hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ScanSearch className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              {isDetectingDisease ? "Analyzing..." : "Trigger Analysis"}
+              {isDetectingDisease ? t("iot.devices.media.analyzing") : t("iot.devices.media.triggerAnalysis")}
             </button>
           ) : null}
         </div>
@@ -555,10 +582,10 @@ function DeviceMediaPanel({
               <div key={getScheduleId(schedule)} className="rounded-xl border border-emerald-100 bg-white px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-black text-slate-800">
-                    {schedule.timeOfDay} · {formatScheduleRecurrenceLabel(t, schedule.recurrence)}
+                    {schedule.display.timeOfDay} · {schedule.display.recurrence}
                   </span>
                   <span className={badgeClass(schedule.enabled ? "green" : "slate")}>
-                    {schedule.enabled ? t("iot.cameraSchedules.enabled") : t("iot.cameraSchedules.disabled")}
+                    {schedule.display.enabled}
                   </span>
                 </div>
                 <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -637,9 +664,9 @@ function DeviceMediaPanel({
               onChange={(event) => setScheduleResolution(event.target.value as "QVGA" | "VGA" | "HD")}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
             >
-              <option value="QVGA">QVGA</option>
-              <option value="VGA">VGA</option>
-              <option value="HD">HD</option>
+              <option value="QVGA">{formatCameraResolutionLabel(t, "QVGA")}</option>
+              <option value="VGA">{formatCameraResolutionLabel(t, "VGA")}</option>
+              <option value="HD">{formatCameraResolutionLabel(t, "HD")}</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
@@ -649,9 +676,9 @@ function DeviceMediaPanel({
               onChange={(event) => setScheduleQuality(event.target.value as "LOW" | "MEDIUM" | "HIGH")}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
             >
-              <option value="LOW">LOW</option>
-              <option value="MEDIUM">MEDIUM</option>
-              <option value="HIGH">HIGH</option>
+              <option value="LOW">{formatCameraQualityLabel(t, "LOW")}</option>
+              <option value="MEDIUM">{formatCameraQualityLabel(t, "MEDIUM")}</option>
+              <option value="HIGH">{formatCameraQualityLabel(t, "HIGH")}</option>
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
@@ -772,23 +799,19 @@ function DeviceMediaPanel({
                     </span>
                   </div>
                   <p className="mt-2 text-xs font-semibold text-slate-500">
-                    {event.fileId
-                      ? `${event.width ?? "-"}x${event.height ?? "-"} - ${formatNumber(event.sizeBytes)} bytes`
-                      : event.error || event.requestId || t("iot.devices.media.waitingForUpload")}
+                    {event.fileId ? event.display.size : event.display.fallbackMessage}
                   </p>
                   {event.analysis ? (
                     <div className={`mt-2 text-xs font-black ${event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
-                      {event.analysis.diseaseDetected
-                        ? `Disease detected: ${event.analysis.diseaseType ?? event.analysis.diseaseName ?? "unknown"}${event.analysis.severity ? ` · ${event.analysis.severity}` : ""}`
-                        : event.analysis.status}
+                      {event.display.analysis?.summary}
                       {event.analysis.alertEventId ? (
                         <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
-                          Alert
+                          {t("iot.devices.media.analysis.alertCreated")}
                         </span>
                       ) : null}
                     </div>
                   ) : (
-                    <p className="mt-2 text-xs font-black text-slate-400">No disease analysis yet</p>
+                    <p className="mt-2 text-xs font-black text-slate-400">{t("iot.devices.media.analysis.notAnalyzed")}</p>
                   )}
                 </div>
               </div>
@@ -799,7 +822,7 @@ function DeviceMediaPanel({
 
       {selectedMedia ? (
         <ModalShell
-          title="Media detail"
+          title={t("iot.devices.media.mediaDetail")}
           titleId="device-media-detail-title"
           subtitle={
             <p className="mt-1 text-sm font-semibold text-slate-500">
@@ -835,27 +858,23 @@ function DeviceMediaPanel({
                     {formatMediaStatusLabel(t, selectedMedia.status)}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
-                    {selectedMedia.triggerType}
+                    {formatCameraTriggerLabel(t, selectedMedia.triggerType)}
                   </span>
                 </div>
                 <dl className="mt-4 space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
-                    <dt className="font-bold text-slate-500">Captured</dt>
+                    <dt className="font-bold text-slate-500">{t("iot.devices.media.capturedAt")}</dt>
                     <dd className="text-right font-black text-slate-700">{formatDateTime(selectedMedia.capturedAt)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="font-bold text-slate-500">Uploaded</dt>
+                    <dt className="font-bold text-slate-500">{t("iot.devices.media.uploadedAt")}</dt>
                     <dd className="text-right font-black text-slate-700">{formatDateTime(selectedMedia.uploadedAt)}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="font-bold text-slate-500">Size</dt>
+                    <dt className="font-bold text-slate-500">{t("iot.devices.media.size")}</dt>
                     <dd className="text-right font-black text-slate-700">
-                      {selectedMedia.width ?? "-"}x{selectedMedia.height ?? "-"} · {formatNumber(selectedMedia.sizeBytes)} bytes
+                      {selectedMedia.display.size}
                     </dd>
-                  </div>
-                  <div className="flex justify-between gap-4">
-                    <dt className="font-bold text-slate-500">Request</dt>
-                    <dd className="break-all text-right font-black text-slate-700">{selectedMedia.requestId ?? "-"}</dd>
                   </div>
                 </dl>
                 {selectedMedia.error ? (
@@ -867,40 +886,40 @@ function DeviceMediaPanel({
 
               <div className="rounded-2xl border border-slate-100 bg-white p-4">
                 <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
-                  Disease analysis
+                  {t("iot.devices.media.analysis.title")}
                 </h4>
                 {selectedAnalysis ? (
                   <div className="mt-3 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={badgeClass(selectedAnalysis.diseaseDetected ? "red" : "green")}>
-                        {selectedAnalysis.diseaseDetected ? "Disease detected" : selectedAnalysis.status}
+                        {selectedMedia.display.analysis?.status}
                       </span>
                       {selectedAnalysis.alertEventId ? (
                         <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700">
-                          Alert
+                          {t("iot.devices.media.analysis.alertCreated")}
                         </span>
                       ) : null}
                     </div>
                     <dl className="space-y-2 text-sm">
                       <div className="flex justify-between gap-4">
-                        <dt className="font-bold text-slate-500">Disease</dt>
+                        <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.disease")}</dt>
                         <dd className="text-right font-black text-slate-700">
-                          {selectedAnalysis.diseaseName ?? selectedAnalysis.diseaseType ?? "-"}
+                          {selectedMedia.display.analysis?.diseaseName ?? "-"}
                         </dd>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <dt className="font-bold text-slate-500">Severity</dt>
-                        <dd className="text-right font-black text-slate-700">{selectedAnalysis.severity ?? "-"}</dd>
+                        <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.severity")}</dt>
+                        <dd className="text-right font-black text-slate-700">{selectedMedia.display.analysis?.severity ?? "-"}</dd>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <dt className="font-bold text-slate-500">Confidence</dt>
+                        <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.confidence")}</dt>
                         <dd className="text-right font-black text-slate-700">
-                          {selectedAnalysis.confidence === null ? "-" : `${formatNumber(selectedAnalysis.confidence * 100)}%`}
+                          {selectedMedia.display.analysis?.confidence ?? "-"}
                         </dd>
                       </div>
                       <div className="flex justify-between gap-4">
-                        <dt className="font-bold text-slate-500">Analyzed</dt>
-                        <dd className="text-right font-black text-slate-700">{formatDateTime(selectedAnalysis.analyzedAt)}</dd>
+                        <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.analyzedAt")}</dt>
+                        <dd className="text-right font-black text-slate-700">{selectedMedia.display.analysis?.analyzedAt ?? "-"}</dd>
                       </div>
                     </dl>
                     {selectedAnalysis.notes || selectedAnalysis.error ? (
@@ -915,7 +934,7 @@ function DeviceMediaPanel({
                   </div>
                 ) : (
                   <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500">
-                    No disease analysis yet
+                    {t("iot.devices.media.analysis.notAnalyzed")}
                   </p>
                 )}
               </div>
@@ -1045,6 +1064,7 @@ function ConfigForm({
 
 export function DeviceDetailPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { deviceId } = useParams();
   const resolvedDeviceId = deviceId ?? "";
   const [range, setRange] = useState<DisplayChartRange>("D1");
@@ -1068,6 +1088,8 @@ export function DeviceDetailPage() {
   } | null>(null);
   const apiChartRange = toApiChartRange(range);
   const [captureRequestId, setCaptureRequestId] = useState<string | null>(null);
+  const [isEditDeviceOpen, setIsEditDeviceOpen] = useState(false);
+  const [isReleaseDeviceOpen, setIsReleaseDeviceOpen] = useState(false);
   const pushWatchUntilRef = useRef(0);
   const completedCaptureRef = useRef<string | null>(null);
 
@@ -1088,6 +1110,8 @@ export function DeviceDetailPage() {
     !!deviceId,
   );
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
+  const updateDeviceMutation = useUpdateDeviceMutation();
+  const releaseDeviceMutation = useReleaseDeviceMutation();
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
   const runScheduleNowMutation = useRunScheduledCameraMutation(deviceUid);
@@ -1128,6 +1152,32 @@ export function DeviceDetailPage() {
     (!watchedCaptureEvent || isMediaWaiting(watchedCaptureEvent));
   const canManageConfig =
     device?.isActive === true && device?.provisioningStatus === "CLAIMED";
+  const isDeviceActionPending =
+    updateDeviceMutation.isPending || releaseDeviceMutation.isPending;
+  const handleUpdateDevice = async (payload: UpdateDeviceRequest) => {
+    try {
+      await updateDeviceMutation.mutateAsync({
+        deviceId: resolvedDeviceId,
+        payload,
+      });
+      toast.success(t("iot.devices.edit.success"));
+      setIsEditDeviceOpen(false);
+      void deviceDetailQuery.refetch();
+    } catch (error) {
+      toast.error(getDeviceManagementErrorMessage(error, t, "edit"));
+      throw error;
+    }
+  };
+  const handleReleaseDevice = async () => {
+    try {
+      await releaseDeviceMutation.mutateAsync({ deviceId: resolvedDeviceId });
+      toast.success(t("iot.devices.release.success"));
+      setIsReleaseDeviceOpen(false);
+      navigate(ROUTES.DASHBOARD.DEVICES);
+    } catch (error) {
+      toast.error(getDeviceManagementErrorMessage(error, t, "release"));
+    }
+  };
   const rememberChartSnapshot = useCallback((snapshot: SensorSnapshot) => {
     setChartSnapshots((current) => {
       const previous = current[snapshot.sensorCode];
@@ -1408,15 +1458,37 @@ export function DeviceDetailPage() {
                   {formatDeviceTypeLabel(t, device.deviceType)} · {formatDeviceStatusLabel(t, device.status)}
                 </p>
               </div>
-              <div className="flex items-center gap-3 rounded-3xl bg-[#F2FCF4] px-4 py-3">
-                <CheckCircle2 className="h-5 w-5 text-[#245A34]" strokeWidth={3} />
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#245A34]">
-                    {t("iot.devices.detail.lastSeenAt")}
-                  </p>
-                  <p className="text-sm font-bold text-slate-700">
-                    {formatDateTime(device.lastSeenAt)}
-                  </p>
+              <div className="flex shrink-0 flex-col gap-3 lg:items-end">
+                <div className="flex items-center gap-3 rounded-3xl bg-[#F2FCF4] px-4 py-3">
+                  <CheckCircle2 className="h-5 w-5 text-[#245A34]" strokeWidth={3} />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-[#245A34]">
+                      {t("iot.devices.detail.lastSeenAt")}
+                    </p>
+                    <p className="text-sm font-bold text-slate-700">
+                      {formatDateTime(device.lastSeenAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditDeviceOpen(true)}
+                    disabled={isDeviceActionPending}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    {t("iot.devices.actions.edit")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsReleaseDeviceOpen(true)}
+                    disabled={isDeviceActionPending}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 px-3 py-2 text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t("iot.devices.actions.release")}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1577,7 +1649,7 @@ export function DeviceDetailPage() {
                           : "text-slate-500 hover:bg-white hover:text-[#245A34]"
                       }`}
                     >
-                      {type.label}
+                      {t(CHART_TYPE_LABEL_KEYS[type.value])}
                     </button>
                   ))}
                 </div>
@@ -1746,6 +1818,21 @@ export function DeviceDetailPage() {
           </section>
         </>
       ) : null}
+
+      <EditDeviceModal
+        open={isEditDeviceOpen}
+        device={device ?? null}
+        onClose={() => setIsEditDeviceOpen(false)}
+        onSubmit={handleUpdateDevice}
+        isSubmitting={updateDeviceMutation.isPending}
+      />
+      <ReleaseDeviceConfirmDialog
+        open={isReleaseDeviceOpen}
+        deviceName={device ? readableDeviceName(t, device) : undefined}
+        onClose={() => setIsReleaseDeviceOpen(false)}
+        onConfirm={handleReleaseDevice}
+        isSubmitting={releaseDeviceMutation.isPending}
+      />
 
       {displayedExpandedSensor ? (
         <SensorChartModal

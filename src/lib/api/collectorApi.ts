@@ -31,6 +31,7 @@ import type {
   UpdateAlertRuleEnabledRequest,
   UpdateAlertRuleRequest,
   UpdateDeviceConfigRequest,
+  UpdateDeviceRequest,
   ZoneOverviewResponse,
 } from "../../types/iot";
 
@@ -121,6 +122,20 @@ export const collectorApi = {
     apiClient.put<DeviceConfigResponse>(
       API_ENDPOINTS.IOT.DEVICE_CONFIG(deviceId),
       payload,
+    ),
+
+  updateDevice: (deviceId: string, payload: UpdateDeviceRequest) =>
+    apiClient.patch<DeviceResponse>(API_ENDPOINTS.IOT.DEVICE(deviceId), payload, {
+      headers: currentUserHeaders(),
+    }),
+
+  releaseDevice: (deviceId: string) =>
+    apiClient.post<DeviceResponse>(
+      `${API_ENDPOINTS.IOT.DEVICE(deviceId)}/release`,
+      undefined,
+      {
+        headers: currentUserHeaders(),
+      },
     ),
 
   pushDeviceConfig: (deviceId: string) =>
