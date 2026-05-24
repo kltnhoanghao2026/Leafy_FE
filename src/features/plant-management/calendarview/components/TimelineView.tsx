@@ -34,7 +34,7 @@ export function TimelineView({
 
   const monthLabel = month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
       {/* Month nav */}
       <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
         <button type="button" onClick={onPrevMonth}
@@ -50,12 +50,12 @@ export function TimelineView({
 
       {/* Timeline list */}
       {dates.length === 0 ? (
-        <div className="flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-10 shadow-sm">
+        <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-10 shadow-sm">
           <Clock className="mb-3 h-8 w-8 text-slate-200" />
           <p className="text-sm font-medium text-slate-500">Không có sự kiện trong tháng này</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-1 flex-col gap-1.5 overflow-y-auto">
           {dates.map(dateStr => {
             const isSelected = selectedDate === dateStr;
             const dateObj = new Date(dateStr + 'T00:00:00');

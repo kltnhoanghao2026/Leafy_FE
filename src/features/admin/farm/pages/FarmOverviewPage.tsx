@@ -347,10 +347,12 @@ function PlotsTab() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const { provinces, provinceMap } = useProvinces();
   useEffect(() => {
-    setPage(0);
+    const timer = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timer);
   }, [statusFilter, provinceCode]);
   useEffect(() => {
-    setPage(0);
+    const timer = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timer);
   }, [debouncedSearch, debouncedMinArea, debouncedMaxArea]);
 
   const { data, isLoading, isError, error } = useAdminFarmPlots({
@@ -522,10 +524,12 @@ function ZonesTab() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
 
   useEffect(() => {
-    setPage(0);
+    const timer = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timer);
   }, [statusFilter, cropType, soilType]);
   useEffect(() => {
-    setPage(0);
+    const timer = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timer);
   }, [debouncedSearch, debouncedMinArea, debouncedMaxArea]);
 
   const { data, isLoading, isError, error } = useAdminFarmZones({

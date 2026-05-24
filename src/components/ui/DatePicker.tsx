@@ -56,11 +56,15 @@ export function DatePicker({
     return { date: new Date(y, m - 1, d), time: timePart };
   }, [value]);
 
-  const [viewDate, setViewDate] = useState(() => {
+  const [viewDateState, setViewDateState] = useState(() => {
     return parsedValue?.date || new Date();
   });
 
-  const [tempTime, setTempTime] = useState(parsedValue?.time || "00:00");
+  const [tempTimeState, setTempTimeState] = useState(parsedValue?.time || "00:00");
+
+  const viewDate = useMemo(() => parsedValue?.date || viewDateState, [parsedValue, viewDateState]);
+
+  const tempTime = useMemo(() => parsedValue?.time || tempTimeState, [parsedValue, tempTimeState]);
 
   const minDay = useMemo(() => {
     if (!minDate) return null;
@@ -80,13 +84,6 @@ export function DatePicker({
     },
     [],
   );
-
-  useEffect(() => {
-    if (parsedValue) {
-      setViewDate(parsedValue.date);
-      setTempTime(parsedValue.time);
-    }
-  }, [parsedValue]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -123,12 +120,12 @@ export function DatePicker({
 
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
+    setViewDateState(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
   };
 
   const handleNextMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
+    setViewDateState(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
   };
 
   const handleDateSelect = (dayObj: Date) => {
@@ -142,7 +139,7 @@ export function DatePicker({
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value;
-    setTempTime(newTime);
+    setTempTimeState(newTime);
     if (parsedValue?.date) {
       onChange?.(formatDateTime(parsedValue.date, newTime));
     }
@@ -213,7 +210,7 @@ export function DatePicker({
       </button>
 
       {isOpen && createPortal(
-        <div ref={dropdownRef} style={dropdownStyle} className="overflow-hidden rounded-4xl border border-slate-100 bg-white p-4 shadow-xl">
+        <div ref={dropdownRef} style={dropdownStyle} className="overflow-hidden rounded-4xl border border-slate-100 bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-4">
             <button
               type="button"
@@ -227,13 +224,13 @@ export function DatePicker({
               <Select
                 value={viewDate.getMonth()}
                 options={monthOptions}
-                onChange={(val) => setViewDate(new Date(viewDate.getFullYear(), Number(val), 1))}
+                onChange={(val) => setViewDateState(new Date(viewDate.getFullYear(), Number(val), 1))}
                 className="w-28"
               />
               <Select
                 value={viewDate.getFullYear()}
                 options={yearOptions}
-                onChange={(val) => setViewDate(new Date(Number(val), viewDate.getMonth(), 1))}
+                onChange={(val) => setViewDateState(new Date(Number(val), viewDate.getMonth(), 1))}
                 className="w-24"
               />
             </div>

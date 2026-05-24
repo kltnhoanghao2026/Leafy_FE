@@ -60,8 +60,11 @@ export function PlantListPage() {
 
   // Clear selections and reset page when filters change to avoid invisible selections
   useEffect(() => {
-    setSelectedIds(new Set());
-    setPage(0);
+    const timer = setTimeout(() => {
+      setSelectedIds(new Set());
+      setPage(0);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [debouncedSearch, farmPlotFilter, farmZoneFilter, speciesFilter, statusFilter]);
 
   // Server-side filtering via the fixed /plants/me endpoint

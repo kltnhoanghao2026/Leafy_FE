@@ -32,12 +32,14 @@ export const plantManagementKeys = {
     [...plantManagementKeys.plansRoot(), "farm-zone", farmZoneId] as const,
   planApplies: (planId: string) =>
     [...plantManagementKeys.plansRoot(), "applies", planId] as const,
+  planApply: (applyId: string) =>
+    [...plantManagementKeys.plansRoot(), "apply-detail", applyId] as const,
   myApplies: (params?: object) =>
     [...plantManagementKeys.plansRoot(), "my-applies", params ?? {}] as const,
   plantEvent: (eventId: string) =>
     [...plantManagementKeys.all(), "plant-events", "detail", eventId] as const,
-  plantEventsByPlan: (sourcePlanId: string) =>
-    [...plantManagementKeys.all(), "plant-events", "plan", sourcePlanId] as const,
+  plantEventsByPlanApply: (planApplyId: string) =>
+    [...plantManagementKeys.all(), "plant-events", "plan-apply", planApplyId] as const,
   plantEventsCalendar: (params: object) =>
     [...plantManagementKeys.all(), "plant-events", "calendar", params] as const,
   agricultureStats: () =>

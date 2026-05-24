@@ -1,94 +1,11 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useTranslation } from '../../../../i18n';
-import type { PlantEventResponse } from '../../shared/types';
-import {
-  type EventCategory,
-  EVENT_CATEGORY_MAP,
-  CATEGORY_LABELS,
-} from '../../shared/components/displayUtils';
+import { CATEGORY_LABELS } from '../../shared/components/displayUtils';
 import { EventRow } from './EventRow';
-import type { EventAccentStyle } from './EventRow';
-
-// ── Category accent styles ────────────────────────────────────────────────────
-const CATEGORY_ACCENT: Record<EventCategory, EventAccentStyle> = {
-  ROUTINE_CARE: {
-    borderColor: '#3B82F6',
-    headerText: 'text-blue-700',
-    countBg: 'bg-blue-100',
-    countText: 'text-blue-700',
-    iconBg: 'bg-blue-50',
-    iconText: 'text-blue-500',
-    dotColor: '#3B82F6',
-    badgeBg: 'bg-blue-50',
-    badgeBorder: 'border-blue-200',
-    badgeText: 'text-blue-700',
-    headerBadgeBg: 'bg-blue-50',
-    headerBadgeText: 'text-blue-600',
-  },
-  HEALTH_MEDICAL: {
-    borderColor: '#F97316',
-    headerText: 'text-orange-700',
-    countBg: 'bg-orange-100',
-    countText: 'text-orange-700',
-    iconBg: 'bg-orange-50',
-    iconText: 'text-orange-500',
-    dotColor: '#F97316',
-    badgeBg: 'bg-orange-50',
-    badgeBorder: 'border-orange-200',
-    badgeText: 'text-orange-700',
-    headerBadgeBg: 'bg-red-50',
-    headerBadgeText: 'text-red-500',
-  },
-  GROWTH_LIFECYCLE: {
-    borderColor: '#10B981',
-    headerText: 'text-emerald-700',
-    countBg: 'bg-emerald-100',
-    countText: 'text-emerald-700',
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-600',
-    dotColor: '#10B981',
-    badgeBg: 'bg-emerald-50',
-    badgeBorder: 'border-emerald-200',
-    badgeText: 'text-[#245A34]',
-    headerBadgeBg: 'bg-emerald-50',
-    headerBadgeText: 'text-emerald-700',
-  },
-};
-
-const CATEGORY_ORDER: EventCategory[] = ['ROUTINE_CARE', 'HEALTH_MEDICAL', 'GROWTH_LIFECYCLE'];
-
-/** Recursively count all events (including nested children). */
-function countAllEvents(events: PlantEventResponse[]): number {
-  let count = 0;
-  for (const e of events) {
-    count += 1;
-    if (e.children && e.children.length > 0) {
-      count += countAllEvents(e.children);
-    }
-  }
-  return count;
-}
-
-/** Check if a single event is considered done. */
-function isEventDone(e: PlantEventResponse): boolean {
-  if (e.trackingGranularity && e.trackingGranularity !== 'NONE') {
-    return e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal;
-  }
-  return e.completed;
-}
-
-/** Recursively count done events (including nested children). */
-function countDoneEvents(events: PlantEventResponse[]): number {
-  let count = 0;
-  for (const e of events) {
-    if (isEventDone(e)) count += 1;
-    if (e.children && e.children.length > 0) {
-      count += countDoneEvents(e.children);
-    }
-  }
-  return count;
-}
+import { CATEGORY_ACCENT_STYLES } from '../schemas/eventAccent';
+import type { GroupedEventListProps } from '../schemas/calendar.types';
+import { CATEGORY_ORDER, countAllEvents, countDoneEvents, groupEventsByCategory } from '../schemas/eventUtils';
+import { useTranslation } from '../../../../i18n';
 
 
 // ── CategorySection ───────────────────────────────────────────────────────────
@@ -105,7 +22,7 @@ interface CategorySectionProps {
 
 function CategorySection({ category, events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent }: CategorySectionProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const accent = CATEGORY_ACCENT[category];
+  const accent = CATEGORY_ACCENT_STYLES[category];
 
   // Compute done count recursively (including nested children).
   const totalCount = countAllEvents(events);
@@ -163,41 +80,19 @@ function CategorySection({ category, events, onEdit, onDelete, onEventHover, onT
 
 // ── GroupedEventList (public API) ─────────────────────────────────────────────
 
-export interface GroupedEventListProps {
-  events: PlantEventResponse[];
-  selectedDate?: string | null;
-  onEdit?: (event: PlantEventResponse) => void;
-  onDelete?: (event: PlantEventResponse) => void;
-  onEventHover?: (event: PlantEventResponse | null) => void;
-  onToggleComplete?: (event: PlantEventResponse) => void;
-  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
-  onSelectEvent?: (event: PlantEventResponse) => void;
-  emptyNode?: React.ReactNode;
-  headerAction?: React.ReactNode;
-  hideHeader?: boolean;
-}
-
 export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onToggleComplete, onToggleTask, onSelectEvent, emptyNode, headerAction, hideHeader }: GroupedEventListProps) {
-  const grouped: Record<EventCategory, PlantEventResponse[]> = {
-    ROUTINE_CARE: [],
-    HEALTH_MEDICAL: [],
-    GROWTH_LIFECYCLE: [],
-  };
-
-  for (const evt of events) {
-    const cat = EVENT_CATEGORY_MAP[evt.eventType] ?? 'ROUTINE_CARE';
-    grouped[cat].push(evt);
-  }
+  const { t } = useTranslation();
+  const grouped = groupEventsByCategory(events);
 
   const hasAny = CATEGORY_ORDER.some((cat) => grouped[cat].length > 0);
   if (!hasAny) return (
     <div className="flex flex-col gap-3">
       {!hideHeader && (
         <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <span className="text-sm font-semibold text-slate-700">{t('plantManagement.calendar.eventListTitle')}</span>
           <div className="flex items-center gap-2">
             {headerAction}
-            <span className="text-xs text-slate-400">0 sự kiện</span>
+            <span className="text-xs text-slate-400">{t('plantManagement.calendar.zeroEvents')}</span>
           </div>
         </div>
       )}
@@ -214,10 +109,10 @@ export function GroupedEventList({ events, onEdit, onDelete, onEventHover, onTog
       {/* List header */}
       {!hideHeader && (
         <div className="flex items-center justify-between border-b border-slate-200 pb-2 px-1">
-          <span className="text-sm font-semibold text-slate-700">Danh sách sự kiện</span>
+          <span className="text-sm font-semibold text-slate-700">{t('plantManagement.calendar.eventListTitle')}</span>
           <div className="flex items-center gap-2">
             {headerAction}
-            <span className="text-xs text-slate-400">{totalCount} sự kiện</span>
+            <span className="text-xs text-slate-400">{t('plantManagement.calendar.eventCount', { count: totalCount })}</span>
           </div>
         </div>
       )}

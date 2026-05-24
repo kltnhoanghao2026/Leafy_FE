@@ -40,6 +40,7 @@ export const treatmentPlanApi = {
         ...params,
         plantId: params.plantId || undefined,
         search: params.search || undefined,
+        sourceType: params.sourceType || undefined,
       },
     });
     return toPageResponse(unwrapApiData(response.data));
@@ -49,11 +50,14 @@ export const treatmentPlanApi = {
     const response = await apiClient.get<
       | ApiEnvelope<PageResponse<PlanResponse>>
       | PageResponse<PlanResponse>
-    >(API_ENDPOINTS.PLANS.PUBLIC, {
+    >(API_ENDPOINTS.SEARCH.PLANS, {
       params: {
         ...defaultParams,
         ...params,
         search: params.search || undefined,
+        sourceType: params.sourceType || undefined,
+        severityLevel: params.severityLevel || undefined,
+        urgency: params.urgency || undefined,
       },
     });
     return toPageResponse(unwrapApiData(response.data));
@@ -142,6 +146,13 @@ export const treatmentPlanApi = {
     return toPageResponse(unwrapApiData(response.data));
   },
 
+  getApplyById: async (applyId: string) => {
+    const response = await apiClient.get<
+      ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
+    >(API_ENDPOINTS.PLANS.APPLY_ITEM(applyId));
+    return unwrapApiData(response.data);
+  },
+
   getMyApplies: async (params: MyAppliesParams = {}) => {
     const response = await apiClient.get<
       | ApiEnvelope<PageResponse<PlanApplyResponse>>
@@ -162,6 +173,20 @@ export const treatmentPlanApi = {
     >(API_ENDPOINTS.PLANS.APPLY_STATUS(applyId), null, {
       params: { status },
     });
+    return unwrapApiData(response.data);
+  },
+
+  cancelApply: async (applyId: string) => {
+    const response = await apiClient.post<
+      ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
+    >(API_ENDPOINTS.PLANS.CANCEL_APPLY(applyId));
+    return unwrapApiData(response.data);
+  },
+
+  completeApply: async (applyId: string, success: boolean) => {
+    const response = await apiClient.patch<
+      ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
+    >(API_ENDPOINTS.PLANS.COMPLETE_APPLY(applyId), { success });
     return unwrapApiData(response.data);
   },
 
@@ -190,5 +215,29 @@ export const treatmentPlanApi = {
       ApiEnvelope<BulkOperationResult> | BulkOperationResult
     >(API_ENDPOINTS.PLANS.BULK_APPLY_CUSTOM, payload);
     return unwrapApiData(response.data) as BulkOperationResult;
+  },
+};
+
+export interface ChunkDetail {
+  chunk_id: string;
+  document_id: string;
+  chunk_index: number;
+  point_id: string | null;
+  text: string;
+  metadata: Record<string, unknown>;
+}
+
+export const ragApi = {
+  getChunksByPointIds: async (pointIds: string[]): Promise<ChunkDetail[]> => {
+    const params = pointIds.map((id) => `point_ids=${encodeURIComponent(id)}`).join("&");
+    const response = await apiClient.get<ApiEnvelope<ChunkDetail[]> | ChunkDetail[]>(
+      API_ENDPOINTS.RAG.CHUNKS_BY_POINT_IDS,
+      { params },
+    );
+    const data = response.data;
+    if (data && typeof data === "object" && "data" in data) {
+      return (data as ApiEnvelope<ChunkDetail[]>).data ?? [];
+    }
+    return (data as ChunkDetail[]) ?? [];
   },
 };

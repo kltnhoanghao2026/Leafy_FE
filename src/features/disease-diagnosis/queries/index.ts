@@ -7,4 +7,7 @@ export {
   useDiagnoseResultsByRequest,
   usePredictDiseaseMutation,
   usePredictHealth,
+  useDetectLeafMutation,
+  useUpdateDiagnosePlantMutation,
+  useGenerateTreatmentPlanMutation,
 } from "./disease.queries";

@@ -4,11 +4,7 @@ import { Avatar } from '../../../components/ui/Avatar';
 import { AttachmentPreview } from './AttachmentPreview';
 import { LinkPreviewCard } from './LinkPreviewCard';
 import { SystemMessageBubble } from './SystemMessageBubble';
-
-export function formatTime(ts: string | null | undefined): string {
-  if (!ts) return '';
-  return new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-}
+import { formatTime } from '../utils/messageHelpers';
 
 interface BubbleProps {
   msg: MessageResponse;

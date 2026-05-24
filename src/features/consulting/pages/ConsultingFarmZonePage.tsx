@@ -1,4 +1,4 @@
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft, FlaskConical, LayoutGrid, List, Sprout } from 'lucide-react';
 import { ROUTES } from '../../../lib/routes';

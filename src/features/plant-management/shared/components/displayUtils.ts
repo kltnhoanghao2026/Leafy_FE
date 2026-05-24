@@ -8,13 +8,14 @@ import type {
 import {
   Droplets, Beaker, Trash2, Scissors, Search, Bug, Syringe,
   ShieldAlert, HeartPulse, Activity, PackageOpen, Wheat,
+  MapPin, Leaf, BellRing,
 } from 'lucide-react';
 
 import type { ComponentType } from 'react';
 
 // ── Category groupings (mirrors Leafy_APP plant-event.types.ts) ───────────────
 
-export type EventCategory = 'ROUTINE_CARE' | 'HEALTH_MEDICAL' | 'GROWTH_LIFECYCLE';
+export type EventCategory = 'ROUTINE_CARE' | 'HEALTH_MEDICAL' | 'GROWTH_LIFECYCLE' | 'ALERTS';
 
 export const EVENT_CATEGORY_MAP: Record<PlantEventType, EventCategory> = {
   IRRIGATION: 'ROUTINE_CARE',
@@ -29,18 +30,21 @@ export const EVENT_CATEGORY_MAP: Record<PlantEventType, EventCategory> = {
   PHENOLOGY: 'GROWTH_LIFECYCLE',
   REPOT: 'GROWTH_LIFECYCLE',
   HARVEST: 'GROWTH_LIFECYCLE',
+  ALERT_TRIGGERED: 'ALERTS',
 };
 
 export const CATEGORY_LABELS: Record<EventCategory, string> = {
   ROUTINE_CARE: 'Chăm sóc định kỳ',
   HEALTH_MEDICAL: 'Sức khỏe & Y tế',
   GROWTH_LIFECYCLE: 'Sinh trưởng',
+  ALERTS: 'Cảnh báo tự động',
 };
 
 export const CATEGORY_DOT_COLORS: Record<EventCategory, string> = {
   ROUTINE_CARE: '#3B82F6',
   HEALTH_MEDICAL: '#F97316',
   GROWTH_LIFECYCLE: '#10B981',
+  ALERTS: '#EF4444',
 };
 
 export const getEventCategory = (eventType: PlantEventType): EventCategory =>
@@ -73,6 +77,7 @@ export const EVENT_TYPE_LABELS: Record<PlantEventType, string> = {
   PHENOLOGY: "Giai đoạn sinh trưởng",
   REPOT: "Chuyển chậu",
   HARVEST: "Thu hoạch",
+  ALERT_TRIGGERED: "Cảnh báo cảm biến",
 };
 
 export const EVENT_TYPE_ICONS: Record<PlantEventType, ComponentType<{ className?: string; style?: Record<string, string | number> }>> = {
@@ -88,6 +93,7 @@ export const EVENT_TYPE_ICONS: Record<PlantEventType, ComponentType<{ className?
   PHENOLOGY: Activity,
   REPOT: PackageOpen,
   HARVEST: Wheat,
+  ALERT_TRIGGERED: BellRing,
 };
 
 export const formatDate = (value?: string | null) => {
@@ -153,10 +159,10 @@ export const TARGET_TYPE_LABELS: Record<TargetType, string> = {
   PLANT: 'Cây cá nhân',
 };
 
-export const TARGET_TYPE_ICONS: Record<TargetType, string> = {
-  FARM: '🌾',
-  FARM_ZONE: '📍',
-  PLANT: '🌱',
+export const TARGET_TYPE_ICONS: Record<TargetType, ComponentType<{ className?: string }>> = {
+  FARM: Wheat,
+  FARM_ZONE: MapPin,
+  PLANT: Leaf,
 };
 
 export const getTargetTypeLabel = (type: TargetType | null | undefined): string =>

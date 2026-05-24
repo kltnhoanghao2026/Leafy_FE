@@ -113,4 +113,13 @@ export const consultingApi = {
     >(API_ENDPOINTS.CONSULTING.FARMER_SUMMARY_BULK, { farmerProfileIds });
     return unwrapApiData(response.data);
   },
+
+  getConsultingCalendar: async (farmerProfileId: string, startDate: string, endDate: string): Promise<PlantEventResponse[]> => {
+    const response = await apiClient.get<
+      ApiEnvelope<PlantEventResponse[]> | PlantEventResponse[]
+    >(API_ENDPOINTS.CONSULTING.CALENDAR, {
+      params: { farmerProfileId, startDate, endDate },
+    });
+    return unwrapApiData(response.data);
+  },
 };

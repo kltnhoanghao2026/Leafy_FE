@@ -26,7 +26,6 @@ export const ROUTES = {
     ZONE_METRICS: (zoneId: string) => `/dashboard/metrics/${zoneId}`,
     DEVICE_DETAIL: (deviceId: string) => `/dashboard/devices/${deviceId}`,
     SEARCH: "/dashboard/search",
-    DISEASE_PREDICTION: "/dashboard/disease-prediction",
     RAG_PANEL: "/dashboard/rag-panel",
     RAG_TREATMENT_PLAN: (planId: string) =>
       `/dashboard/rag-panel/treatment-plans/${planId}`,
@@ -37,10 +36,19 @@ export const ROUTES = {
     DEVICE_ONBOARDING: "/dashboard/devices/onboarding",
     PLANTS: "/dashboard/plants",
     PLANT_DETAIL: (plantId: string) => `/dashboard/plants/${plantId}`,
+    SPECIES: "/dashboard/species",
+    FARM_PLOT_DETAIL: (farmPlotId: string) => `/dashboard/farms/${farmPlotId}`,
+    FARM_ZONE_DETAIL: (farmPlotId: string, farmZoneId: string) => `/dashboard/farms/${farmPlotId}/zones/${farmZoneId}`,
+    SPECIES_DETAIL: (id: string) => `/dashboard/species/${id}`,
     PLANS: "/dashboard/plans",
     PLANS_CREATE: "/dashboard/plans/create",
+    PLANS_GENERATE_PROGRESS: "/dashboard/plans/generate-progress",
     PLAN_DETAIL: (planId: string) =>
       `/dashboard/plans/${planId}`,
+    PLAN_EDIT: (planId: string) =>
+      `/dashboard/plans/${planId}/edit`,
+    PLAN_APPLY_DETAIL: (applyId: string) =>
+      `/dashboard/plans/applies/${applyId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
@@ -60,6 +68,8 @@ export const ROUTES = {
     CONSULTING_FARM_PLOT: (farmerProfileId: string, farmPlotId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}`,
     CONSULTING_FARM_ZONE: (farmerProfileId: string, farmPlotId: string, farmZoneId: string) => `/dashboard/consulting/${farmerProfileId}/farms/${farmPlotId}/zones/${farmZoneId}`,
     CONSULTING_PLANT: (farmerProfileId: string, plantId: string) => `/dashboard/consulting/${farmerProfileId}/plants/${plantId}`,
+    APPLY_AS_EXPERT: "/dashboard/apply-as-expert",
+    EXPERT_APPLICATION_HISTORY: "/dashboard/expert-application-history",
   },
 
   // Admin routes (JWT required, ADMIN role required)
@@ -172,14 +182,15 @@ export const API_ENDPOINTS = {
     GET: (profileId: string) => `/profiles/${profileId}`,
     GET_BY_USER: (userId: string) => `/profiles/user/${userId}`,
     PUBLIC_EXPERTS: "/profiles/experts",
+    MY_APPROVAL_REQUESTS: (profileId: string) => `/profiles/${profileId}/approval-requests`,
     APPROVAL_REQUESTS: (profileId: string) =>
       `/profiles/${profileId}/approval-requests`,
-    PENDING_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/pending`,
-    PROCESSED_APPROVAL_REQUESTS: `/profiles/admin/approval-requests/processed`,
+    PENDING_APPROVAL_REQUESTS: `/admin/certificates/approval-requests/pending`,
+    PROCESSED_APPROVAL_REQUESTS: `/admin/certificates/approval-requests/processed`,
     UPDATE_APPROVAL_STATUS: (profileId: string, requestId: string) =>
-      `/profiles/${profileId}/approval-requests/${requestId}/status`,
+      `/admin/certificates/approval-requests/${profileId}/${requestId}/status`,
     REVOKE_APPROVAL: (profileId: string, requestId: string) =>
-      `/profiles/${profileId}/approval-requests/${requestId}/revoke`,
+      `/admin/certificates/approval-requests/${profileId}/${requestId}/revoke`,
     // Admin-only endpoints
     LIST: "/profiles",
     SEARCH_EXPERTS: "/profiles/search/experts",
@@ -203,12 +214,16 @@ export const API_ENDPOINTS = {
     ME: "/preferences/me",
     APPEARANCE: "/preferences/appearance",
     GENERAL: "/preferences/general",
-    SECURITY: "/preferences/security",
     PRIVACY: "/preferences/privacy",
-    MESSAGE: "/preferences/message",
+    PRIVACY_BY_PROFILE: (profileId: string) => `/preferences/profile/${profileId}/privacy`,
     NOTIFICATION: "/preferences/notification",
-    SYNC: "/preferences/sync",
-    UTILITIES: "/preferences/utilities",
+  },
+
+  CONSULTING_ACCESS: {
+    REQUEST: "/profiles/consulting/access/request",
+    PENDING: "/profiles/consulting/access/requests/pending",
+    APPROVE: (requestId: string) => `/profiles/consulting/access/requests/${requestId}/approve`,
+    DENY: (requestId: string) => `/profiles/consulting/access/requests/${requestId}/deny`,
   },
 
   USERS: {
@@ -240,11 +255,16 @@ export const API_ENDPOINTS = {
       `/votes/${targetType}/${targetId}`,
   },
 
+  FEED: {
+    MARK_VIEWED: "/feed/viewed",
+  },
+
   FARMS: {
     PLOTS: "/farms/plots",
     PLOT: (id: string) => `/farms/plots/${id}`,
     PLOT_ZONES: (plotId: string) => `/farms/plots/${plotId}/zones`,
     ZONE: (id: string) => `/farms/zones/${id}`,
+    ZONES_BY_OWNER: "/farms/zones",
     ADMIN_PLOTS: "/farms/plots/admin",
     ADMIN_ZONES: "/farms/admin/zones",
   },
@@ -257,6 +277,7 @@ export const API_ENDPOINTS = {
     PLANTS: "/plants/consulting",
     PLANT: (id: string) => `/plants/consulting/${id}`,
     PLANT_EVENTS: "/plant-events/consulting",
+    CALENDAR: "/plant-events/consulting/calendar",
     PLANS: "/plans/consulting",
   },
 
@@ -286,19 +307,18 @@ export const API_ENDPOINTS = {
     BY_PLANT: (plantId: string) => `/plant-events/plant/${plantId}`,
     BY_PLANT_TYPE: (plantId: string, eventType: string) =>
       `/plant-events/plant/${plantId}/type/${eventType}`,
-    BY_PLANT_PLANNED: (plantId: string) =>
+    BY_PLAN_PLANNED: (plantId: string) =>
       `/plant-events/plant/${plantId}/planned`,
-    BY_PLAN: (sourcePlanId: string) => `/plant-events/plan/${sourcePlanId}`,
+    BY_PLAN_APPLY: (planApplyId: string) => `/plant-events/plan-apply/${planApplyId}`,
     BY_FARM_PLOT: (farmPlotId: string) =>
       `/plant-events/farm-plot/${farmPlotId}`,
     BY_FARM_ZONE: (farmZoneId: string) =>
       `/plant-events/farm-zone/${farmZoneId}`,
     CALENDAR: "/plant-events/calendar",
-    PROGRESS: (eventId: string) => `/plant-events/${eventId}/progress`,
-    PROGRESS_ITEM: (eventId: string, progressId: string) =>
-      `/plant-events/${eventId}/progress/${progressId}`,
-    PROGRESS_GENERATE: (eventId: string) =>
-      `/plant-events/${eventId}/progress/generate`,
+    DELETABLE_CHILDREN: (eventId: string) =>
+      `/plant-events/${eventId}/deletable-children`,
+    WITH_CHILDREN: (eventId: string) =>
+      `/plant-events/${eventId}/with-children`,
   },
 
   PLANS: {
@@ -307,7 +327,10 @@ export const API_ENDPOINTS = {
     ITEM: (planId: string) => `/plans/${planId}`,
     APPLY: (planId: string) => `/plans/${planId}/apply`,
     APPLIES: (planId: string) => `/plans/${planId}/applies`,
+    APPLY_ITEM: (applyId: string) => `/plans/applies/${applyId}`,
     APPLY_STATUS: (applyId: string) => `/plans/applies/${applyId}/status`,
+    CANCEL_APPLY: (applyId: string) => `/plans/applies/${applyId}/cancel`,
+    COMPLETE_APPLY: (applyId: string) => `/plans/applies/${applyId}/complete`,
     BULK_APPLY_STATUS: "/plans/applies/bulk/status",
     BULK_DELETE: "/plans/bulk",
     BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",
@@ -346,8 +369,13 @@ export const API_ENDPOINTS = {
     DOCUMENT: (documentId: string) => `/rag/v1/documents/${documentId}`,
     TASKS: "/rag/v1/tasks",
     TASK: (taskId: string) => `/rag/v1/tasks/${taskId}`,
+    CHUNKS_BY_POINT_IDS: "/rag/v1/chunks/by-point-ids",
     TREATMENT_PLANS: "/rag/v1/treatment-plans/",
     TREATMENT_PLAN: (planId: string) => `/rag/v1/treatment-plans/${planId}`,
+    GENERATE_PLAN: "/rag/v1/plans/generate",
+    GENERATE_PLAN_PREVIEW: "/rag/v1/plans/generate-preview",
+    GENERATE_PLAN_V2: "/rag/v2/plans/generate",
+    GENERATE_PLAN_V2_STREAM: "/rag/v2/plans/generate/stream",
   },
 
   DISEASES: {

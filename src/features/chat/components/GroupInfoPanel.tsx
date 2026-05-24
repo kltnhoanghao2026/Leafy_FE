@@ -170,8 +170,8 @@ export function GroupInfoPanel({ conversation, currentUserId, onClose }: GroupIn
   const { data: searchResults = [], isLoading: searching } = useQuery({
     queryKey: ['panel-search', addSearch],
     queryFn: async () => {
-      const res = await apiClient.get<any>(API_ENDPOINTS.PROFILES.SEARCH, { params: { searchTerm: addSearch, page: 0, size: 20 } });
-      return (res.data?.data?.content || res.data?.content || []) as Profile[];
+      const res = await apiClient.get<{ data?: { content?: Profile[] }; content?: Profile[] }>(API_ENDPOINTS.PROFILES.SEARCH, { params: { searchTerm: addSearch, page: 0, size: 20 } });
+      return res.data?.data?.content || res.data?.content || [];
     },
     enabled: showAdd && addSearch.trim().length > 0,
   });

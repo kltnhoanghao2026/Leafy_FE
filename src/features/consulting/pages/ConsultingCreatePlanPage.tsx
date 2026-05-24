@@ -5,10 +5,11 @@ import { PlanPreviewCalendar } from '../components/PlanPreviewCalendar';
 import { ROUTES } from '../../../lib/routes';
 import { useCreateConsultingPlan, useConsultingFarmPlots } from '../queries/consulting.queries';
 import type { PlanCreateRequest, PlantEventCreateRequest } from '../../plant-management/shared/types';
-import { PlanInfoSection, emptyForm } from '../components/PlanInfoSection';
+import { PlanInfoSection } from '../components/PlanInfoSection';
+import { emptyForm } from '../utils/planFormHelpers';
 import type { PlanFormState, PlanInfoErrors } from '../components/PlanInfoSection';
 import { EventScheduleSection } from '../components/EventScheduleSection';
-import { emptyEvent } from '../components/PlanInfoSection';
+import { emptyEvent } from '../utils/planFormHelpers';
 
 export function ConsultingCreatePlanPage() {
   const { farmerProfileId } = useParams<{ farmerProfileId: string }>();
@@ -56,7 +57,7 @@ export function ConsultingCreatePlanPage() {
     [farmPlots],
   );
 
-  const updateForm = (field: keyof PlanFormState, value: string) => {
+  const updateForm = (field: keyof PlanFormState, value: string | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     setPlanErrors((prev) => ({ ...prev, [field]: undefined }));
   };
@@ -128,20 +129,27 @@ export function ConsultingCreatePlanPage() {
       eventType: evt.eventType,
       note: evt.note,
       description: evt.description?.trim() || undefined,
-      daysFromNow: evt.daysFromNow,
+      daysFromStart: evt.daysFromStart,
       durationDays: evt.durationDays,
       estimatedCost: evt.estimatedCost?.trim() || undefined,
+      phiDays: evt.phiDays,
+      ppeRequired: evt.ppeRequired?.trim() || undefined,
+      mrlNote: evt.mrlNote?.trim() || undefined,
       isPlanned: true,
     }));
 
     const payload: PlanCreateRequest = {
       diseaseName: form.diseaseName.trim(),
-      question: form.question.trim() || undefined,
+      planName: form.planName?.trim() || undefined,
       farmPlotId: form.farmPlotId || undefined,
+      speciesId: form.speciesId || undefined,
+      source: 'documents',
       severityLevel: form.severityLevel || undefined,
-      urgency: form.urgency || undefined,
-      successIndicators: form.successIndicators.trim() || undefined,
-      estimatedCost: form.estimatedCost.trim() || undefined,
+      requiredInputs: form.requiredInputs?.trim() ? [form.requiredInputs.trim()] : undefined,
+      safetyWarnings: form.safetyWarnings?.trim() ? [form.safetyWarnings.trim()] : undefined,
+      successIndicators: form.successIndicators?.trim() || undefined,
+      estimatedCost: form.estimatedCost?.trim() || undefined,
+      isPublic: form.isPublic,
       schedule: cleanedEvents.length > 0 ? cleanedEvents : undefined,
     };
 

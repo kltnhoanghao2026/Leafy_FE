@@ -33,7 +33,10 @@ export function CompareChart({
   const { t } = useTranslation();
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
-  const drawableSeries = series.filter((item) => item.data.length > 0);
+  const drawableSeries = useMemo(
+    () => series.filter((item) => item.data.length > 0).slice(),
+    [series],
+  );
   const primary = drawableSeries[0];
 
   const valueDomain = useMemo(() => {

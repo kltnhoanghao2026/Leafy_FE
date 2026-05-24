@@ -747,13 +747,13 @@ function ProfileList({ profiles }: { profiles: SearchProfileItem[] }) {
         const name   = profile.fullName ?? 'Người dùng'
         return (
           <li key={profile.id} className="flex items-start gap-3 px-5 py-4 hover:bg-slate-50/70 transition-colors group">
-            <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.userId!)} className="block shrink-0">
+            <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.id)} className="block shrink-0">
               <Avatar src={avatar} name={name} alt={name} size="xl"
                 className="border border-slate-200" />
             </Link>
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.userId!)} className="text-[14px] font-bold text-gray-900 hover:text-[#10B981] hover:underline transition-colors">
+                <Link to={ROUTES.DASHBOARD.PROFILE_VIEW(profile.id)} className="text-[14px] font-bold text-gray-900 hover:text-[#10B981] hover:underline transition-colors">
                   {name}
                 </Link>
                 {profile.isVerified && (
@@ -833,8 +833,11 @@ function PlanList({ plans, keyword }: { plans: SearchPlanItem[]; keyword: string
                     ? <Globe className="w-3 h-3 text-blue-400" strokeWidth={2} />
                     : <Lock className="w-3 h-3 text-slate-400" strokeWidth={2} />
                   }
-                  {plan.isConsulted && (
+                  {plan.sourceType === 'CONSULTED' && (
                     <span className="px-2 py-0.5 rounded-full bg-purple-50 text-[10px] font-black uppercase text-purple-600">Tư vấn</span>
+                  )}
+                  {plan.sourceType === 'RAG_GEN' && (
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[10px] font-black uppercase text-blue-600">AI tạo</span>
                   )}
                 </div>
                 {plan.diseaseName && plan.planName && (

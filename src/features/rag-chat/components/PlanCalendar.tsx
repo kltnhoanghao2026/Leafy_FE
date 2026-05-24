@@ -176,7 +176,7 @@ export function PlanCalendar({ schedule }: PlanCalendarProps) {
 
   const displayedEvents = selectedDateUrl ? selectedDayEvents : upcomingEvents;
   const listTitle = selectedDateUrl 
-    ? `SÃ¡Â»Â± kiÃ¡Â»â¡n ngÃÂ y ${new Date(selectedDateUrl).toLocaleDateString("vi-VN")}`
+    ? `SÃ¡Â»Â± kiÃ¡Â»â¡n ngÃÂ� y ${new Date(selectedDateUrl).toLocaleDateString("vi-VN")}`
     : "SÃ¡Â»Â± kiÃ¡Â»â¡n lÃ¡Â»â¹ch trÃÂ¬nh (TÃ¡ÂºÂ¥t cÃ¡ÂºÂ£)";
 
   return (
@@ -224,7 +224,7 @@ export function PlanCalendar({ schedule }: PlanCalendarProps) {
         {displayedEvents.length === 0 ? (
           <div className="text-center py-6 text-sm text-slate-500 flex flex-col items-center">
             <Info className="w-8 h-8 text-slate-300 mb-2" />
-            KhÃÂ´ng cÃÂ³ sÃ¡Â»Â± kiÃ¡Â»â¡n nÃÂ o.
+            KhÃÂ´ng cÃÂ³ sÃ¡Â»Â± kiÃ¡Â»â¡n nÃÂ� o.
           </div>
         ) : (
           <div className="space-y-4">
@@ -262,7 +262,7 @@ export function PlanCalendar({ schedule }: PlanCalendarProps) {
                     <div className="flex flex-wrap gap-2 text-xs">
                       {phi !== undefined && (
                         <span className="rounded-lg bg-amber-50 border border-amber-200 px-2 py-1 text-amber-700 font-semibold">
-                          PHI: {phi} ngÃÂ y
+                          PHI: {phi} ngÃÂ� y
                         </span>
                       )}
                       {ppe && (
@@ -286,3 +286,4 @@ export function PlanCalendar({ schedule }: PlanCalendarProps) {
     </div>
   );
 }
+

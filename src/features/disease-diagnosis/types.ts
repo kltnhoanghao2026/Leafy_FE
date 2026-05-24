@@ -9,6 +9,7 @@ export interface PageResponse<T> {
 export interface DiseasePrediction {
   className: string;
   confidenceScore: number;
+  severityLevel?: string;
 }
 
 export interface PredictResponse {
@@ -26,12 +27,15 @@ export interface DiagnoseRequest {
   userId: string;
   imageFileName: string;
   imageContentType: string;
+  fileId?: string;
+  plantId?: string;
   timeStamp: string;
 }
 
 export interface DiagnoseResultItem {
   diseaseName: string;
   confidenceScore: number;
+  severityLevel?: string;
 }
 
 export interface DiagnoseResult {
@@ -40,4 +44,26 @@ export interface DiagnoseResult {
   userId: string;
   result: DiagnoseResultItem[];
   timeStamp: string;
+}
+
+export interface BoundingBox {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+export interface LeafDetection {
+  className: string;
+  confidenceScore: number;
+  boundingBox: BoundingBox;
+}
+
+export interface LeafDetectionResponse {
+  detections: LeafDetection[];
+  modelName: string;
+  imageWidth: number;
+  imageHeight: number;
+  processingTimeMs: number | null;
+  detectionCount: number;
 }

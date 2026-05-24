@@ -3,21 +3,11 @@ import { CalendarDays, CalendarRange, Clock, GripVertical } from 'lucide-react';
 import { CalendarViewPanel } from './CalendarViewPanel';
 import { EventListPanel } from './EventListPanel';
 import { useTranslation } from '../../../../i18n';
-import {
-  addLocalDays,
-  startOfLocalWeek,
-  toLocalDateOnly,
-} from '../../shared/utils/dateOnly';
-import {
-  CATEGORY_DOT_COLORS,
-  getEventCategory,
-} from '../../shared/components/displayUtils';
-import type {
-  CalendarViewPanelProps,
-  HoveredDateRange,
-  ViewType,
-} from './CalendarViewPanel';
+import { startOfLocalWeek, toLocalDateOnly, addLocalDays } from '../../shared/utils/dateOnly';
+import { CATEGORY_DOT_COLORS, getEventCategory } from '../../shared/components/displayUtils';
 import type { PlantEventResponse } from '../../shared/types';
+import type { ViewType } from '../schemas/calendar.types';
+import type { CalendarViewPanelProps, HoveredDateRange, CalendarDateRange, CalendarWorkspaceProps } from '../schemas/calendar.types';
 
 function getMonthBounds(d: Date) {
   const y = d.getFullYear();
@@ -37,35 +27,6 @@ function getWeekBounds(weekMonday: Date) {
 
 const STUB_QUERY = { isLoading: false, isError: false, refetch: () => undefined };
 
-export interface CalendarDateRange {
-  startDate: string;
-  endDate: string;
-  activeView: ViewType;
-}
-
-export interface CalendarWorkspaceProps {
-  /** Events to render on the calendar + event list. */
-  events: PlantEventResponse[];
-  /** Optional query state for showing loading/error overlays in the calendar panel. */
-  calendarQuery?: { isLoading: boolean; isError: boolean; refetch: () => unknown };
-  /** Notified whenever the visible date range / view changes (for parents that drive API queries). */
-  onDateRangeChange?: (range: CalendarDateRange) => void;
-  /** Event-list interactions. Omit to render a read-only list. */
-  onEditEvent?: (event: PlantEventResponse) => void;
-  onToggleComplete?: (event: PlantEventResponse) => void;
-  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
-  onSelectEvent?: (event: PlantEventResponse) => void;
-  /** Rendered when `events` is empty (e.g. preview-mode placeholder). */
-  emptyState?: React.ReactNode;
-  /** Optional renderer slotted to the left of the view tabs (page title, etc.). */
-  renderHeaderLeft?: () => React.ReactNode;
-  /** Allowed splitter range as [minPct, maxPct]. Defaults to [22, 72]. */
-  splitterRange?: [number, number];
-  /** Initial selected date (defaults to today). */
-  initialSelectedDate?: string;
-  className?: string;
-}
-
 const todayDate = new Date();
 const today = toLocalDateOnly(todayDate);
 
@@ -77,6 +38,7 @@ export function CalendarWorkspace({
   onToggleComplete,
   onToggleTask,
   onSelectEvent,
+  onDelete,
   emptyState,
   renderHeaderLeft,
   splitterRange = [22, 72],
@@ -194,9 +156,12 @@ export function CalendarWorkspace({
   const hoveredDateRange = useMemo<HoveredDateRange | null>(() => {
     if (!hoveredEvent?.calculatedStartDate) return null;
     const category = getEventCategory(hoveredEvent.eventType);
+    const end = hoveredEvent.durationDays != null && hoveredEvent.durationDays > 0
+      ? addLocalDays(hoveredEvent.calculatedStartDate, hoveredEvent.durationDays - 1)
+      : (hoveredEvent.calculatedEndDate ?? hoveredEvent.calculatedStartDate);
     return {
       start: hoveredEvent.calculatedStartDate,
-      end:   hoveredEvent.calculatedEndDate ?? hoveredEvent.calculatedStartDate,
+      end,
       color: CATEGORY_DOT_COLORS[category],
     };
   }, [hoveredEvent]);
@@ -229,13 +194,14 @@ export function CalendarWorkspace({
     onToggleComplete,
     onToggleTask,
     onSelectEvent,
+    onDelete,
   };
 
   // Empty-state takes over the entire workspace when applicable.
   const showEmpty = emptyState != null && events.length === 0 && !calendarQuery?.isLoading;
 
   return (
-    <div className={`flex h-full min-h-0 flex-col gap-3 ${className}`}>
+    <div className={`flex h-full flex-col gap-3 ${className}`}>
       {/* Header: optional left slot + view tabs */}
       <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">{renderHeaderLeft?.()}</div>
@@ -266,9 +232,11 @@ export function CalendarWorkspace({
       ) : (
         <>
           {/* Desktop: split layout (lg+) */}
-          <div ref={containerRef} className="hidden lg:flex flex-1 min-h-0 flex-row gap-0 overflow-hidden">
-            <div className="shrink-0 h-full overflow-hidden" style={{ width: `${leftPct}%` }}>
-              <CalendarViewPanel {...calendarPanelProps} />
+          <div ref={containerRef} className="hidden lg:flex h-full flex-1 min-h-0 flex-row gap-0">
+            <div className="shrink-0 overflow-hidden" style={{ width: `${leftPct}%` }}>
+              <div className="h-full overflow-hidden">
+                <CalendarViewPanel {...calendarPanelProps} />
+              </div>
             </div>
 
             <div
@@ -281,19 +249,17 @@ export function CalendarWorkspace({
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-              <div className="shrink-0 flex-1 min-h-0 overflow-y-auto p-3">
-                <EventListPanel {...eventListPanelProps} />
-              </div>
+            <div className="min-h-0 flex-1 flex flex-col overflow-y-auto rounded-2xl border border-slate-100 bg-white shadow-sm p-3">
+              <EventListPanel {...eventListPanelProps} />
             </div>
           </div>
 
           {/* Mobile: stacked layout (< lg) */}
-          <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 lg:hidden">
+          <div className="flex-1 min-h-0 flex flex-col gap-4 lg:hidden">
             <div className="shrink-0">
               <CalendarViewPanel {...calendarPanelProps} />
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-slate-100 bg-white shadow-sm p-3">
               <EventListPanel {...eventListPanelProps} />
             </div>
           </div>

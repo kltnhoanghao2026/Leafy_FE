@@ -6,6 +6,7 @@ import { CSVExportButton } from "./CSVExportButton";
 import { EventMarker } from "./EventMarker";
 import type { EventMarkerData } from "../utils/chartAnalytics";
 import type { SensorThresholds } from "../utils/chartThresholds";
+import { CHART_TYPE_LABEL_KEYS } from "../utils/chartHelpers";
 import { useTranslation } from "../../../i18n";
 
 export type SensorChartType = "area" | "line" | "bar" | "scatter";
@@ -59,19 +60,6 @@ interface IoTMetricCardProps {
 const chartWidth = 320;
 const chartHeight = 92;
 const chartPadding = 8;
-export const CHART_TYPES: Array<{ value: SensorChartType; label: string }> = [
-  { value: "area", label: "Area" },
-  { value: "line", label: "Line" },
-  { value: "bar", label: "Bar" },
-  { value: "scatter", label: "Dots" },
-];
-
-export const CHART_TYPE_LABEL_KEYS = {
-  area: "iot.charts.area",
-  line: "iot.charts.line",
-  bar: "iot.charts.bar",
-  scatter: "iot.charts.scatter",
-} as const;
 
 const parseTime = (value?: TimestampValue): number => {
   if (!value) return Number.NaN;
@@ -140,12 +128,14 @@ export function IoTMetricCard({
     Math.abs(maxTrendValue) * 0.05,
     1,
   );
-  const yDomain: [number, number] = domainValues.length
-    ? [
-        Math.max(0, minTrendValue - domainPadding),
-        maxTrendValue + domainPadding,
-      ]
-    : [0, 1];
+  const yDomain = useMemo<[number, number]>(() => (
+    domainValues.length
+      ? [
+          Math.max(0, minTrendValue - domainPadding),
+          maxTrendValue + domainPadding,
+        ]
+      : [0, 1]
+  ), [domainValues.length, minTrendValue, maxTrendValue, domainPadding]);
   const yRange = Math.max(yDomain[1] - yDomain[0], 1);
   const lastTrendPoint = data.trend[data.trend.length - 1];
   const lastUpdated =
@@ -162,7 +152,7 @@ export function IoTMetricCard({
     return `${formattedValue} ${data.unit}${sampleSuffix}`;
   };
   const labelInterval = Math.max(1, Math.ceil(data.trend.length / 4));
-  const valueToY = (value: number) => {
+  const valueToY = useMemo(() => (value: number) => {
     const drawableHeight = chartHeight - chartPadding * 2;
     const normalized = (value - yDomain[0]) / yRange;
     return (
@@ -170,7 +160,7 @@ export function IoTMetricCard({
       chartPadding -
       Math.min(1, Math.max(0, normalized)) * drawableHeight
     );
-  };
+  }, [yDomain, yRange]);
   const chartPoints = useMemo(() => {
     if (!data.trend.length) return [];
     const maxIndex = Math.max(data.trend.length - 1, 1);
@@ -182,7 +172,7 @@ export function IoTMetricCard({
       const y = valueToY(point.value);
       return { ...point, x, y };
     });
-  }, [data.trend, yDomain, yRange]);
+  }, [data.trend, valueToY]);
   const rollingPath = chartPoints
     .filter((point) => typeof point.rollingAverage === "number")
     .map((point, index) => {

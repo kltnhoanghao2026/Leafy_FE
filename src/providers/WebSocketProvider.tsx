@@ -1,23 +1,21 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuthStore } from '../store/authStore';
+import { WebSocketContext } from './wsUtils';
 
 const WS_URL = import.meta.env.VITE_WS_URL || '/ws';
-
-interface WebSocketContextValue {
-  client: Client | null;
-  connected: boolean;
-}
-
-const WebSocketContext = createContext<WebSocketContextValue>({ client: null, connected: false });
-
-export const useWebSocketClient = () => useContext(WebSocketContext);
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, accessToken: token, isInitializing } = useAuthStore();
   const stompClientRef = useRef<Client | null>(null);
   const [connected, setConnected] = useState(false);
+  const [client, setClient] = useState<Client | null>(null);
+
+  // Sync ref to state when connection state changes
+  useEffect(() => {
+    setClient(stompClientRef.current);
+  }, [connected]);
 
   useEffect(() => {
     if (isInitializing) return;
@@ -26,7 +24,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (stompClientRef.current) {
         stompClientRef.current.deactivate();
         stompClientRef.current = null;
-        setConnected(false);
       }
       return;
     }
@@ -35,7 +32,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     console.log(`[WebSocket] Attempting to connect to ${WS_URL}...`);
     const socket = new SockJS(WS_URL);
-    const client = new Client({
+    const newClient = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
       connectHeaders: {
@@ -57,8 +54,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
 
-    client.activate();
-    stompClientRef.current = client;
+    newClient.activate();
+    stompClientRef.current = newClient;
 
     return () => {
       if (stompClientRef.current) {
@@ -69,7 +66,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [user, token, isInitializing]);
 
   return (
-    <WebSocketContext.Provider value={{ client: stompClientRef.current, connected }}>
+    <WebSocketContext.Provider value={{ client, connected }}>
       {children}
     </WebSocketContext.Provider>
   );

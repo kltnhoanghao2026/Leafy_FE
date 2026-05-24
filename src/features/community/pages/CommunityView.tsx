@@ -1,15 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { CreatePostArea } from '../components/CreatePostArea'
 import { SuggestedExpertsWidget } from '../../profiles/components/SuggestedExpertsWidget'
 import { PostCard } from '../components/PostCard'
 import { useCommunityFeed } from '../queries'
+import { communityApi } from '../../../lib/api/communityApi'
 import type { CommunityPageParams } from '../../../lib/api/communityApi'
 import { formatNumber } from '../../metrics-view/utils/format'
+
+const VIEW_BATCH_SIZE = 5
 
 export function CommunityView() {
   const [page, setPage] = useState(0)
   const size = 10
+  const pendingViewedRef = useRef<Set<string>>(new Set())
 
   const feedParams = useMemo<CommunityPageParams>(
     () => ({ page, size }),
@@ -18,6 +22,37 @@ export function CommunityView() {
   const feedQuery = useCommunityFeed(feedParams)
   const feed = feedQuery.data
   const posts = feed?.items ?? []
+
+  // Callback when a post becomes visible
+  const handlePostViewed = useCallback((postId: string) => {
+    pendingViewedRef.current.add(postId)
+  }, [])
+
+  // Send batched viewed posts to backend when threshold is reached
+  useEffect(() => {
+    if (pendingViewedRef.current.size >= VIEW_BATCH_SIZE) {
+      const postIds = Array.from(pendingViewedRef.current)
+      pendingViewedRef.current.clear()
+      communityApi.markPostsViewed(postIds).catch((err) => {
+        console.error('Failed to mark posts as viewed:', err)
+        // Re-add failed posts to pending
+        postIds.forEach((id) => pendingViewedRef.current.add(id))
+      })
+    }
+  }, [posts])
+
+  // Flush remaining viewed posts on page change or unmount
+  useEffect(() => {
+    return () => {
+      if (pendingViewedRef.current.size > 0) {
+        const postIds = Array.from(pendingViewedRef.current)
+        pendingViewedRef.current.clear()
+        communityApi.markPostsViewed(postIds).catch((err) => {
+          console.error('Failed to mark posts as viewed on cleanup:', err)
+        })
+      }
+    }
+  }, [page])
 
   return (
     <div className="w-full max-w-7xl mx-auto animate-in fade-in duration-500">
@@ -70,14 +105,20 @@ export function CommunityView() {
                 {posts.length === 0 ? (
                   <div className="rounded-[2rem] bg-white border border-slate-100 p-10 text-center shadow-sm">
                     <h3 className="text-lg font-black text-slate-800">
-                      No community posts
+                      No new content
                     </h3>
                     <p className="mt-1 text-sm font-semibold text-slate-500">
-                      The backend returned an empty feed page.
+                      Follow more people or experts to see their posts.
                     </p>
                   </div>
                 ) : (
-                  posts.map(post => <PostCard key={post.id} post={post} />)
+                  posts.map(post => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onView={handlePostViewed}
+                    />
+                  ))
                 )}
               </div>
 

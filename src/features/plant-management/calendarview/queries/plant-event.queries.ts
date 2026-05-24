@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { plantEventApi } from "../api/plant-event.api";
-import type { PlantEventsCalendarParams, PlantEventUpdateRequest, EventProgressUpdateRequest } from '../../shared/types';
+import type { PlantEventsCalendarParams, PlantEventUpdateRequest, PlantEventCreateRequest } from '../../shared/types';
 import { plantManagementKeys } from '../../shared/queries/keys';
 
 export const usePlantEvent = (eventId: string, enabled = true) =>
@@ -24,11 +24,13 @@ export const usePlannedPlantEvents = (plantId: string, enabled = true) =>
     enabled: enabled && !!plantId,
   });
 
-export const usePlantEventsByPlan = (sourcePlanId: string, enabled = true) =>
+
+
+export const usePlantEventsByPlanApply = (planApplyId: string, enabled = true) =>
   useQuery({
-    queryKey: plantManagementKeys.plantEventsByPlan(sourcePlanId),
-    queryFn: () => plantEventApi.getPlantEventsByPlan(sourcePlanId),
-    enabled: enabled && !!sourcePlanId,
+    queryKey: plantManagementKeys.plantEventsByPlanApply(planApplyId),
+    queryFn: () => plantEventApi.getPlantEventsByPlanApply(planApplyId),
+    enabled: enabled && !!planApplyId,
   });
 
 export const usePlantEventsCalendar = (params: PlantEventsCalendarParams) =>
@@ -54,9 +56,6 @@ export const useUpdatePlantEventMutation = () => {
         queryClient.invalidateQueries({
           queryKey: plantManagementKeys.plantEvent(event.id),
         }),
-        queryClient.invalidateQueries({
-          queryKey: [...plantManagementKeys.plantEvent(event.id), "progress"],
-        }),
         // Invalidate ALL plantEvent detail queries so the full ancestor chain refreshes
         // (FARM → FARM_ZONE → PLANT hierarchy — toggling any level needs all ancestors to update)
         queryClient.invalidateQueries({
@@ -67,9 +66,9 @@ export const useUpdatePlantEventMutation = () => {
               queryKey: plantManagementKeys.plantEvents(event.plantId),
             })
           : Promise.resolve(),
-        event.sourcePlanId
+        event.planApplyId
           ? queryClient.invalidateQueries({
-              queryKey: plantManagementKeys.plantEventsByPlan(event.sourcePlanId),
+              queryKey: plantManagementKeys.plantEventsByPlan(event.planApplyId),
             })
           : Promise.resolve(),
         queryClient.invalidateQueries({
@@ -99,6 +98,54 @@ export const useDeletePlantEventMutation = () => {
   });
 };
 
+export const useDeletableChildren = (eventId: string) =>
+  useQuery({
+    queryKey: [...plantManagementKeys.plantEvent(eventId), "deletable-children"],
+    queryFn: () => plantEventApi.getDeletableChildren(eventId),
+    enabled: !!eventId,
+  });
+
+export const useDeleteWithChildrenMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ eventId, confirmDelete }: { eventId: string; confirmDelete: boolean }) =>
+      plantEventApi.deleteWithChildren(eventId, confirmDelete),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã xóa lịch chăm sóc và các sự kiện con.",
+    },
+  });
+};
+
+export const useCreatePlantEventMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: PlantEventCreateRequest) =>
+      plantEventApi.createPlantEvent(payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+        }),
+      ]);
+    },
+    meta: {
+      successMessage: "Đã tạo lịch chăm sóc.",
+    },
+  });
+};
+
 export const useToggleTaskMutation = () => {
   const queryClient = useQueryClient();
 
@@ -115,68 +162,11 @@ export const useToggleTaskMutation = () => {
               queryKey: plantManagementKeys.plantEvents(event.plantId),
             })
           : Promise.resolve(),
-        event.sourcePlanId
+        event.planApplyId
           ? queryClient.invalidateQueries({
-              queryKey: plantManagementKeys.plantEventsByPlan(event.sourcePlanId),
+              queryKey: plantManagementKeys.plantEventsByPlan(event.planApplyId),
             })
           : Promise.resolve(),
-        queryClient.invalidateQueries({
-          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
-        }),
-      ]);
-    },
-  });
-};
-
-export const useEventProgress = (eventId: string, page = 0, enabled = true) =>
-  useQuery({
-    queryKey: [...plantManagementKeys.plantEvent(eventId), "progress", page],
-    queryFn: () => plantEventApi.getEventProgress(eventId, page),
-    enabled: enabled && !!eventId,
-  });
-
-export const useUpdateEventProgressMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({
-      eventId,
-      progressId,
-      payload,
-    }: {
-      eventId: string;
-      progressId: string;
-      payload: EventProgressUpdateRequest;
-    }) => plantEventApi.updateEventProgress(eventId, progressId, payload),
-    onSuccess: async (_data, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: [...plantManagementKeys.plantEvent(variables.eventId), "progress"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plantEvent(variables.eventId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
-        }),
-      ]);
-    },
-  });
-};
-
-export const useGenerateEventProgressMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (eventId: string) => plantEventApi.generateEventProgress(eventId),
-    onSuccess: async (_data, eventId) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: [...plantManagementKeys.plantEvent(eventId), "progress"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: plantManagementKeys.plantEvent(eventId),
-        }),
         queryClient.invalidateQueries({
           queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
         }),

@@ -16,7 +16,8 @@ import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
 import { useMyProfile } from "../../../settings/queries";
 import { DatePicker } from "../../../../components/ui/DatePicker";
 import { Select } from "../../../../components/ui/Select";
-import { usePlantsByFarmPlot } from "../..";
+import { useMyPlants } from "../..";
+import { unwrapPageContent } from "../../shared/api/apiUtils";
 import type { PlanApplyRequest } from "../../shared/types";
 
 interface BulkApplyPlanDialogProps {
@@ -47,8 +48,15 @@ export function BulkApplyPlanDialog({
 
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const zonesQuery = useFarmZones(farmPlotId, !!farmPlotId);
-  const plantsQuery = usePlantsByFarmPlot(farmPlotId, !!farmPlotId);
+  const plantsQuery = useMyPlants(
+    {
+      farmPlotId: farmPlotId || undefined,
+      farmZoneId: farmZoneId || undefined,
+    },
+    !!farmPlotId,
+  );
 
+  const zones = zonesQuery.data ?? [];
   const plotOptions = [
     { value: "", label: "Tất cả vườn" },
     ...(plotsQuery.data ?? []).map((p) => ({ value: p.id, label: p.name })),
@@ -62,9 +70,11 @@ export function BulkApplyPlanDialog({
     })),
   ];
 
+  const plants = unwrapPageContent(plantsQuery.data);
+
   const plantOptions = [
     { value: "", label: "Tất cả cây trong vườn" },
-    ...(plantsQuery.data ?? []).map((pl) => ({
+    ...plants.map((pl) => ({
       value: pl.id,
       label: pl.nickName ?? pl.plantNumber ?? pl.id,
     })),
@@ -72,9 +82,9 @@ export function BulkApplyPlanDialog({
 
   const selectedPlotName = plotsQuery.data?.find((p) => p.id === farmPlotId)?.name;
   const selectedZoneName = zonesQuery.data?.find((z) => z.id === farmZoneId)?.zoneName;
-  const selectedPlantLabel = plantsQuery.data?.find((p) => p.id === plantId)
-    ? (plantsQuery.data!.find((p) => p.id === plantId)!.nickName ??
-       plantsQuery.data!.find((p) => p.id === plantId)!.plantNumber ??
+  const selectedPlantLabel = plants.find((p) => p.id === plantId)
+    ? (plants.find((p) => p.id === plantId)!.nickName ??
+       plants.find((p) => p.id === plantId)!.plantNumber ??
        plantId)
     : null;
 
@@ -90,6 +100,14 @@ export function BulkApplyPlanDialog({
   const showExcludePlants = !!farmPlotId && !plantId;
   const showExcludeSection = showExcludeZones || showExcludePlants;
   const totalExcluded = excludedPlantIds.length + excludedFarmZoneIds.length;
+
+  // Get names of excluded items
+  const excludedZoneNames = zones
+    .filter((z) => excludedFarmZoneIds.includes(z.id))
+    .map((z) => z.zoneName);
+  const excludedPlantNames = plants
+    .filter((p) => excludedPlantIds.includes(p.id))
+    .map((p) => p.nickName ?? p.plantNumber ?? p.id);
 
   const canSubmit = !!startDate && (!!plantId || !!farmPlotId || !!farmZoneId);
 
@@ -219,8 +237,24 @@ export function BulkApplyPlanDialog({
                       </p>
                       {totalExcluded > 0 && (
                         <p className="mt-1 text-[11px] font-semibold opacity-70">
-                          trừ {totalExcluded} mục bị loại trừ
+                          trừ {excludedFarmZoneIds.length > 0 && `${excludedFarmZoneIds.length} khu vực`}
+                          {excludedFarmZoneIds.length > 0 && excludedPlantIds.length > 0 && " và "}
+                          {excludedPlantIds.length > 0 && `${excludedPlantIds.length} cây`}
                         </p>
+                      )}
+                      {totalExcluded > 0 && (excludedZoneNames.length > 0 || excludedPlantNames.length > 0) && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {excludedZoneNames.map((name) => (
+                            <span key={name} className="inline-flex items-center rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600">
+                              {name}
+                            </span>
+                          ))}
+                          {excludedPlantNames.map((name) => (
+                            <span key={name} className="inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-600">
+                              {name}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -361,7 +395,7 @@ export function BulkApplyPlanDialog({
                         </div>
                       )}
 
-                      {showExcludePlants && (plantsQuery.data ?? []).length > 0 && (
+                      {showExcludePlants && plants.length > 0 && (
                         <div>
                           <div className="mb-2 flex items-center justify-between">
                             <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-slate-400">
@@ -375,7 +409,7 @@ export function BulkApplyPlanDialog({
                             )}
                           </div>
                           <div className="flex max-h-56 flex-col gap-1.5 overflow-y-auto pr-0.5">
-                            {(plantsQuery.data ?? []).map((pl) => {
+                            {plants.map((pl) => {
                               const excluded = excludedPlantIds.includes(pl.id);
                               return (
                                 <label key={pl.id} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition-all ${

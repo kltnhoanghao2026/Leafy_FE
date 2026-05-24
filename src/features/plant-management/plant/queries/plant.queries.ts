@@ -14,10 +14,11 @@ export const usePlants = () =>
     queryFn: plantApi.getPlants,
   });
 
-export const useMyPlants = (params: import('../../shared/types').PlantListParams = {}) =>
+export const useMyPlants = (params: import('../../shared/types').PlantListParams = {}, enabled = true) =>
   useQuery({
     queryKey: [...plantManagementKeys.plantsRoot(), "me", params],
     queryFn: () => plantApi.getMyPlants(params),
+    enabled,
   });
 
 export const usePlant = (plantId: string, enabled = true) =>

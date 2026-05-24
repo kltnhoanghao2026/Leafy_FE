@@ -2,6 +2,7 @@ export { farmManagementKeys } from "./keys";
 export {
   useFarmPlots,
   useFarmZones,
+  useFarmZonesByOwner,
 } from "./queries";
 export {
   useCreateFarmPlot,

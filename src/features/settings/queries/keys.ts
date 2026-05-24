@@ -7,6 +7,7 @@ export const profileKeys = {
 export const preferenceKeys = {
   all: () => ["preferences"] as const,
   me: () => [...preferenceKeys.all(), "me"] as const,
+  byProfile: (profileId: string) => [...preferenceKeys.all(), "profile", profileId] as const,
 };
 
 export const fileKeys = {

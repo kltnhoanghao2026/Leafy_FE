@@ -32,6 +32,11 @@ export interface UserNotificationResponse {
   body: string
   isRead: boolean
   occurredAt: string
+  /**
+   * Additional data for template rendering and navigation.
+   * For DIRECT_MESSAGE, contains conversationId for navigation.
+   */
+  payload?: Record<string, string>
 }
 
 export interface NotificationStateResponse {
@@ -53,5 +58,7 @@ export interface InAppNotificationPayload {
   title: string
   body: string
   occurredAt: string
+  /** Additional data for navigation (e.g., conversationId for DIRECT_MESSAGE) */
+  payload?: Record<string, string>
 }
 

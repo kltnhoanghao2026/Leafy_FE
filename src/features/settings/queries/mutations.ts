@@ -5,12 +5,8 @@ import { preferenceKeys, profileKeys } from "./keys";
 import type {
   AppearanceSettingsUpdateRequest,
   GeneralSettingsUpdateRequest,
-  SecuritySettingsUpdateRequest,
   PrivacySettingsUpdateRequest,
-  MessageSettingsUpdateRequest,
   NotificationSettingsUpdateRequest,
-  SyncSettingsUpdateRequest,
-  UtilitiesSettingsUpdateRequest,
   ProfileUpdateRequest,
 } from "../types";
 
@@ -61,18 +57,6 @@ export const useUpdateGeneralPreferencesMutation = () => {
   });
 };
 
-export const useUpdateSecurityPreferencesMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: SecuritySettingsUpdateRequest) =>
-      profileApi.updateSecurityPreferences(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
-    },
-  });
-};
-
 export const useUpdatePrivacyPreferencesMutation = () => {
   const queryClient = useQueryClient();
 
@@ -85,48 +69,12 @@ export const useUpdatePrivacyPreferencesMutation = () => {
   });
 };
 
-export const useUpdateMessagePreferencesMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: MessageSettingsUpdateRequest) =>
-      profileApi.updateMessagePreferences(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
-    },
-  });
-};
-
 export const useUpdateNotificationPreferencesMutation = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: NotificationSettingsUpdateRequest) =>
       profileApi.updateNotificationPreferences(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
-    },
-  });
-};
-
-export const useUpdateSyncPreferencesMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: SyncSettingsUpdateRequest) =>
-      profileApi.updateSyncPreferences(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
-    },
-  });
-};
-
-export const useUpdateUtilitiesPreferencesMutation = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (data: UtilitiesSettingsUpdateRequest) =>
-      profileApi.updateUtilitiesPreferences(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: preferenceKeys.me() });
     },

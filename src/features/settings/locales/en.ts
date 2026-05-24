@@ -13,7 +13,7 @@ export const settingsEn: SettingsTranslationDict = {
     display: "Display",
     privacy: "Privacy",
     notifications: "Notifications",
-    messaging: "Messaging & Other",
+    consulting: "Consulting",
   },
 
   display: {
@@ -49,17 +49,6 @@ export const settingsEn: SettingsTranslationDict = {
     viewProfile: "View your profile page",
   },
 
-  security: {
-    title: "Security",
-    twoFactor: "Two-Factor Authentication",
-    twoFactorDesc: "Protect your account by requiring a verification code when logging in.",
-    loadError: "Could not load security preferences.",
-    saving: "Saving...",
-    saved: "Security preferences saved.",
-    saveError: "Could not save security preferences.",
-    retry: "Retry",
-  },
-
   privacy: {
     title: "Privacy",
     loadError: "Could not load privacy preferences.",
@@ -67,36 +56,16 @@ export const settingsEn: SettingsTranslationDict = {
     saved: "Privacy preferences saved.",
     saveError: "Could not save privacy preferences.",
     retry: "Retry",
-    
-    activeStatus: "Show active status",
-    activeStatusDesc: "Let others see when you are online.",
-    readStatus: "Read receipts",
-    readStatusDesc: "Show when you have read messages.",
-    searchPhone: "Search by phone number",
-    searchPhoneDesc: "Let others find you using your phone number.",
-    allFriends: "Show all friends",
-    allFriendsDesc: "Show people even if they haven't joined the app yet.",
-    showPosts: "Show my posts",
-    showPostsDesc: "Let others see your posts.",
-    postLimit: "Post time limit",
-    postLimitDesc: "Only show posts after a specific date.",
-    
-    canText: "Who can message me",
-    canTextDesc: "Control who can send you messages.",
-    canCall: "Who can call me",
-    canCallDesc: "Control who can call you.",
-    showDob: "Show birthday",
-    showDobDesc: "How your date of birth is displayed.",
 
-    options: {
-      everybody: "Everybody",
-      friends: "Friends",
-      nobody: "Nobody",
-      fullDate: "Full Date",
-      monthDay: "Month & Day",
-      year: "Year Only",
-      none: "Hidden",
-    }
+    consultingSharing: "Data Sharing with Consulting Experts",
+    shareFarmPlots: "Share Farm Plots",
+    shareFarmPlotsDesc: "Allow experts to view your farm plots and zones.",
+    sharePlants: "Share Plants",
+    sharePlantsDesc: "Allow experts to view your plants.",
+    sharePlantEvents: "Share Plant Events",
+    sharePlantEventsDesc: "Allow experts to view and create events for your plants.",
+    sharePlans: "Share Treatment Plans",
+    sharePlansDesc: "Allow experts to view your treatment plans.",
   },
 
   notification: {
@@ -109,7 +78,6 @@ export const settingsEn: SettingsTranslationDict = {
 
     groups: {
       messages: "Messages",
-      calls: "Calls",
       friendActivity: "Friend Activity",
       inApp: "In-App"
     },
@@ -121,67 +89,43 @@ export const settingsEn: SettingsTranslationDict = {
     groupMessage: "Group messages",
     groupMessageDesc: "Receive notifications from groups.",
     
-    incomingCall: "Incoming calls",
-    incomingCallDesc: "Receive notifications for incoming calls.",
-    
     newPost: "New posts",
     newPostDesc: "Notify when friends publish new posts.",
-    birthday: "Birthdays",
-    birthdayDesc: "Receive friend birthday notifications.",
     
     inAppNotice: "In-app notifications",
     inAppNoticeDesc: "Show notifications while using the app.",
-    vibrate: "Vibrate on new message",
-    vibrateDesc: "Vibrate device when receiving new messages in-app."
   },
 
-  message: {
-    title: "Messaging",
-    loadError: "Could not load messaging preferences.",
-    saving: "Saving...",
-    saved: "Messaging preferences saved.",
-    saveError: "Could not save messaging preferences.",
-    retry: "Retry",
-
-    quickReply: "Quick replies",
-    quickReplyDesc: "Use templates to reply quickly.",
-    priorityInbox: "Separate priority inbox",
-    priorityInboxDesc: "Split inbox into Priority and Other.",
-    typingStatus: "Typing status",
-    typingStatusDesc: "Show when you are typing a message."
+  certificate: {
+    title: "Expert Certificate",
+    noHistory: "You haven't submitted any verification requests yet",
+    verifiedBadge: "Verified Expert",
+    pendingBadge: "Application under review",
+    rejectedBadge: "Application rejected",
+    submitButton: "Submit verification request",
+    viewHistory: "View application history",
   },
 
-  syncUtilities: {
-    title: "Sync & Utilities",
-    loadError: "Could not load sync and utilities preferences.",
-    saving: "Saving...",
-    savedSync: "Sync preferences saved.",
-    savedUtil: "Utilities preferences saved.",
-    saveError: "Could not save preferences.",
-    retry: "Retry",
+  consulting: {
+    title: "Consulting Requests",
+    subtitle: "Manage consulting requests and data access requests.",
+    loadError: "Could not load data. Please try again.",
 
-    groups: {
-      sync: "Sync",
-      utilities: "Utilities"
+    accept: "Accept",
+    reject: "Reject",
+    approve: "Approve",
+    deny: "Deny",
+
+    consultation: {
+      title: "Consultation Requests",
+      empty: "No consultation requests.",
+      emptyDesc: "When new consultation requests come in, they will appear here.",
     },
 
-    syncSuggest: "Sync suggestions",
-    syncSuggestDesc: "Automatically suggest data syncing.",
-    syncProgress: "Show sync progress",
-    syncProgressDesc: "Display progress bar while syncing.",
-    stickerSuggest: "Sticker suggestions",
-    stickerSuggestDesc: "Suggest stickers while you type."
-  },
-
-  about: {
-    title: "About Coffee Monitor",
-    p1Start: "is not just a management app, but a reliable companion for Vietnamese farmers. Our mission is to apply digital technology to coffee farms, helping farmers optimize yields and protect the environment.",
-    p2: "We focus on creating intuitive, easy-to-use tools suitable for all ages, making tracking crop health simpler than ever.",
-    stats: {
-      farmers: "Farmers",
-      experts: "Experts",
-      support: "Support"
+    dataAccess: {
+      title: "Data Access Requests",
+      empty: "No data access requests.",
+      emptyDesc: "When experts request access to your farm data, they will appear here.",
     },
-    hotline: "Connect with us via hotline: "
-  }
+  },
 };

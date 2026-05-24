@@ -1,13 +1,11 @@
-import { useMemo, useState, useEffect, type ComponentType } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  CalendarDays, Check, CheckCircle2, CircleDashed, ClipboardList,
+  CalendarDays, Check, ClipboardList,
   Globe, Layers, Loader2, Lock, Minus, Play, Plus, RefreshCw, Search,
-  Trash2, Users, X, XCircle,
+  Trash2, Users, X,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
-import { useFarmPlots } from "../../../farm-management/queries";
-import { useMyProfile } from "../../../settings/queries";
 import { ROUTES } from "../../../../lib/routes";
 import { PagedGrid } from "../../../../components/ui/PagedGrid";
 import { FilterCard } from "../../../../components/ui/FilterCard";
@@ -17,6 +15,7 @@ import {
   useBulkApplyPlansMutation,
   useBulkDeletePlansMutation,
   useBulkUpdateApplyStatusMutation,
+  useCancelApplyMutation,
   useDeletePlanMutation,
   useMyApplies,
   useMyPlans,
@@ -25,8 +24,9 @@ import {
   useUpdateApplyStatusMutation,
 } from "../..";
 import { useBulkApplyCustomMutation } from "../queries/plan.queries";
+import { CancelApplyDialog } from "../components/CancelApplyDialog";
 import { useSearchPlans } from "../../../search/queries";
-import type { PlanApplyRequest, PlanResponse, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
+import type { PlanApplyRequest, PlanResponse, PlanSourceType, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
 import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
 import { BulkApplyCustomDialog } from "../components/BulkApplyCustomDialog";
@@ -35,20 +35,6 @@ import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
 // ── Types ─────────────────────────────────────────────────────────────────────
 type ViewTab = "my" | "public" | "applied";
 
-const STATUS_TABS: Array<{
-  value: TreatmentStatus | "";
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  activeClass: string;
-}> = [
-  { value: "",          label: "Tất cả",          icon: ClipboardList, activeClass: "bg-slate-800 text-white" },
-  { value: "PENDING",   label: "Chờ áp dụng",    icon: CircleDashed,  activeClass: "bg-amber-500 text-white" },
-  { value: "APPLYING",  label: "Đang xử lý",     icon: CircleDashed,  activeClass: "bg-purple-600 text-white" },
-  { value: "ACTIVE",    label: "Đang thực hiện", icon: Play,          activeClass: "bg-blue-600 text-white" },
-  { value: "COMPLETED", label: "Hoàn thành",     icon: CheckCircle2,  activeClass: "bg-emerald-600 text-white" },
-  { value: "CANCELLED", label: "Đã hủy",         icon: XCircle,       activeClass: "bg-slate-500 text-white" },
-];
-
 const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "", label: "Tất cả trạng thái" },
   { value: "PENDING",   label: "Chờ áp dụng" },
@@ -56,6 +42,13 @@ const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "ACTIVE",    label: "Đang thực hiện" },
   { value: "COMPLETED", label: "Hoàn thành" },
   { value: "CANCELLED", label: "Đã hủy" },
+];
+
+const SOURCE_TYPE_CHIPS: Array<{ value: PlanSourceType | ""; label: string }> = [
+  { value: "", label: "Tất cả nguồn" },
+  { value: "USER_CREATED", label: "Tự tạo" },
+  { value: "RAG_GEN", label: "AI tạo" },
+  { value: "CONSULTED", label: "Tư vấn" },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -69,10 +62,14 @@ export function PlansPage() {
   const [pageSize, setPageSize] = useState(20);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [applyStatusFilter, setApplyStatusFilter] = useState<TreatmentStatus | "">("")
+  const [sourceTypeFilter, setSourceTypeFilter] = useState<PlanSourceType | "">("");
+  const [severityLevelFilter, setSeverityLevelFilter] = useState("");
+  const [urgencyFilter, setUrgencyFilter] = useState("");
 
   // ── my-plans-only state ──────────────────────────────────────────────────
   const [plantId, setPlantId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PlanResponse | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<import("../shared/types").PlanApplyResponse | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkApplyOpen, setBulkApplyOpen] = useState(false);
   const [bulkApplyCustomOpen, setBulkApplyCustomOpen] = useState(false);
@@ -83,18 +80,15 @@ export function PlansPage() {
   const [applyTarget, setApplyTarget] = useState<PlanResponse | null>(null);
 
   // ── data ─────────────────────────────────────────────────────────────────
-  const myPlansQuery  = useMyPlans({ plantId: plantId || undefined, search: search || undefined, page, size: pageSize });
-  const pubPlansQuery = usePublicPlans({ search: search || undefined, page, size: pageSize } satisfies PublicPlanListParams);
+  const myPlansQuery  = useMyPlans({ plantId: plantId || undefined, search: search || undefined, sourceType: sourceTypeFilter || undefined, page, size: pageSize });
+  const pubPlansQuery = usePublicPlans({ search: search || undefined, sourceType: sourceTypeFilter || undefined, severityLevel: severityLevelFilter || undefined, urgency: urgencyFilter || undefined, page, size: pageSize } satisfies PublicPlanListParams);
   const myAppliesQuery = useMyApplies({ status: applyStatusFilter || undefined, page, size: pageSize });
   const plantsQuery   = usePlants();
-  const profileQuery  = useMyProfile();
-  const ownerProfileId = profileQuery.data?.id ?? "";
-  const plotsQuery    = useFarmPlots(ownerProfileId, !!ownerProfileId);
 
   // ES-powered search for public plans (when search term has >= 2 chars)
   const hasEsSearch = viewTab === "public" && search.trim().length >= 2;
   const esPublicPlansQuery = useSearchPlans(
-    { searchTerm: search, isPublic: true, page, size: pageSize },
+    { searchTerm: search, isPublic: true, severityLevel: severityLevelFilter || undefined, urgency: urgencyFilter || undefined, page, size: pageSize },
     hasEsSearch,
   );
 
@@ -108,21 +102,18 @@ export function PlansPage() {
         diseaseName: item.diseaseName ?? "",
         creatorId: item.creatorId ?? "",
         ownerId: item.ownerId ?? "",
-        ragPlanId: "",
-        question: "",
-        source: item.source ?? "",
-        confidenceScore: item.confidenceScore ?? 0,
-        severityLevel: item.severityLevel ?? "",
-        urgency: item.urgency ?? "",
         requiredInputs: item.requiredInputs ?? [],
         safetyWarnings: item.safetyWarnings ?? [],
         successIndicators: item.successIndicators ?? "",
         estimatedCost: item.estimatedCost ?? "",
         events: [],
+        source: item.source ?? "",
+        confidenceScore: item.confidenceScore ?? 0,
+        severityLevel: item.severityLevel ?? "",
         applyCount: item.applyCount ?? 0,
         applies: [],
         isPublic: item.isPublic ?? true,
-        isConsulted: item.isConsulted ?? false,
+        sourceType: item.sourceType as PlanSourceType ?? 'USER_CREATED',
         ownerInfo: null,
         creatorInfo: item.creatorInfo ? {
           id: item.creatorInfo.id ?? "",
@@ -157,10 +148,9 @@ export function PlansPage() {
   const bulkApplyPlans   = useBulkApplyPlansMutation();
   const bulkApplyCustom  = useBulkApplyCustomMutation();
   const updateApplyStatus = useUpdateApplyStatusMutation();
+  const cancelApply     = useCancelApplyMutation();
 
-  const plants    = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
-  const plantById = useMemo(() => new Map(plants.map((p) => [p.id, p])), [plants]);
-  const plotById  = useMemo(() => new Map((plotsQuery.data ?? []).map((p) => [p.id, p])), [plotsQuery.data]);
+  const plants = useMemo(() => plantsQuery.data ?? [], [plantsQuery.data]);
 
   // Build planId → planName map from myPlans data for applies tab
   const planNameById = useMemo(() => {
@@ -177,7 +167,14 @@ export function PlansPage() {
   const totalPages = activeQuery.data?.totalPages ?? 0;
 
   // Reset page & selection when tab / filters change
-  useEffect(() => { setPage(0); setSelectedIds(new Set()); }, [viewTab, search, plantId, pageSize, applyStatusFilter]);
+  useEffect(() => {
+    const timer = setTimeout(() => setPage(0), 0);
+    return () => clearTimeout(timer);
+  }, [viewTab, search, plantId, pageSize, applyStatusFilter, sourceTypeFilter, severityLevelFilter, urgencyFilter]);
+  useEffect(() => {
+    const timer = setTimeout(() => setSelectedIds(new Set()), 0);
+    return () => clearTimeout(timer);
+  }, [viewTab, search, plantId, pageSize, applyStatusFilter, sourceTypeFilter, severityLevelFilter, urgencyFilter]);
 
   // ── my-plans helpers ─────────────────────────────────────────────────────
   const handleDelete = async () => {
@@ -187,7 +184,7 @@ export function PlansPage() {
   };
 
   const toggleSelect = (id: string) =>
-    setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const allPageSelected  = paginatedPlans.length > 0 && paginatedPlans.every((p) => selectedIds.has(p.id));
   const somePageSelected = paginatedPlans.some((p) => selectedIds.has(p.id)) && !allPageSelected;
@@ -217,7 +214,7 @@ export function PlansPage() {
 
   // ── render ───────────────────────────────────────────────────────────────
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col space-y-8">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-5">
 
       {/* ── Header ── */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -286,41 +283,6 @@ export function PlansPage() {
           </p>
         </div>
       )}
-      {/* ── Applied Plans: status filter + info banner ── */}
-      {viewTab === "applied" && (
-        <>
-          <div className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
-            <Play className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
-            <p className="text-sm font-semibold text-emerald-700">
-              Danh sách các kế hoạch bạn đã áp dụng vào vườn hoặc cây trồng. Theo dõi trạng thái từng lần áp dụng tại đây.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { value: "" as const, label: "Tất cả" },
-              { value: "PENDING" as const, label: "Chờ xử lý" },
-              { value: "APPLYING" as const, label: "Đang áp dụng" },
-              { value: "ACTIVE" as const, label: "Đang thực hiện" },
-              { value: "COMPLETED" as const, label: "Hoàn thành" },
-              { value: "CANCELLED" as const, label: "Đã hủy" },
-            ].map(({ value, label }) => (
-              <button
-                key={value || "all"}
-                type="button"
-                onClick={() => setApplyStatusFilter(value)}
-                className={`rounded-2xl border px-4 py-2 text-sm font-bold transition-all ${
-                  applyStatusFilter === value
-                    ? "border-[#245A34] bg-[#245A34] text-white shadow-md"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-
 
       {/* ── Filter card ── */}
       <FilterCard viewMode={viewMode} onViewModeChange={setViewMode}>
@@ -355,6 +317,130 @@ export function PlansPage() {
             </div>
           )}
         </div>
+
+        {/* Applied tab: status filter + info */}
+        {viewTab === "applied" && (
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500 mr-1">Trạng thái:</span>
+            {[
+              { value: "" as const, label: "Tất cả", activeClass: "border-[#245A34] bg-[#245A34] text-white shadow-sm", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50" },
+              { value: "PENDING" as const, label: "Chờ xử lý", activeClass: "border-amber-400 bg-amber-50 text-amber-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50/50 hover:text-amber-600" },
+              { value: "APPLYING" as const, label: "Đang áp dụng", activeClass: "border-purple-400 bg-purple-50 text-purple-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-purple-200 hover:bg-purple-50/50 hover:text-purple-600" },
+              { value: "ACTIVE" as const, label: "Đang thực hiện", activeClass: "border-green-400 bg-green-50 text-green-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-green-200 hover:bg-green-50/50 hover:text-green-600" },
+              { value: "COMPLETED" as const, label: "Hoàn thành", activeClass: "border-blue-400 bg-blue-50 text-blue-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600" },
+              { value: "CANCELLED" as const, label: "Đã hủy", activeClass: "border-red-400 bg-red-50 text-red-600", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50/50 hover:text-red-600" },
+            ].map(({ value, label, activeClass, inactiveClass }) => (
+              <button
+                key={value || "all"}
+                type="button"
+                onClick={() => setApplyStatusFilter(value)}
+                className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                  applyStatusFilter === value
+                    ? activeClass
+                    : inactiveClass
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Source type filter chips — only for public tab */}
+        {viewTab === "public" && (
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500 self-center">Nguồn:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {SOURCE_TYPE_CHIPS.map(({ value, label }) => (
+                  <button
+                    key={value || "all"}
+                    type="button"
+                    onClick={() => setSourceTypeFilter(value)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                      sourceTypeFilter === value
+                        ? "border-[#245A34] bg-[#245A34] text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Severity level filter chips */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500 self-center">Mức độ:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { value: "", label: "Tất cả", activeClass: "border-[#245A34] bg-[#245A34] text-white shadow-sm", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50" },
+                  { value: "LOW", label: "Thấp", activeClass: "border-green-400 bg-green-50 text-green-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-green-200 hover:bg-green-50/50 hover:text-green-600" },
+                  { value: "MEDIUM", label: "Trung bình", activeClass: "border-amber-400 bg-amber-50 text-amber-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50/50 hover:text-amber-600" },
+                  { value: "HIGH", label: "Cao", activeClass: "border-red-400 bg-red-50 text-red-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50/50 hover:text-red-600" },
+                ].map(({ value, label, activeClass, inactiveClass }) => (
+                  <button
+                    key={value || "all"}
+                    type="button"
+                    onClick={() => setSeverityLevelFilter(value)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                      severityLevelFilter === value ? activeClass : inactiveClass
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Urgency filter chips */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="text-xs font-black uppercase tracking-wide text-slate-500 self-center">Độ khẩn:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { value: "", label: "Tất cả", activeClass: "border-[#245A34] bg-[#245A34] text-white shadow-sm", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50" },
+                  { value: "LOW", label: "Không khẩn", activeClass: "border-blue-400 bg-blue-50 text-blue-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50/50 hover:text-blue-600" },
+                  { value: "MEDIUM", label: "Khẩn", activeClass: "border-amber-400 bg-amber-50 text-amber-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-amber-200 hover:bg-amber-50/50 hover:text-amber-600" },
+                  { value: "HIGH", label: "Rất khẩn", activeClass: "border-red-400 bg-red-50 text-red-700", inactiveClass: "border-slate-200 bg-white text-slate-600 hover:border-red-200 hover:bg-red-50/50 hover:text-red-600" },
+                ].map(({ value, label, activeClass, inactiveClass }) => (
+                  <button
+                    key={value || "all"}
+                    type="button"
+                    onClick={() => setUrgencyFilter(value)}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                      urgencyFilter === value ? activeClass : inactiveClass
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Source type filter — always visible for non-public tabs */}
+        {viewTab !== "public" && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500 self-center">Nguồn:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {SOURCE_TYPE_CHIPS.map(({ value, label }) => (
+                <button
+                  key={value || "all"}
+                  type="button"
+                  onClick={() => setSourceTypeFilter(value)}
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                    sourceTypeFilter === value
+                      ? "border-[#245A34] bg-[#245A34] text-white shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </FilterCard>
 
       {/* ── My Plans: selection + bulk actions ── */}
@@ -554,6 +640,7 @@ export function PlansPage() {
               onStatusChange={(applyId, newStatus) =>
                 void updateApplyStatus.mutateAsync({ applyId, status: newStatus })
               }
+              onCancelApply={setCancelTarget}
             />
           ))}
         </PagedGrid>
@@ -607,6 +694,18 @@ export function PlansPage() {
           onClose={() => setApplyTarget(null)}
           onSubmit={(payload) =>
             void bulkApplyPlans.mutateAsync({ planIds: [applyTarget.id], payload }).then(() => setApplyTarget(null))
+          }
+        />
+      )}
+
+      {/* ── Cancel apply dialog ── */}
+      {cancelTarget && (
+        <CancelApplyDialog
+          apply={cancelTarget}
+          isCancelling={cancelApply.isPending}
+          onClose={() => setCancelTarget(null)}
+          onConfirm={() =>
+            void cancelApply.mutateAsync(cancelTarget.id).then(() => setCancelTarget(null))
           }
         />
       )}

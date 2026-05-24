@@ -1,24 +1,24 @@
-import { useState } from 'react'
-import { ModalShell } from '../../../components/ui/ModalShell'
+import { useState } from 'react';
+import { ModalShell } from '../../../components/ui/ModalShell';
 
 interface AddDeviceModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onAdd: (device: { name: string; id: string; zone: string }) => void
-  zones: { id: string; name: string }[]
+  isOpen: boolean;
+  onClose: () => void;
+  onAdd: (device: { name: string; id: string; zone: string }) => void;
+  zones: { id: string; name: string }[];
 }
 
 export function AddDeviceModal({ isOpen, onClose, onAdd, zones }: AddDeviceModalProps) {
-  const [formData, setFormData] = useState({ name: '', id: 'COF-', zone: '' })
+  const [formData, setFormData] = useState({ name: '', id: 'COF-', zone: '' });
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onAdd(formData)
-    setFormData({ name: '', id: 'COF-', zone: '' }) // Reset
-    onClose()
-  }
+    e.preventDefault();
+    onAdd(formData);
+    setFormData({ name: '', id: 'COF-', zone: '' }); // Reset
+    onClose();
+  };
 
   return (
     <ModalShell onClose={onClose} title="Thêm Module mới" maxWidth="max-w-md">
@@ -74,5 +74,5 @@ export function AddDeviceModal({ isOpen, onClose, onAdd, zones }: AddDeviceModal
         </form>
       </div>
     </ModalShell>
-  )
+  );
 }

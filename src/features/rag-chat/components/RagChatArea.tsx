@@ -3,16 +3,20 @@ import {
   ArrowUp,
   Bot,
   ChevronDown,
+  ClipboardList,
   Info,
   LoaderCircle,
-  MapPin,
   MessageCircle,
   RefreshCcw,
+  Search,
+  Sparkles,
   Square,
+  Zap,
 } from "lucide-react";
 import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { RagRoute } from "../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +30,7 @@ export interface ChatMessage {
   ragState?: string;
   currentNode?: string;
   step?: number;
+  pathType?: string;
   isStreaming?: boolean;
 }
 
@@ -134,6 +139,8 @@ interface RagChatAreaProps {
   onLanguageChange: (lang: string) => void;
   onResetConversation: () => void;
   onToggleInfo: () => void;
+  selectedRoute: RagRoute;
+  onRouteChange: (route: RagRoute) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -149,14 +156,6 @@ export function RagChatArea({
   textareaRef,
   bottomRef,
   isInfoOpen,
-  plots,
-  zones,
-  selectedPlotId,
-  selectedZoneId,
-  isLoadingPlots,
-  isLoadingZones,
-  onPlotChange,
-  onZoneChange,
   onSubmit,
   onQuestionChange,
   onKeyDown,
@@ -164,6 +163,8 @@ export function RagChatArea({
   onLanguageChange,
   onResetConversation,
   onToggleInfo,
+  selectedRoute,
+  onRouteChange,
 }: RagChatAreaProps) {
   const hasRealMessages =
     messages.length > 1 ||
@@ -298,10 +299,22 @@ export function RagChatArea({
                       </div>
                     )}
                   </div>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <p className="text-[10px] text-slate-400">
                       {formatTime(message.createdAt)}
                     </p>
+                    {message.pathType && (
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                        message.pathType === 'fast' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' :
+                        message.pathType === 'deep' ? 'bg-blue-50 border-blue-200 text-blue-600' :
+                        message.pathType === 'planning' ? 'bg-purple-50 border-purple-200 text-purple-600' :
+                        'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}>
+                        {message.pathType === 'fast' && <><Zap className="w-3 h-3" /> Nhanh</>}
+                        {message.pathType === 'deep' && <><Search className="w-3 h-3" /> Chuyên sâu</>}
+                        {message.pathType === 'planning' && <><ClipboardList className="w-3 h-3" /> Kế hoạch</>}
+                      </span>
+                    )}
                     {message.ragState && (
                       <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
                         {message.isStreaming && (message.ragState === "running" || message.ragState === "streaming_response") && (
@@ -328,7 +341,7 @@ export function RagChatArea({
       {/* ── Input footer ── */}
       <div className="shrink-0 border-t border-gray-200/60 bg-white px-3 py-3">
         {/* Farm context selector row */}
-        <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+        {/* <div className="flex items-center gap-2 mb-2.5 flex-wrap">
           <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
             <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
             <select
@@ -370,6 +383,62 @@ export function RagChatArea({
               Ngữ cảnh đã chọn
             </span>
           )}
+        </div> */}
+
+        {/* Route selector row */}
+        <div className="flex items-center gap-2 mb-2.5 flex-wrap text-[11px] font-medium">
+          <span className="text-slate-500 px-1">Chế độ:</span>
+          
+          <button
+            type="button"
+            onClick={() => onRouteChange("auto")}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors border ${
+              selectedRoute === "auto"
+                ? "bg-slate-100 border-slate-300 text-slate-700"
+                : "bg-white border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+            }`}
+          >
+            <Sparkles className="w-3 h-3" /> Tự động
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onRouteChange("fast")}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors border ${
+              selectedRoute === "fast"
+                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                : "bg-white border-transparent text-slate-500 hover:bg-emerald-50 hover:text-emerald-700"
+            }`}
+            title="Sử dụng mô hình Flash nhanh"
+          >
+            <Zap className="w-3 h-3" /> Nhanh
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onRouteChange("deep")}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors border ${
+              selectedRoute === "deep"
+                ? "bg-blue-50 border-blue-200 text-blue-700"
+                : "bg-white border-transparent text-slate-500 hover:bg-blue-50 hover:text-blue-700"
+            }`}
+            title="Tìm kiếm Web + Mô hình Pro"
+          >
+            <Search className="w-3 h-3" /> Chuyên sâu
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => onRouteChange("planner")}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors border ${
+              selectedRoute === "planner"
+                ? "bg-purple-50 border-purple-200 text-purple-700"
+                : "bg-white border-transparent text-slate-500 hover:bg-purple-50 hover:text-purple-700"
+            }`}
+            title="Tạo phác đồ điều trị"
+          >
+            <ClipboardList className="w-3 h-3" /> Kế hoạch
+          </button>
         </div>
 
         {/* Unified input card */}

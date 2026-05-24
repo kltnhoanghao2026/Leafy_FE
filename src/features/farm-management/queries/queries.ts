@@ -15,3 +15,10 @@ export const useFarmZones = (plotId: string, enabled = true) =>
     queryFn: () => farmApi.getZonesByPlot(plotId),
     enabled: enabled && !!plotId,
   });
+
+export const useFarmZonesByOwner = (ownerProfileId: string, enabled = true) =>
+  useQuery({
+    queryKey: farmManagementKeys.zonesByOwner(ownerProfileId),
+    queryFn: () => farmApi.getZonesByOwnerProfileId(ownerProfileId),
+    enabled: enabled && !!ownerProfileId,
+  });

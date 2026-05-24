@@ -1,17 +1,9 @@
 import { CalendarDays, CheckCircle2 } from 'lucide-react';
 import { GroupedEventList } from './GroupedEventList';
 import type { PlantEventResponse } from '../../shared/types';
+import { isEventDone } from '../schemas/eventUtils';
 import { useTranslation } from '../../../../i18n';
-
-export interface EventListPanelProps {
-  selectedDate: string | null;
-  selectedDateEvents: PlantEventResponse[];
-  onEdit: (event: PlantEventResponse) => void;
-  onEventHover: (event: PlantEventResponse | null) => void;
-  onToggleComplete?: (event: PlantEventResponse) => void;
-  onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
-  onSelectEvent?: (event: PlantEventResponse) => void;
-}
+import type { EventListPanelProps } from '../schemas/calendar.types';
 
 export function EventListPanel({
   selectedDate,
@@ -21,6 +13,7 @@ export function EventListPanel({
   onToggleComplete,
   onToggleTask,
   onSelectEvent,
+  onDelete,
 }: EventListPanelProps): React.ReactElement {
   const { t } = useTranslation();
   if (!selectedDate) {
@@ -55,10 +48,7 @@ export function EventListPanel({
   const countDone = (events: PlantEventResponse[]): number => {
     let c = 0;
     for (const e of events) {
-      const isDone = e.trackingGranularity && e.trackingGranularity !== 'NONE'
-        ? (e.progressTotal != null && e.progressTotal > 0 && e.progressCompleted === e.progressTotal)
-        : e.completed;
-      if (isDone) c += 1;
+      if (isEventDone(e)) c += 1;
       if (e.children?.length) c += countDone(e.children);
     }
     return c;
@@ -70,9 +60,9 @@ export function EventListPanel({
   const allDone = done === total && total > 0;
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Compact header: date + progress inline */}
-      <div className="flex flex-col gap-1.5">
+    <div className="flex h-full flex-col">
+      {/* Sticky header: date + progress bar */}
+      <div className="sticky top-0 z-10 shrink-0 flex flex-col gap-1.5 pb-3 bg-white border-b border-slate-100 shadow-sm">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className={`h-3.5 w-3.5 shrink-0 ${allDone ? 'text-emerald-500' : 'text-slate-300'}`} />
@@ -90,15 +80,20 @@ export function EventListPanel({
         </div>
       </div>
 
-      <GroupedEventList
-        events={selectedDateEvents}
-        selectedDate={selectedDate}
-        onEdit={onEdit}
-        onEventHover={onEventHover}
-        onToggleComplete={onToggleComplete}
-        onToggleTask={onToggleTask}
-        onSelectEvent={onSelectEvent}
-      />
+      {/* Scrollable event list */}
+      <div className="flex-1 min-h-0">
+        <GroupedEventList
+          events={selectedDateEvents}
+          selectedDate={selectedDate}
+          onEdit={onEdit}
+          onEventHover={onEventHover}
+          onToggleComplete={onToggleComplete}
+          onToggleTask={onToggleTask}
+          onSelectEvent={onSelectEvent}
+          onDelete={onDelete}
+          hideHeader
+        />
+      </div>
     </div>
   );
 }

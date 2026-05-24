@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,7 +11,6 @@ import {
   CalendarDays,
   SlidersHorizontal,
   ChevronDown,
-  AlertCircle,
 } from "lucide-react";
 import { AdminTable } from "../../../../components/admin/AdminTable";
 import { AdminPagination } from "../../../../components/admin/AdminPagination";
@@ -206,10 +204,24 @@ function SpeciesModal({
   onSave,
   isSaving,
 }: SpeciesModalProps) {
-  const [form, setForm] = useState<SpeciesCreatePayload>(EMPTY_FORM);
+  const [form, setForm] = useState<SpeciesCreatePayload>(() =>
+    initial
+      ? {
+          commonName: initial.commonName ?? "",
+          cultivarName: initial.cultivarName ?? "",
+          waterFrequencyDays: initial.waterFrequencyDays ?? undefined,
+          lightRequirements: initial.lightRequirements ?? "",
+          daysToMaturity: initial.daysToMaturity ?? undefined,
+          plantingWindow: initial.plantingWindow ?? "",
+          plantingSeason: initial.plantingSeason ?? "",
+          spacing: initial.spacing ?? undefined,
+          expectedYieldKg: initial.expectedYieldKg ?? undefined,
+        }
+      : EMPTY_FORM,
+  );
 
   useEffect(() => {
-    if (open) {
+    const timer = setTimeout(() => {
       setForm(
         initial
           ? {
@@ -225,8 +237,9 @@ function SpeciesModal({
             }
           : EMPTY_FORM,
       );
-    }
-  }, [open, initial]);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [initial]);
 
   if (!open) return null;
 

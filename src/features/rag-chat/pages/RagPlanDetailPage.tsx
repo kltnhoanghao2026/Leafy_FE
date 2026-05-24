@@ -239,7 +239,7 @@ export function RagPlanDetailPage() {
                         <div className="flex flex-wrap gap-2 text-xs">
                           {phi !== undefined && (
                             <span className="rounded-lg bg-amber-50 border border-amber-200 px-2 py-1 text-amber-700 font-semibold">
-                              ThÃ¡Â»Âi gian cÃÂ¡ch ly (PHI): {phi} ngÃÂ y
+                              ThÃ¡Â»Âi gian cÃÂ¡ch ly (PHI): {phi} ngÃÂ� y
                             </span>
                           )}
                           {ppe && (
@@ -283,7 +283,7 @@ export function RagPlanDetailPage() {
             <div>
               <h3 className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <AlertTriangle className="h-4 w-4" />
-                LÃÂ°u ÃÂ½ an toÃÂ n
+                LÃÂ°u ÃÂ½ an toÃÂ� n
               </h3>
               <ul className="space-y-2">
                 {safetyWarnings.map((item, i) => (
@@ -301,7 +301,7 @@ export function RagPlanDetailPage() {
 
         {successIndicators && (
           <div className="mt-8 p-4 rounded-2xl bg-indigo-50 border border-indigo-100">
-             <h3 className="text-sm font-bold text-indigo-900 mb-2">DÃ¡ÂºÂ¥u hiÃ¡Â»â¡u phÃ¡Â»Â¥c hÃ¡Â»âi thÃÂ nh cÃÂ´ng</h3>
+             <h3 className="text-sm font-bold text-indigo-900 mb-2">DÃ¡ÂºÂ¥u hiÃ¡Â»â¡u phÃ¡Â»Â¥c hÃ¡Â»âi thÃÂ� nh cÃÂ´ng</h3>
              <p className="text-sm text-indigo-800">{successIndicators}</p>
           </div>
         )}
@@ -318,3 +318,4 @@ export function RagPlanDetailPage() {
     </div>
   );
 }
+

@@ -8,7 +8,8 @@ import { DatePicker } from "../../../../components/ui/DatePicker";
 import { Select } from "../../../../components/ui/Select";
 import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
 import { useMyProfile } from "../../../settings/queries";
-import { usePlantsByFarmPlot } from "../..";
+import { useMyPlants } from "../..";
+import { unwrapPageContent } from "../../shared/api/apiUtils";
 import type { BulkApplyCustomRequest, PlanApplyItemRequest, PlanResponse } from "../../shared/types";
 
 // ── Per-plan row state ────────────────────────────────────────────────────────
@@ -45,12 +46,18 @@ function PlanRow({ plan, config, onUpdate, plotOptions }: PlanRowProps) {
   const [excludeOpen, setExcludeOpen] = useState(false);
 
   const zonesQuery  = useFarmZones(config.farmPlotId, !!config.farmPlotId);
-  const plantsQuery = usePlantsByFarmPlot(config.farmPlotId, !!config.farmPlotId);
+  const plantsQuery = useMyPlants(
+    {
+      farmPlotId: config.farmPlotId || undefined,
+      farmZoneId: config.farmZoneId || undefined,
+    },
+    !!config.farmPlotId,
+  );
 
   const today = new Date().toISOString().slice(0, 10);
 
   const zones  = zonesQuery.data  ?? [];
-  const plants = plantsQuery.data ?? [];
+  const plants = unwrapPageContent(plantsQuery.data);
 
   const zoneOptions = [
     { value: "", label: "Tất cả khu vực" },

@@ -3,14 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
 import { ModalShell } from '../../../components/ui/ModalShell';
+import { Avatar } from '../../../components/ui/Avatar';
+import type { ProfileResponse } from '../../profiles/api/profilesApi';
 
-interface Profile {
-  id: string;
-  userId: string;
-  fullName: string;
-  avatar: string;
-  role: string;
-}
+type Profile = ProfileResponse;
 
 interface NewDMModalProps {
   isOpen: boolean;
@@ -25,10 +21,10 @@ export function NewDMModal({ isOpen, onClose, onStartChat }: NewDMModalProps) {
     queryKey: ['profile-search', searchTerm],
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
-      const res = await apiClient.get<any>(API_ENDPOINTS.PROFILES.SEARCH, {
+      const res = await apiClient.get<{ data?: { content?: Profile[] }; content?: Profile[] }>(API_ENDPOINTS.PROFILES.SEARCH, {
         params: { searchTerm, page: 0, size: 20 },
       });
-      return (res.data?.data?.content || res.data?.content || []) as Profile[];
+      return res.data?.data?.content || res.data?.content || [];
     },
     enabled: searchTerm.trim().length > 0,
   });
@@ -82,10 +78,11 @@ export function NewDMModal({ isOpen, onClose, onStartChat }: NewDMModalProps) {
                   onClick={() => { onStartChat(profile.id); handleClose(); }}
                   className="flex items-center p-3 hover:bg-gray-50 cursor-pointer rounded-xl transition-colors group"
                 >
-                  <img
-                    src={profile.avatar || `https://i.pravatar.cc/150?u=${profile.id}`}
-                    alt={profile.fullName}
-                    className="w-12 h-12 rounded-full object-cover border border-gray-200 group-hover:border-green-300 transition-colors"
+                  <Avatar
+                    src={profile.avatar}
+                    name={profile.fullName}
+                    size="xl"
+                    className="border border-gray-200 group-hover:border-green-300 transition-colors"
                   />
                   <div className="ml-4 flex-1">
                     <h4 className="text-sm font-bold text-gray-900 group-hover:text-green-700 transition-colors">{profile.fullName}</h4>

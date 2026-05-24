@@ -211,7 +211,7 @@ export function PlantEventDetailPage() {
             icon={<CalendarDays className="w-3.5 h-3.5 text-slate-400" />}
             label="Ngày từ hiện tại"
             value={
-              event.daysFromNow != null ? `${event.daysFromNow} ngày` : "—"
+              event.daysFromStart != null ? `${event.daysFromStart} ngày` : "—"
             }
           />
           <InfoRow

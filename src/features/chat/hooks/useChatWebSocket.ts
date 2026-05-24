@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
-import type { MessageResponse, ConversationResponse, ChatNotification } from '../api/chatApi';
+import type { MessageResponse, ConversationResponse, ChatNotification, MessageStatus } from '../api/chatApi';
 import { normalizeChatNotification, chatApi } from '../api/chatApi';
-import { useWebSocketClient } from '../../../providers/WebSocketProvider';
+import { useWebSocketClient } from '../../../providers/wsUtils';
 
 export const useChatWebSocket = (activeConversationId?: string | null) => {
   const { user } = useAuthStore();
@@ -154,7 +154,7 @@ export const useChatWebSocket = (activeConversationId?: string | null) => {
               if (!oldData) return oldData;
               return oldData.map(m =>
                 m.id === data.messageId
-                  ? { ...m, status: data.newStatus as any, content: null, replyTo: null }
+                  ? { ...m, status: data.newStatus as MessageStatus, content: null, replyTo: null }
                   : m
               );
             }
@@ -171,7 +171,7 @@ export const useChatWebSocket = (activeConversationId?: string | null) => {
                 if (conv.lastMessage?.id !== data.messageId) return conv;
                 return {
                   ...conv,
-                  lastMessage: { ...conv.lastMessage, content: null, status: data.newStatus as any },
+                  lastMessage: { ...conv.lastMessage, content: null, status: data.newStatus as MessageStatus },
                 };
               });
             }

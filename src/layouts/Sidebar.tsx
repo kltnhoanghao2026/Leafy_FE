@@ -12,6 +12,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   Sprout,
+  Leaf,
   Users,
   Settings,
   MessageSquare,
@@ -25,6 +26,8 @@ import { ROUTES } from "../lib/routes";
 import { useNotificationState } from "../features/notifications/queries/queries";
 import { useNotificationWebSocket } from "../features/notifications/hooks/useNotificationWebSocket";
 import { useTranslation } from "../i18n";
+import { chatApi } from "../features/chat/api/chatApi";
+import { useQuery } from "@tanstack/react-query";
 
 type SidebarNavItem = {
   name: string;
@@ -43,9 +46,22 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
 
+  // Total unread chat count — uses same queryKey as chat page so WebSocket updates flow through
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['conversations'],
+    queryFn: () => chatApi.getConversations(0, 100),
+    staleTime: 30_000,
+  });
+  const chatUnreadCount = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
+
+  const utilityBadgeMap: Record<string, number> = {
+    [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
+    [ROUTES.DASHBOARD.CHAT]: chatUnreadCount,
+  };
+
   const coreNavItems: SidebarNavItem[] = [
     { name: t('nav.home'), path: ROUTES.DASHBOARD.ROOT, icon: Home },
-    { name: t('nav.diseaseSearch'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
+    { name: t('nav.search'), path: ROUTES.DASHBOARD.SEARCH, icon: Search },
     { name: t('nav.alerts'), path: ROUTES.DASHBOARD.ALERTS, icon: Bell },
     { name: t('nav.alertRules'), path: ROUTES.DASHBOARD.ALERT_RULES, icon: BellRing },
     { name: t('nav.devices'), path: ROUTES.DASHBOARD.DEVICES, icon: Cpu },
@@ -54,9 +70,10 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const agricultureNavItems: SidebarNavItem[] = [
     { name: t('nav.agricultureOverview'), path: ROUTES.DASHBOARD.AGRICULTURE_OVERVIEW, icon: LayoutDashboard },
     { name: t('nav.plants'), path: ROUTES.DASHBOARD.PLANTS, icon: Sprout },
+    { name: t('nav.species'), path: ROUTES.DASHBOARD.SPECIES, icon: Leaf },
     { name: t('nav.plans'), path: ROUTES.DASHBOARD.PLANS, icon: ClipboardList },
     { name: t('nav.plantEventsCalendar'), path: ROUTES.DASHBOARD.PLANT_EVENTS_CALENDAR, icon: CalendarDays },
-    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_PREDICTION, icon: ScanSearch },
+    { name: t('nav.diseasePrediction'), path: ROUTES.DASHBOARD.DISEASE_DIAGNOSIS, icon: ScanSearch },
     { name: t('nav.ragPanel'), path: ROUTES.DASHBOARD.RAG_PANEL, icon: Bot },
     ...(profile?.role === 'EXPERT'
       ? [{ name: 'Tư Vấn', path: ROUTES.DASHBOARD.CONSULTING, icon: Stethoscope }]
@@ -66,17 +83,10 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const utilityNavItems: SidebarNavItem[] = [
     { name: t('nav.experts'), path: ROUTES.DASHBOARD.EXPERTS, icon: UserSquare },
     { name: t('nav.chat'), path: ROUTES.DASHBOARD.CHAT, icon: MessageSquare },
+    { name: 'Thông báo', path: ROUTES.DASHBOARD.NOTIFICATIONS, icon: Bell },
     { name: t('nav.community'), path: ROUTES.DASHBOARD.COMMUNITY, icon: Users },
     { name: t('nav.settings'), path: ROUTES.DASHBOARD.SETTINGS, icon: Settings },
   ];
-
-  const isSectionActive = (items: SidebarNavItem[]) =>
-    items.some((item) => {
-      const activePath = item.activePath ?? item.path;
-      return item.path === ROUTES.DASHBOARD.ROOT
-        ? location.pathname === ROUTES.DASHBOARD.ROOT || location.pathname.startsWith('/dashboard/metrics')
-        : location.pathname.startsWith(activePath);
-    });
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     core: true,
@@ -183,9 +193,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
           {coreNavItems.map((item) => renderNavItem(item))}
         </div>
         {renderSection('agriculture', t('nav.sectionAgriculture'), agricultureNavItems)}
-        {renderSection('utility', t('nav.sectionOther'), utilityNavItems, {
-          [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
-        })}
+        {renderSection('utility', t('nav.sectionOther'), utilityNavItems, utilityBadgeMap)}
       </nav>
     </aside>
   );
