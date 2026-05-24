@@ -174,13 +174,13 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
-    expect(await screen.findByText(/08:30:00/)).toBeInTheDocument();
+    expect(await screen.findByText(/08:30/)).toBeInTheDocument();
     expect(screen.getAllByText(/Hang ngay/).length).toBeGreaterThan(0);
     const images = await screen.findAllByRole("img");
     expect(images.some((image) => image.getAttribute("src") === "https://files.example.test/file-1.jpg")).toBe(true);
     expect(screen.getByText(/coffee-rust/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/HIGH/i).length).toBeGreaterThan(0);
-    expect(screen.getByText("Alert")).toBeInTheDocument();
+    expect(screen.getAllByText(/Quan trọng/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("Đã tạo cảnh báo")).toBeInTheDocument();
   });
 
   it("creates a client camera schedule through the device scoped endpoint", async () => {
@@ -188,7 +188,7 @@ describe("DeviceDetailPage camera media panel", () => {
     const handlers = setupHandlers();
     renderPage();
 
-    await screen.findByText(/08:30:00/);
+    await screen.findByText(/08:30/);
     await user.click(screen.getByRole("button", { name: /^Tao$/i }));
 
     await waitFor(() =>
@@ -208,7 +208,7 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     await screen.findByText("Leafy Camera");
-    await user.click(screen.getByRole("button", { name: /Trigger Analysis/i }));
+    await user.click(screen.getByRole("button", { name: /Phân tích ảnh mới nhất/i }));
 
     await waitFor(() =>
       expect(handlers.getDetectPayload()).toMatchObject({
@@ -226,12 +226,12 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     await screen.findByText("Leafy Camera");
-    await user.click(screen.getByRole("button", { name: /Disease detected: coffee-rust/i }));
+    await user.click(screen.getByRole("button", { name: /coffee-rust - Quan trọng/i }));
 
-    expect(screen.getByRole("dialog", { name: /Media detail/i })).toBeInTheDocument();
-    expect(screen.getByText("Disease analysis")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Chi tiết ảnh/i })).toBeInTheDocument();
+    expect(screen.getByText("Phân tích bệnh")).toBeInTheDocument();
     expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(1);
     expect(screen.getByText(/86%/)).toBeInTheDocument();
-    expect(screen.getByText("Detected")).toBeInTheDocument();
+    expect(screen.getAllByText("Đã upload").length).toBeGreaterThan(0);
   });
 });

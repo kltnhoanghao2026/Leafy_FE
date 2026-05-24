@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "../../../i18n";
 import { collectorApi } from "../../../lib/api/collectorApi";
 import type { ChartRange } from "../../../types/iot";
+import { withMediaDisplay } from "../../iot/utils/iotDisplay";
 import { deviceKeys } from "./keys";
 
 export const useDeviceDetail = (deviceId: string, enabled = true) =>
@@ -44,11 +46,14 @@ export const useDeviceMedia = (
   deviceId: string,
   enabled = true,
   refetchInterval?: number | false,
-) =>
-  useQuery({
+) => {
+  const { t } = useTranslation();
+
+  return useQuery({
     queryKey: deviceKeys.media(deviceId),
     queryFn: () => collectorApi.getDeviceMedia(deviceId),
-    select: (response) => response.data,
+    select: (response) => response.data.map((event) => withMediaDisplay(t, event)),
     enabled: enabled && !!deviceId,
     refetchInterval,
   });
+};
