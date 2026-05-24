@@ -1,22 +1,29 @@
 import { Link } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useTranslation } from '../../../../i18n';
 import { usePlantEventsCalendar } from '../..';
 import { useAgricultureStats } from '../queries/stats.queries';
 import type { PlantEventResponse } from '../../shared/types';
 import { PlantEventProgressModal } from '../components/PlantEventProgressModal';
 import { StatsGrid } from '../components/StatsGrid';
-import { CompletionRing } from '../components/CompletionRing';
+import { EventCompletionCard } from '../components/EventCompletionCard';
 import { EventTypeBreakdown } from '../components/EventTypeBreakdown';
-import { PlanApplyStats } from '../components/PlanApplyStats';
+import { MonthStatsPanel } from '../components/MonthStatsPanel';
 import { GroupedEventList } from '../../calendarview/components/GroupedEventList';
-import { useUpdatePlantEventMutation, useToggleTaskMutation } from '../../calendarview/queries';
+import { PlantEventEditDialog } from '../../calendarview/components/PlantEventEditDialog';
+import { DeleteEventModal } from '../../calendarview/components/DeleteEventModal';
+import {
+  useUpdatePlantEventMutation,
+  useToggleTaskMutation,
+} from '../../calendarview/queries';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
 
 export function AgricultureOverviewPage() {
   const { t } = useTranslation();
   const todayString = toLocalDateOnly(new Date());
   const [selectedEvent, setSelectedEvent] = useState<PlantEventResponse | null>(null);
+  const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
+  const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
 
   const statsQuery = useAgricultureStats();
   const todayEventsQuery = usePlantEventsCalendar({
@@ -29,6 +36,7 @@ export function AgricultureOverviewPage() {
 
   const toggleComplete = useUpdatePlantEventMutation();
   const toggleTask = useToggleTaskMutation();
+  const updateMutation = useUpdatePlantEventMutation();
 
   const handleToggleComplete = (event: PlantEventResponse) => {
     void toggleComplete.mutateAsync({
@@ -36,38 +44,18 @@ export function AgricultureOverviewPage() {
       payload: { completed: !event.completed },
     });
   };
-
-  // Map RecentEventSummary[] → PlantEventResponse[] for GroupedEventList
-  const recentAsEvents = useMemo<PlantEventResponse[]>(() => {
-    if (!stats?.recentEvents) return [];
-    return stats.recentEvents.map((e) => ({
-      id: e.id,
-      eventType: e.eventType,
-      note: e.note,
-      targetType: e.targetType,
-      completed: e.completed,
-      calculatedStartDate: e.calculatedStartDate,
-      calculatedEndDate: null,
-      description: null,
-      durationDays: null,
-      phiDays: null,
-      ppeRequired: null,
-      mrlNote: null,
-      estimatedCost: null,
-      planned: false,
-      farmPlotId: null,
-      farmZoneId: null,
-      plantId: null,
-      tasks: [],
-      children: [],
-      trackingGranularity: null,
-      progressTotal: null,
-      progressCompleted: null,
-    } as PlantEventResponse));
-  }, [stats?.recentEvents]);
-
   const handleToggleTask = (event: PlantEventResponse, taskIndex: number) => {
     void toggleTask.mutateAsync({ eventId: event.id, taskIndex });
+  };
+
+  const handleEdit = (event: PlantEventResponse) => {
+    setSelectedEvent(null);
+    setEditEventTarget(event);
+  };
+
+  const handleDelete = (event: PlantEventResponse) => {
+    setSelectedEvent(null);
+    setDeleteEventTarget(event);
   };
 
   return (
@@ -212,19 +200,21 @@ export function AgricultureOverviewPage() {
               className="main-content-row"
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr',
+                gridTemplateColumns: '1fr 1fr',
                 gap: '10px',
                 flex: 1,
                 minHeight: 0,
                 overflow: 'hidden',
               }}
             >
-              {/* Left column: Completion + Today's Tasks (GroupedEventList) */}
+              {/* Left column: Month stats + Today's Tasks (GroupedEventList) */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0, overflow: 'hidden' }}>
                 <div style={{ flexShrink: 0 }}>
-                  <CompletionRing
-                    completed={stats.totalCompletedEvents}
-                    pending={stats.totalPendingEvents}
+                  <MonthStatsPanel
+                    monthEvents={stats.monthEvents}
+                    monthCompletedEvents={stats.monthCompletedEvents}
+                    monthPendingEvents={stats.monthPendingEvents}
+                    monthEventsByType={stats.monthEventsByType}
                   />
                 </div>
                 <div
@@ -292,50 +282,19 @@ export function AgricultureOverviewPage() {
                 </div>
               </div>
 
-              {/* Middle column: Event breakdown + Plan stats */}
+              {/* Middle column: Today's completion ring + Overall event breakdown */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0, overflow: 'hidden' }}>
+                <div style={{ flexShrink: 0 }}>
+                  <EventCompletionCard
+                    completed={stats.todayCompletedEvents}
+                    pending={stats.todayEvents - stats.todayCompletedEvents}
+                    titleKey="plantManagement.overview.completionTitle"
+                    gradientFrom="#8B5CF6"
+                    gradientTo="#7C3AED"
+                  />
+                </div>
                 <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
                   <EventTypeBreakdown eventsByType={stats.eventsByType} />
-                </div>
-                <div style={{ flexShrink: 0 }}>
-                  <PlanApplyStats
-                    activePlanApplies={stats.activePlanApplies}
-                    completedPlanApplies={stats.completedPlanApplies}
-                    totalPlans={stats.totalPlans}
-                    upcomingEvents7d={stats.upcomingEvents7d}
-                  />
-                </div>
-              </div>
-
-              {/* Right column: Recent Activity */}
-              <div
-                style={{
-                  minHeight: 0,
-                  borderRadius: '16px',
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.04)',
-                  padding: '14px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                }}
-              >
-                <h3 style={{ margin: '0 0 8px', fontSize: '13px', fontWeight: 900, color: '#0f172a', flexShrink: 0 }}>
-                  {t('plantManagement.overview.recentActivityTitle')}
-                </h3>
-                <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-                  <GroupedEventList
-                    hideHeader
-                    events={recentAsEvents}
-                    onToggleComplete={handleToggleComplete}
-                    onSelectEvent={setSelectedEvent}
-                    emptyNode={
-                      <div style={{ borderRadius: '12px', border: '1px dashed #e2e8f0', background: '#f8fafc', padding: '20px', textAlign: 'center', fontSize: '12px', fontWeight: 700, color: '#94a3b8' }}>
-                        {t('plantManagement.overview.recentActivityEmpty')}
-                      </div>
-                    }
-                  />
                 </div>
               </div>
             </div>
@@ -347,6 +306,30 @@ export function AgricultureOverviewPage() {
         <PlantEventProgressModal
           event={selectedEvent}
           onClose={() => setSelectedEvent(null)}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {editEventTarget && (
+        <PlantEventEditDialog
+          event={editEventTarget}
+          isSubmitting={updateMutation.isPending}
+          onClose={() => setEditEventTarget(null)}
+          zIndex="z-[60]"
+          onSubmit={payload =>
+            void updateMutation
+              .mutateAsync({ eventId: editEventTarget.id, payload })
+              .then(() => setEditEventTarget(null))
+          }
+        />
+      )}
+
+      {deleteEventTarget && (
+        <DeleteEventModal
+          event={deleteEventTarget}
+          onClose={() => setDeleteEventTarget(null)}
+          zIndex="z-[60]"
         />
       )}
 

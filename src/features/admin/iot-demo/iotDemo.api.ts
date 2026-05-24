@@ -5,18 +5,28 @@ import type {
   ScenarioRequest,
   SimulationStatusResponse,
 } from "./iotDemo.types";
+import { useAuthStore } from "../../../store/authStore";
 
 export const isIotDemoToolsEnabled = () =>
   import.meta.env.VITE_ENABLE_IOT_DEMO_TOOLS === "true";
 
 export const getIotDemoBaseUrl = () =>
-  import.meta.env.VITE_IOT_TEST_DATA_BASE_URL || "/iot-test-data";
+  import.meta.env.VITE_IOT_TEST_DATA_BASE_URL || "/api/iot-test-data";
 
 const iotDemoClient = axios.create({
   baseURL: getIotDemoBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+// Attach JWT token to all requests
+iotDemoClient.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) {
+    config.headers.set("Authorization", `Bearer ${token}`);
+  }
+  return config;
 });
 
 const unwrap = <T>(promise: Promise<{ data: T }>) =>

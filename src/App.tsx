@@ -15,11 +15,12 @@ import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
 import { I18nProvider } from "./i18n";
 import { WebSocketProvider } from "./providers/WebSocketProvider";
-import { FarmOverviewPage, FarmPlotDetailPage, FarmZoneDetailPage } from "./features/admin/farm";
+import { FarmOverviewPage, FarmPlotDetailPage as AdminFarmPlotDetailPage, FarmZoneDetailPage as AdminFarmZoneDetailPage } from "./features/admin/farm";
 import { ContentModerationPage } from "./features/admin/content-moderation";
 import { SystemHealthPage } from "./features/admin/health";
 import { AnalyticsDashboardPage } from "./features/admin/analytics";
-import { PlantEventsPage, PlantsPage, SpeciesPage, PlantDetailPage as AdminPlantDetailPage, SpeciesDetailPage, PlantEventDetailPage, DiseasePage } from "./features/admin/plant-disease";
+import { PlantEventsPage, PlantsPage, PlantDetailPage as AdminPlantDetailPage, PlantEventDetailPage, DiseasePage } from "./features/admin/plant-disease";
+import { SpeciesPage } from "./features/plant-management/species/pages/SpeciesPage";
 import { ProfileManagementPage, ProfileDetailPage } from "./features/admin/profiles";
 import { CertificateApprovalPage } from "./features/admin/certificates";
 import { DataSeedingPage } from "./features/admin/seeding";
@@ -32,7 +33,6 @@ import { AdminLayout } from "./layouts/AdminLayout";
 import { AdminOverviewPage } from "./features/admin/overview";
 import { UserManagementPage } from "./features/admin/users";
 
-import { DiseasePredictionPage } from "./features/disease-detection";
 import { DocumentIngestionPage } from "./features/admin/knowledge-base";
 
 const AgricultureOverviewPage = lazy(() =>
@@ -98,6 +98,11 @@ const PlanDetailPage = lazy(() =>
     default: module.PlanDetailPage,
   })),
 );
+const PlanApplyDetailPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanApplyDetailPage").then((module) => ({
+    default: module.PlanApplyDetailPage,
+  })),
+);
 const PlansPage = lazy(() =>
   import("./features/plant-management/plan/pages/PlansPage").then((module) => ({
     default: module.PlansPage,
@@ -106,6 +111,16 @@ const PlansPage = lazy(() =>
 const CreatePlanPage = lazy(() =>
   import("./features/plant-management/plan/pages/CreatePlanPage").then((module) => ({
     default: module.CreatePlanPage,
+  })),
+);
+const EditPlanPage = lazy(() =>
+  import("./features/plant-management/plan/pages/EditPlanPage").then((module) => ({
+    default: module.EditPlanPage,
+  })),
+);
+const PlanGenerationProgressPage = lazy(() =>
+  import("./features/plant-management/plan/pages/PlanGenerationProgressPage").then((module) => ({
+    default: module.PlanGenerationProgressPage,
   })),
 );
 const RagChatPage = lazy(() =>
@@ -214,6 +229,28 @@ const ConsultingPlantPage = lazy(() =>
   }))
 );
 
+const ApplyAsExpertPage = lazy(() =>
+  import('./features/certificates/pages/ApplyAsExpertPage').then((module) => ({
+    default: module.ApplyAsExpertPage,
+  }))
+);
+
+const ExpertApplicationHistoryPage = lazy(() =>
+  import('./features/certificates/pages/ExpertApplicationHistoryPage').then((module) => ({
+    default: module.ExpertApplicationHistoryPage,
+  }))
+);
+const FarmPlotDetailPage = lazy(() =>
+  import('./features/plant-management/farm-management/pages/FarmPlotDetailPage').then((module) => ({
+    default: module.FarmPlotDetailPage,
+  }))
+);
+const FarmZoneDetailPage = lazy(() =>
+  import('./features/plant-management/farm-management/pages/FarmZoneDetailPage').then((module) => ({
+    default: module.FarmZoneDetailPage,
+  }))
+);
+
 const PageLoader = () => (
   <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-sm font-bold text-slate-500">
     Đang tải trang...
@@ -295,7 +332,6 @@ function App() {
                   </Suspense>
                 }
               />
-              <Route path="disease-prediction" element={<DiseasePredictionPage />} />
               <Route
                 path="rag-panel/treatment-plans/:planId"
                 element={
@@ -345,6 +381,22 @@ function App() {
                 }
               />
               <Route
+                path="farms/:farmPlotId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <FarmPlotDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="farms/:farmPlotId/zones/:farmZoneId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <FarmZoneDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="plans"
                 element={
                   <Suspense fallback={<PageLoader />}>
@@ -361,6 +413,22 @@ function App() {
                 }
               />
               <Route
+                path="plans/generate-progress"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PlanGenerationProgressPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="plans/:planId/edit"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <EditPlanPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="plans/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
@@ -369,10 +437,26 @@ function App() {
                 }
               />
               <Route
+                path="plans/applies/:applyId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <PlanApplyDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="plant-events/calendar"
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <PlantEventsCalendarPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="species"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <SpeciesPage />
                   </Suspense>
                 }
               />
@@ -528,6 +612,22 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="apply-as-expert"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ApplyAsExpertPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="expert-application-history"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <ExpertApplicationHistoryPage />
+                  </Suspense>
+                }
+              />
             </Route>
           </Route>
 
@@ -553,10 +653,10 @@ function App() {
               <Route path="overview" element={<AdminOverviewPage />} />
               <Route path="users" element={<UserManagementPage />} />
               <Route path="farms" element={<FarmOverviewPage />} />
-              <Route path="farms/:plotId" element={<FarmPlotDetailPage />} />
+              <Route path="farms/:plotId" element={<AdminFarmPlotDetailPage />} />
               <Route
                 path="farms/zones/:zoneId"
-                element={<FarmZoneDetailPage />}
+                element={<AdminFarmZoneDetailPage />}
               />
               <Route path="content" element={<ContentModerationPage />} />
               <Route path="knowledge-base" element={<DocumentIngestionPage />} />
@@ -564,9 +664,8 @@ function App() {
               <Route path="analytics" element={<AnalyticsDashboardPage />} />
               <Route path="plants" element={<PlantsPage />} />
               <Route path="plants/:id" element={<AdminPlantDetailPage />} />
-              
+
               <Route path="species" element={<SpeciesPage />} />
-              <Route path="species/:id" element={<SpeciesDetailPage />} />
               <Route path="plant-events" element={<PlantEventsPage />} />
               <Route
                 path="plant-events/:id"

@@ -7,17 +7,17 @@ import {
   Bot,
   CalendarDays,
   CheckCircle2,
-  Circle,
   Clock,
   Cpu,
   DollarSign,
   Edit2,
+  ExternalLink,
+  FileText,
   FlaskConical,
   Globe,
   Leaf,
   Lock,
   MapPin,
-  Pencil,
   Play,
   RefreshCw,
   ShieldAlert,
@@ -25,41 +25,28 @@ import {
   Trash2,
   User,
   UserCheck,
+  XCircle,
 } from "lucide-react";
 import { PlanPreviewCalendar } from "../../../consulting/components/PlanPreviewCalendar";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
 import { useFarmPlots, useFarmZones } from "../../../farm-management/queries";
 import { ROUTES } from "../../../../lib/routes";
-import { PlantEventEditDialog } from "../../calendarview/components/PlantEventEditDialog";
 import {
   useApplyPlanMutation,
-  useDeletePlantEventMutation,
   useDeletePlanMutation,
   usePlant,
-  usePlantEventsByPlan,
-  useTreatmentPlanDetail,  useToggleTaskMutation,  useUpdatePlantEventMutation,
-  useUpdateApplyStatusMutation,
+  useTreatmentPlanDetail,
   useUpdatePlanVisibilityMutation,
 } from "../..";
-import { useUpdatePlanMutation } from "../queries/plan.queries";
 import { useMyProfile } from "../../../settings/queries";
-import type { PlantEventResponse, PlanApplyResponse, TreatmentStatus } from "../../shared/types";
+import type { PlanApplyResponse, SourceDocument, TreatmentStatus } from "../../shared/types";
 import {
-  EVENT_TYPE_LABELS,
   formatDate,
   TREATMENT_STATUS_LABELS,
 } from "../../shared/components/displayUtils";
-import { Select } from "../../../../components/ui/Select";
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
-import { EditPlanDialog } from "../components/EditPlanDialog";
-
-const STATUS_OPTIONS: TreatmentStatus[] = [
-  "PENDING",
-  "APPLYING",
-  "ACTIVE",
-  "COMPLETED",
-  "CANCELLED",
-];
+import { EmbeddedEventList } from "../components/EmbeddedEventList";
+import { SourceDocumentModal } from "../components/SourceDocumentModal";
 
 const STATUS_STYLE: Record<TreatmentStatus, string> = {
   PENDING:   "bg-amber-50 text-amber-700 border-amber-200",
@@ -76,18 +63,6 @@ const SEVERITY_COLOR: Record<string, string> = {
   CRITICAL: "text-red-600 bg-red-50",
 };
 
-function InfoChip({ label, value, icon: Icon, color = "slate" }: { label: string; value: string; icon?: React.ElementType; color?: string }) {
-  return (
-    <div className={`flex flex-col gap-1 rounded-2xl bg-${color}-50 p-4`}>
-      <div className="flex items-center gap-1.5">
-        {Icon && <Icon className={`w-3.5 h-3.5 text-${color}-400`} strokeWidth={2.5} />}
-        <p className={`text-[10px] font-black uppercase tracking-widest text-${color}-400`}>{label}</p>
-      </div>
-      <p className={`text-sm font-bold text-${color}-800`}>{value}</p>
-    </div>
-  );
-}
-
 export function PlanDetailPage() {
   const { planId = "" } = useParams();
   const location = useLocation();
@@ -96,14 +71,10 @@ export function PlanDetailPage() {
   const navigate = useNavigate();
   const [deletePlanOpen, setDeletePlanOpen] = useState(false);
   const [applyPlanOpen, setApplyPlanOpen] = useState(false);
-  const [editPlanOpen, setEditPlanOpen] = useState(false);
-  const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
-  const [editEventTarget, setEditEventTarget] = useState<PlantEventResponse | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<SourceDocument | null>(null);
 
   const planQuery = useTreatmentPlanDetail(activePlanId);
   const plan = planQuery.data;
-  const sourcePlanId = plan?.id || "";
-  const eventsQuery = usePlantEventsByPlan(sourcePlanId, Boolean(sourcePlanId));
   const profileQuery = useMyProfile();
   const ownerProfileId = profileQuery.data?.id ?? "";
   // Derive latest apply for status/scope display
@@ -118,17 +89,15 @@ export function PlanDetailPage() {
     })[0];
   }, [plan?.applies]);
 
+  // Ensure latestApply is captured
+
+
   const plotsQuery = useFarmPlots(ownerProfileId, !!ownerProfileId);
   const zonesQuery = useFarmZones(latestApply?.farmPlotId ?? "", Boolean(latestApply?.farmPlotId));
   const plantQuery = usePlant(latestApply?.plantId ?? "", Boolean(latestApply?.plantId));
-  const updateApplyStatus = useUpdateApplyStatusMutation();
   const updateVisibility = useUpdatePlanVisibilityMutation();
-  const updatePlan = useUpdatePlanMutation();
-  const deletePlan = useDeletePlanMutation();
   const applyPlan = useApplyPlanMutation();
-  const updateEvent = useUpdatePlantEventMutation();
-  const toggleTask  = useToggleTaskMutation();
-  const deleteEvent = useDeletePlantEventMutation();
+  const deletePlan = useDeletePlanMutation();
 
   const plotById = useMemo(
     () => new Map((plotsQuery.data ?? []).map((plot) => [plot.id, plot])),
@@ -140,22 +109,14 @@ export function PlanDetailPage() {
     await deletePlan.mutateAsync(plan.id);
     navigate(ROUTES.DASHBOARD.PLANS);
   };
-
-  const handleDeleteEvent = async () => {
-    if (!deleteEventTarget) return;
-    await deleteEvent.mutateAsync(deleteEventTarget.id);
-    setDeleteEventTarget(null);
-  };
-
-  const events = eventsQuery.data ?? [];
-
   const previewDraftEvents = useMemo(() => {
-    if (plan?.events && plan.events.length > 0) {
-      return plan.events.map((e) => ({
+    const pEvents = plan?.events;
+    if (pEvents && pEvents.length > 0) {
+      return pEvents.map((e) => ({
         eventType: e.eventType,
         note: e.note ?? "",
         description: e.description ?? undefined,
-        daysFromNow: e.daysFromNow ?? 0,
+        daysFromStart: e.daysFromStart ?? 0,
         durationDays: e.durationDays ?? undefined,
         phiDays: e.phiDays ?? undefined,
         ppeRequired: e.ppeRequired ?? undefined,
@@ -197,9 +158,6 @@ export function PlanDetailPage() {
   const zoneName = latestApply?.farmZoneId
     ? (zonesQuery.data ?? []).find((z) => z.id === latestApply.farmZoneId)?.zoneName || latestApply.farmZoneId
     : null;
-  const applyStatus: TreatmentStatus | null = latestApply?.status ?? null;
-  const statusLabel = applyStatus ? ((TREATMENT_STATUS_LABELS as Record<string, string>)[applyStatus] ?? applyStatus) : "Chưa áp dụng";
-  const statusStyle = applyStatus ? (STATUS_STYLE[applyStatus] ?? "bg-slate-50 text-slate-600 border-slate-200") : "bg-slate-50 text-slate-600 border-slate-200";
   const severityStyle = plan.severityLevel ? (SEVERITY_COLOR[plan.severityLevel.toUpperCase()] ?? "text-slate-600 bg-slate-50") : "";
   const confidencePct = plan.confidenceScore != null ? Math.round(plan.confidenceScore * 100) : null;
 
@@ -207,7 +165,7 @@ export function PlanDetailPage() {
   const isOwner = !!ownerProfileId && (ownerProfileId === plan.ownerId || ownerProfileId === plan.creatorId);
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+    <div className="flex min-h-0 w-full flex-1 flex-col gap-6">
       {/* ── Header ── */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex-1 min-w-0">
@@ -219,15 +177,7 @@ export function PlanDetailPage() {
             <h1 className="text-[28px] font-black tracking-tight text-slate-900">
               {plan.planName || plan.diseaseName || "Kế hoạch điều trị"}
             </h1>
-            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-black ${statusStyle}`}>
-              {statusLabel}
-            </span>
-            {plan.urgency && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 border border-orange-200 px-3 py-1 text-xs font-black text-orange-700">
-                <Clock className="w-3 h-3" strokeWidth={2.5} />
-                {plan.urgency}
-              </span>
-            )}
+
           </div>
           {plan.diseaseName && plan.planName && plan.diseaseName !== plan.planName && (
             <p className="mt-1 text-sm font-semibold text-slate-500 flex items-center gap-1.5">
@@ -246,25 +196,15 @@ export function PlanDetailPage() {
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {isOwner && (
-            <button
-              type="button"
-              onClick={() => setEditPlanOpen(true)}
+            <Link
+              to={ROUTES.DASHBOARD.PLAN_EDIT(plan.id)}
               className="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
             >
               <Edit2 className="mr-2 h-4 w-4" />
               Sửa
-            </button>
+            </Link>
           )}
-          {isOwner && latestApply && (
-            <Select
-              value={latestApply.status}
-              onChange={(v) => void updateApplyStatus.mutateAsync({ applyId: latestApply.id, status: v as TreatmentStatus })}
-              options={STATUS_OPTIONS.map((s) => ({
-                value: s,
-                label: (TREATMENT_STATUS_LABELS as Record<string, string>)[s] ?? s,
-              }))}
-            />
-          )}
+
           {isOwner && (
             <button
               type="button"
@@ -316,16 +256,7 @@ export function PlanDetailPage() {
         </div>
       </header>
 
-      {/* ── Question / original prompt ── */}
-      {plan.question && (
-        <div className="rounded-[1.75rem] border border-amber-100 bg-amber-50 px-6 py-4 flex gap-3">
-          <Bot className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" strokeWidth={2} />
-          <div>
-            <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-1">Câu hỏi gốc</p>
-            <p className="text-sm font-semibold leading-relaxed text-amber-900">{plan.question}</p>
-          </div>
-        </div>
-      )}
+
 
       {/* ── Main 2-col grid ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -337,10 +268,7 @@ export function PlanDetailPage() {
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="text-base font-black text-slate-900 mb-4">Thông tin chính</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Trạng thái</p>
-                <span className={`mt-1.5 inline-flex rounded-full border px-2.5 py-0.5 text-xs font-black ${statusStyle}`}>{statusLabel}</span>
-              </div>
+
               {confidencePct != null && (
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Độ tin cậy</p>
@@ -363,12 +291,7 @@ export function PlanDetailPage() {
                   <p className="mt-1 text-sm font-black">{plan.severityLevel}</p>
                 </div>
               )}
-              {plan.urgency && (
-                <div className="rounded-2xl bg-orange-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-400">Khẩn cấp</p>
-                  <p className="mt-1 text-sm font-bold text-orange-800">{plan.urgency}</p>
-                </div>
-              )}
+
               {plan.estimatedCost && (
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" strokeWidth={2.5} />Chi phí</p>
@@ -379,6 +302,38 @@ export function PlanDetailPage() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Số sự kiện</p>
                 <p className="mt-1 text-sm font-black text-slate-800">{plan.events?.length ?? 0}</p>
               </div>
+
+              {/* Success stats */}
+              {(plan.successApplyCount ?? 0) > 0 && (
+                <div className="rounded-2xl bg-green-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-green-600 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
+                    Thành công
+                  </p>
+                  <p className="mt-1 text-sm font-black text-green-700">{plan.successApplyCount}</p>
+                </div>
+              )}
+
+              {(plan.failedApplyCount ?? 0) > 0 && (
+                <div className="rounded-2xl bg-red-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-red-500 flex items-center gap-1">
+                    <XCircle className="w-3 h-3" strokeWidth={2.5} />
+                    Thất bại
+                  </p>
+                  <p className="mt-1 text-sm font-black text-red-600">{plan.failedApplyCount}</p>
+                </div>
+              )}
+
+              {/* Total applies (when no success/failed yet) */}
+              {(plan.applyCount ?? 0) > 0 && (plan.successApplyCount ?? 0) === 0 && (plan.failedApplyCount ?? 0) === 0 && (
+                <div className="rounded-2xl bg-blue-50 p-4">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1">
+                    <Play className="w-3 h-3" strokeWidth={2.5} />
+                    Tổng áp dụng
+                  </p>
+                  <p className="mt-1 text-sm font-black text-blue-700">{plan.applyCount}</p>
+                </div>
+              )}
             </div>
           </section>
 
@@ -441,35 +396,37 @@ export function PlanDetailPage() {
         <div className="flex flex-col gap-6">
 
           {/* Scope */}
-          <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4">Phạm vi áp dụng</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                <Sprout className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cây trồng</p>
-                  <p className="text-sm font-bold text-slate-800 truncate">{plantName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
+          {isOwner && (
+            <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-black text-slate-900 mb-4">Phạm vi áp dụng</h2>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <Sprout className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cây trồng</p>
+                    <p className="text-sm font-bold text-slate-800 truncate">{plantName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <MapPin className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vườn</p>
+                    <p className="text-sm font-bold text-slate-800 truncate">{plotName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
+                  <Cpu className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Khu vực</p>
+                    <p className="text-sm font-bold text-slate-800 truncate">{zoneName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                <MapPin className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vườn</p>
-                  <p className="text-sm font-bold text-slate-800 truncate">{plotName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
-                <Cpu className="w-4 h-4 text-[#245A34] shrink-0" strokeWidth={2.5} />
-                <div className="min-w-0">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Khu vực</p>
-                  <p className="text-sm font-bold text-slate-800 truncate">{zoneName || <span className="text-slate-400 italic">Chưa gắn</span>}</p>
-                </div>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* Author info */}
-          {(plan.ownerInfo || plan.creatorInfo) && (
+          {(plan.ownerInfo || plan.creatorInfo || plan.sourceType === 'RAG_GEN') && (
             <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
               <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-slate-400" strokeWidth={2} />
@@ -494,7 +451,20 @@ export function PlanDetailPage() {
                     </div>
                   </div>
                 )}
-                {plan.creatorInfo && (
+                {plan.sourceType === 'RAG_GEN' ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-indigo-800">
+                      <Bot className="w-4 h-4" strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-sm font-bold text-indigo-900">Leafy AI</p>
+                        <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-indigo-600" strokeWidth={2.5} />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Trợ lý AI</p>
+                    </div>
+                  </div>
+                ) : plan.creatorInfo && plan.creatorInfo.id !== plan.ownerInfo?.id && (
                   <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3">
                     {plan.creatorInfo.avatar ? (
                       <img src={plan.creatorInfo.avatar} alt={plan.creatorInfo.fullName ?? ""} className="h-9 w-9 rounded-full object-cover shrink-0" />
@@ -520,26 +490,77 @@ export function PlanDetailPage() {
           )}
 
           {/* AI source */}
-          <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Bot className="w-4 h-4 text-slate-400" strokeWidth={2} />
-              Nguồn AI
-            </h2>
-            <div className="space-y-3 text-sm">
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nguồn</p>
-                <p className="font-bold text-slate-700">{plan.source || <span className="italic text-slate-400">Không rõ</span>}</p>
+          {plan.sourceType === 'RAG_GEN' && (
+            <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
+                <Bot className="w-4 h-4 text-slate-400" strokeWidth={2} />
+                Tài liệu & Nguồn tham khảo AI
+              </h2>
+              <div className="space-y-4 text-sm">
+                {plan.sourceDocuments && plan.sourceDocuments.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-slate-400" />
+                      Tài liệu chuyên môn ({plan.sourceDocuments.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {plan.sourceDocuments.map((doc, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSelectedDoc(doc)}
+                          className="w-full text-left rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100 hover:border-[#245A34]/40 hover:bg-green-50/40 transition-all cursor-pointer"
+                        >
+                          <p className="font-bold text-slate-800 text-sm mb-1">{doc.title || (doc.metadata as Record<string, unknown>)?.source_file || "Tài liệu"}</p>
+                          {doc.contentSnippet ? (
+                            <p className="text-xs text-slate-500 line-clamp-2">{doc.contentSnippet}</p>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic line-clamp-2">Bấm để xem chi tiết nội dung</p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {plan.webSearchResults && plan.webSearchResults.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5 mt-4">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      Tìm kiếm Web ({plan.webSearchResults.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {plan.webSearchResults.map((res, idx) => (
+                        <a 
+                          key={idx} 
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors group"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="font-bold text-indigo-900 text-sm group-hover:underline">{res.title}</p>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          </div>
+                          {res.snippet && (
+                            <p className="text-xs text-slate-500 line-clamp-2">{res.snippet}</p>
+                          )}
+                          <p className="text-[10px] text-slate-400 mt-2 truncate font-mono">{res.url}</p>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(!plan.sourceDocuments || plan.sourceDocuments.length === 0) && (!plan.webSearchResults || plan.webSearchResults.length === 0) && (
+                  <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nguồn nội bộ</p>
+                    <p className="font-bold text-slate-700">{plan.source || <span className="italic text-slate-400">Không rõ</span>}</p>
+                  </div>
+                )}
               </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">RAG Plan ID</p>
-                <p className="font-mono text-xs text-slate-600 break-all">{plan.ragPlanId || <span className="italic text-slate-400">Không có</span>}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Plan ID</p>
-                <p className="font-mono text-xs text-slate-600 break-all">{plan.id}</p>
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* Audit */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
@@ -566,8 +587,19 @@ export function PlanDetailPage() {
         </div>
       </div>
 
+      {/* ── Template Events ── */}
+      <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+        <h2 className="text-base font-black text-slate-900 mb-1">
+          Lịch trình (Bản mẫu) ({plan.events?.length ?? 0})
+        </h2>
+        <p className="mb-5 text-sm font-semibold text-slate-400">
+          Các sự kiện mẫu được định nghĩa sẵn trong kế hoạch này
+        </p>
+        <EmbeddedEventList events={plan.events ?? []} />
+      </section>
+
       {/* ── Calendar Preview ── */}
-      {!eventsQuery.isLoading && previewDraftEvents.length > 0 && (
+      {previewDraftEvents.length > 0 && (
         <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between gap-4">
             <div>
@@ -594,185 +626,92 @@ export function PlanDetailPage() {
         </section>
       )}
 
-      {/* ── Plant Events ── */}
+      {/* ── Applied Plans ── */}
       <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-        <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
+        <div className="mb-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-black text-slate-900">
-              Lịch chăm sóc đã áp dụng ({events.length})
+              Lịch chăm sóc đã áp dụng ({plan.applies?.length ?? 0})
             </h2>
             <p className="mt-0.5 text-sm font-semibold text-slate-400">
-              Các sự kiện thực tế được sinh ra khi áp dụng kế hoạch này
+              Thông tin các lần kế hoạch này được áp dụng
             </p>
           </div>
+          {(plan.successApplyCount ?? 0) > 0 || (plan.failedApplyCount ?? 0) > 0 ? (
+            <div className="flex items-center gap-3">
+              {(plan.successApplyCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs font-bold text-green-700 ring-1 ring-green-200">
+                  <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  {plan.successApplyCount} thành công
+                </span>
+              )}
+              {(plan.failedApplyCount ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600 ring-1 ring-red-200">
+                  <XCircle className="h-3.5 w-3.5" strokeWidth={2.5} />
+                  {plan.failedApplyCount} thất bại
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
 
-        {eventsQuery.isLoading && (
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-100" />)}
-          </div>
-        )}
-        {eventsQuery.isError && (
-          <p className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-700">
-            Không tải được sự kiện của kế hoạch.
-          </p>
-        )}
-        {!eventsQuery.isLoading && !eventsQuery.isError && !events.length && (
-          <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-400">
-            Chưa có sự kiện nào cho kế hoạch này.
-          </p>
-        )}
-
         <div className="space-y-3">
-          {events.map((event, idx) => (
-            <article key={event.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4 hover:shadow-sm transition-shadow">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          {!plan.applies || plan.applies.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-400">
+              Chưa có lần áp dụng nào cho kế hoạch này.
+            </p>
+          ) : (
+            [...plan.applies].reverse().map((app, idx) => (
+              <Link 
+                key={app.id} 
+                to={ROUTES.DASHBOARD.PLAN_APPLY_DETAIL(app.id)}
+                className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 hover:shadow-md hover:border-[#245A34]/30 transition-all cursor-pointer"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-start gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#245A34]/10 text-[#245A34] text-xs font-black">
-                    {idx + 1}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className={`text-sm font-black ${event.completed ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                        {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
-                      </h3>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${event.planned ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
-                        {event.planned ? "Đã lên lịch" : "Ghi nhận"}
-                      </span>
-                      {event.completed && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-600">
-                          <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} />
-                          Hoàn thành
-                        </span>
-                      )}
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#245A34]/10 text-[#245A34] text-xs font-black">
+                      {plan.applies!.length - idx}
                     </div>
-                    {(event.note || event.description) && (
-                      <p className="mt-1 text-sm font-semibold text-slate-600 leading-relaxed">
-                        {event.note || event.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button
-                    type="button"
-                    title={event.completed ? 'Đánh dấu chưa hoàn thành' : 'Đánh dấu hoàn thành'}
-                    onClick={() => void updateEvent.mutateAsync({ eventId: event.id, payload: { completed: !event.completed } })}
-                    className={`inline-flex items-center rounded-xl border px-3 py-1.5 text-xs font-bold transition-colors ${
-                      event.completed
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                    }`}
-                  >
-                    {event.completed
-                      ? <><CheckCircle2 className="mr-1.5 w-3 h-3" strokeWidth={2.5} />Hoàn thành</>
-                      : <><Circle className="mr-1.5 w-3 h-3" strokeWidth={2} />Đánh dấu</>}
-                  </button>
-                  {isOwner && (
-                    <button
-                      type="button"
-                      onClick={() => setEditEventTarget(event)}
-                      className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100"
-                    >
-                      <Pencil className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
-                      Sửa
-                    </button>
-                  )}
-                  {isOwner && (
-                    <button
-                      type="button"
-                      onClick={() => setDeleteEventTarget(event)}
-                      className="inline-flex items-center rounded-xl border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100"
-                    >
-                      <Trash2 className="mr-1.5 w-3 h-3" strokeWidth={2.5} />
-                      Xóa
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Bắt đầu</p>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{formatDate(event.calculatedStartDate) || "—"}</p>
-                </div>
-                <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Kết thúc</p>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{formatDate(event.calculatedEndDate) || "—"}</p>
-                </div>
-                <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Thời gian (ngày)</p>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{event.durationDays ?? "—"}</p>
-                </div>
-                <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">PHI (ngày)</p>
-                  <p className="text-xs font-bold text-slate-700 mt-0.5">{event.phiDays ?? "—"}</p>
-                </div>
-              </div>
-
-              {(event.ppeRequired || event.mrlNote || event.estimatedCost) && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {event.ppeRequired && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                      <ShieldAlert className="w-3 h-3" strokeWidth={2.5} />
-                      PPE: {event.ppeRequired}
-                    </span>
-                  )}
-                  {event.mrlNote && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                      <Leaf className="w-3 h-3" strokeWidth={2.5} />
-                      MRL: {event.mrlNote}
-                    </span>
-                  )}
-                  {event.estimatedCost && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                      <DollarSign className="w-3 h-3" strokeWidth={2.5} />
-                      {event.estimatedCost}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Task checklist */}
-              {event.tasks != null && event.tasks.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Công việc</p>
-                  <div className="space-y-1">
-                    {event.tasks.map((task, taskIdx) => (
-                      <div
-                        key={taskIdx}
-                        className="flex items-start gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2"
-                      >
-                        <button
-                          type="button"
-                          title={task.completed ? 'Đánh dấu chưa xong' : 'Đánh dấu hoàn thành'}
-                          onClick={() => void toggleTask.mutateAsync({ eventId: event.id, taskIndex: taskIdx })}
-                          className="mt-0.5 shrink-0 transition-colors hover:opacity-70"
-                        >
-                          {task.completed
-                            ? <CheckCircle2 className="h-4 w-4 text-emerald-500" strokeWidth={2.5} />
-                            : <Circle className="h-4 w-4 text-slate-300" strokeWidth={2} />}
-                        </button>
-                        <div className="min-w-0 flex-1">
-                          <p className={`text-xs font-semibold ${task.completed ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                            {task.title}
-                          </p>
-                          {task.description && (
-                            <p className="mt-0.5 text-[11px] text-slate-400">{task.description}</p>
-                          )}
-                        </div>
-                        {task.estimatedCost && (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600">
-                            {task.estimatedCost}
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm font-black text-slate-900">
+                          Áp dụng vào ngày {formatDate(app.startDate)}
+                        </h3>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-black border ${STATUS_STYLE[app.status] ?? "bg-slate-100 text-slate-500 border-slate-200"}`}>
+                          {TREATMENT_STATUS_LABELS[app.status] ?? app.status}
+                        </span>
+                        {app.trackingGranularity && app.trackingGranularity !== "NONE" && (
+                          <span className="rounded-full bg-slate-200/50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-600">
+                            Theo dõi: {app.trackingGranularity}
                           </span>
                         )}
                       </div>
-                    ))}
+                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-slate-500">
+                        <span className="flex items-center gap-1.5">
+                          <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
+                          Bắt đầu: {formatDate(app.startDate)}
+                        </span>
+                        {app.targetName && (
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                            Phạm vi: {app.targetName}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1.5">
+                          <Leaf className="h-3.5 w-3.5 text-slate-400" />
+                          Sinh ra {app.plantEventIds?.length ?? 0} sự kiện
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-slate-400" />
+                          Tạo lúc: {formatDate(app.createdAt)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-            </article>
-          ))}
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
@@ -796,37 +735,11 @@ export function PlanDetailPage() {
           }
         />
       )}
-      {deleteEventTarget && (
-        <ConfirmDeleteDialog
-          title="Xóa lịch chăm sóc"
-          description={`Bạn có chắc muốn xóa sự kiện "${deleteEventTarget.note || deleteEventTarget.id}"?`}
-          isDeleting={deleteEvent.isPending}
-          onCancel={() => setDeleteEventTarget(null)}
-          onConfirm={() => void handleDeleteEvent()}
-        />
-      )}
-      {editEventTarget && (
-        <PlantEventEditDialog
-          event={editEventTarget}
-          isSubmitting={updateEvent.isPending}
-          onClose={() => setEditEventTarget(null)}
-          onSubmit={(payload) =>
-            void updateEvent
-              .mutateAsync({ eventId: editEventTarget.id, payload })
-              .then(() => setEditEventTarget(null))
-          }
-        />
-      )}
-      {editPlanOpen && (
-        <EditPlanDialog
-          plan={plan}
-          isSubmitting={updatePlan.isPending}
-          onClose={() => setEditPlanOpen(false)}
-          onSubmit={(payload) =>
-            void updatePlan
-              .mutateAsync({ planId: plan.id, payload })
-              .then(() => setEditPlanOpen(false))
-          }
+
+      {selectedDoc && (
+        <SourceDocumentModal
+          sourceDocument={selectedDoc}
+          onClose={() => setSelectedDoc(null)}
         />
       )}
     </div>

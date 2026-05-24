@@ -76,12 +76,9 @@ export function CommentModal({
   // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 150)
-    } else {
-      setCommentText('')
-      setPage(0)
+      setTimeout(() => inputRef.current?.focus(), 150);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Lock body scroll while open
   useEffect(() => {

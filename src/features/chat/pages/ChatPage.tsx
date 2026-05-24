@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { chatApi } from '../api/chatApi';
@@ -12,6 +12,7 @@ import { useChatWebSocket } from '../hooks/useChatWebSocket';
 import { useSidebarCollapsed } from '../../../layouts/SidebarContext';
 
 export function ChatPage() {
+  const location = useLocation();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDMModalOpen, setIsDMModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
@@ -31,17 +32,24 @@ export function ChatPage() {
 
   const activeConversation = conversations.find((c) => c.id === activeId) || null;
 
-  const location = useLocation();
-
-  // Auto-open conversation when redirected from join link page
-  useEffect(() => {
+  // Auto-open conversation when redirected from join link page — derive from useMemo
+  const autoOpenId = useMemo(() => {
     const state = location.state as { openConversationId?: string } | null;
-    if (state?.openConversationId) {
-      setActiveId(state.openConversationId);
-      // Clear state so refreshing the page doesn't re-open it
-      window.history.replaceState({}, '');
-    }
+    return state?.openConversationId ?? null;
   }, [location.state]);
+
+  // Sync autoOpenId into activeId (only once on mount or when autoOpenId first appears)
+  const hasAutoOpened = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (autoOpenId && !hasAutoOpened.current) {
+        hasAutoOpened.current = true;
+        setActiveId(autoOpenId);
+        window.history.replaceState({}, '');
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [autoOpenId]);
 
   const handleSelect = (id: string) => {
     setActiveId(id);

@@ -4,15 +4,10 @@ import apiClient from '../../../lib/apiClient';
 import { API_ENDPOINTS } from '../../../lib/routes';
 import { chatApi } from '../api/chatApi';
 import { ModalShell } from '../../../components/ui/ModalShell';
+import type { ProfileResponse } from '../../profiles/api/profilesApi';
 
 // ─── Profile type for DM search ───────────────────────────────────────────────
-interface Profile {
-  id: string;
-  userId: string;
-  fullName: string;
-  avatar: string;
-  role: string;
-}
+type Profile = ProfileResponse;
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface NewChatModalProps {
@@ -43,10 +38,10 @@ export function NewChatModal({ isOpen, onClose, onStartChat, onGroupCreated }: N
     queryKey: ['profile-search', searchTerm],
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
-      const res = await apiClient.get<any>(API_ENDPOINTS.PROFILES.SEARCH, {
+      const res = await apiClient.get<{ data?: { content?: Profile[] }; content?: Profile[] }>(API_ENDPOINTS.PROFILES.SEARCH, {
         params: { searchTerm, page: 0, size: 20 },
       });
-      return (res.data?.data?.content || res.data?.content || []) as Profile[];
+      return res.data?.data?.content || res.data?.content || [];
     },
     enabled: tab === 'dm' && searchTerm.trim().length > 0,
   });
@@ -57,10 +52,10 @@ export function NewChatModal({ isOpen, onClose, onStartChat, onGroupCreated }: N
     queryKey: ['group-member-search', memberSearch],
     queryFn: async () => {
       if (!memberSearch.trim()) return [];
-      const res = await apiClient.get<any>(API_ENDPOINTS.PROFILES.SEARCH, {
+      const res = await apiClient.get<{ data?: { content?: Profile[] }; content?: Profile[] }>(API_ENDPOINTS.PROFILES.SEARCH, {
         params: { searchTerm: memberSearch, page: 0, size: 20 },
       });
-      return (res.data?.data?.content || res.data?.content || []) as Profile[];
+      return res.data?.data?.content || res.data?.content || [];
     },
     enabled: tab === 'group' && memberSearch.trim().length > 0,
   });

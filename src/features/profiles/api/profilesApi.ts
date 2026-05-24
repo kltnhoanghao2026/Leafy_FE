@@ -37,16 +37,30 @@ export interface CertificateDto {
   expired: boolean;
 }
 
+export interface springPageSort {
+  sorted: boolean;
+  unsorted: boolean;
+  empty: boolean;
+}
+
+export interface springPagePageable {
+  pageNumber: number;
+  pageSize: number;
+  offset: number;
+  unpaged: boolean;
+  paged: boolean;
+}
+
 export interface SpringPage<T> {
   content: T[];
-  pageable: any;
+  pageable: springPagePageable;
   last: boolean;
   totalPages: number;
   totalElements: number;
   first: boolean;
   size: number;
   number: number;
-  sort: any;
+  sort: springPageSort;
   numberOfElements: number;
   empty: boolean;
 }
@@ -69,6 +83,23 @@ export interface UserConnectionResponse {
   consultationStatus: "NONE" | "PENDING" | "ACCEPTED" | "REJECTED";
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+export type ConsultingDataType = "FARM_PLOTS" | "PLANTS" | "PLANT_EVENTS" | "PLANS";
+
+export type AccessRequestStatus = "PENDING" | "APPROVED" | "DENIED" | "EXPIRED";
+
+export interface ConsultingDataAccessRequestResponse {
+  id: string;
+  expertProfileId: string;
+  expertName: string | null;
+  expertAvatar: string | null;
+  farmerProfileId: string;
+  dataType: ConsultingDataType;
+  status: AccessRequestStatus;
+  expertMessage: string | null;
+  requestedAt: string | null;
+  respondedAt: string | null;
 }
 
 export const profilesApi = {
@@ -138,9 +169,9 @@ export const profilesApi = {
       },
     }),
 
-  respondToConsultation: (farmerId: string, accept: boolean) =>
+  respondToConsultation: (farmerProfileId: string, accept: boolean) =>
     apiClient.post<ApiEnvelope<UserConnectionResponse>>(`/profiles/experts/consult/respond`, null, {
-      params: { farmerId, accept },
+      params: { farmerProfileId, accept },
     }),
 
   getFollowersProfiles: (userId: string, params: { page?: number; size?: number } = {}) =>
@@ -150,4 +181,39 @@ export const profilesApi = {
         size: params.size ?? 20,
       },
     }),
+
+  getFollowingProfiles: (userId: string, params: { page?: number; size?: number } = {}) =>
+    apiClient.get<ApiEnvelope<SpringPage<ProfileResponse>>>(`/profiles/users/${userId}/following/profiles`, {
+      params: {
+        page: params.page ?? 0,
+        size: params.size ?? 20,
+      },
+    }),
+
+  requestDataAccess: (
+    farmerProfileId: string,
+    dataType: ConsultingDataType,
+    message?: string,
+  ) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/request`,
+      message ? { message } : undefined,
+      { params: { farmerProfileId, dataType } },
+    ),
+
+  getPendingAccessRequests: (params: { page?: number; size?: number } = {}) =>
+    apiClient.get<ApiEnvelope<SpringPage<ConsultingDataAccessRequestResponse>>>(
+      `/profiles/consulting/access/requests/pending`,
+      { params: { page: params.page ?? 0, size: params.size ?? 20 } },
+    ),
+
+  approveAccessRequest: (requestId: string) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/requests/${requestId}/approve`,
+    ),
+
+  denyAccessRequest: (requestId: string) =>
+    apiClient.post<ApiEnvelope<ConsultingDataAccessRequestResponse>>(
+      `/profiles/consulting/access/requests/${requestId}/deny`,
+    ),
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { Plus, X, Check, GripVertical, ListChecks, CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { CalendarViewPanel } from '../../plant-management/calendarview/components/CalendarViewPanel';
 import { GroupedEventList } from '../../plant-management/calendarview/components/GroupedEventList';
@@ -57,7 +57,7 @@ function makeEmptyForm(date?: string): DraftFormState {
 
 function toCalendarEvent(evt: PlantEventCreateRequest, idx: number): PlantEventResponse {
   const startDate =
-    evt.daysFromNow != null ? addLocalDays(todayDate, evt.daysFromNow) : today;
+    evt.daysFromStart != null ? addLocalDays(todayDate, evt.daysFromStart) : today;
   const endDate =
     evt.durationDays != null && evt.durationDays > 0
       ? addLocalDays(startDate, evt.durationDays - 1)
@@ -71,7 +71,7 @@ function toCalendarEvent(evt: PlantEventCreateRequest, idx: number): PlantEventR
     eventType: evt.eventType,
     note: evt.note ?? null,
     description: evt.description ?? null,
-    daysFromNow: evt.daysFromNow ?? null,
+    daysFromStart: evt.daysFromStart ?? null,
     durationDays: evt.durationDays ?? null,
     planned: true,
     calculatedStartDate: startDate,
@@ -92,7 +92,7 @@ function toCalendarEvent(evt: PlantEventCreateRequest, idx: number): PlantEventR
 
 function draftToForm(evt: PlantEventCreateRequest): DraftFormState {
   const startDate =
-    evt.daysFromNow != null ? addLocalDays(todayDate, evt.daysFromNow) : today;
+    evt.daysFromStart != null ? addLocalDays(todayDate, evt.daysFromStart) : today;
   return {
     eventType: (evt.eventType as PlantEventType) ?? '',
     note: evt.note ?? '',
@@ -111,12 +111,12 @@ function draftToForm(evt: PlantEventCreateRequest): DraftFormState {
 }
 
 function formToRequest(f: DraftFormState): PlantEventCreateRequest {
-  const daysFromNow = daysBetweenDateOnly(today, f.startDateStr);
+  const daysFromStart = daysBetweenDateOnly(today, f.startDateStr);
   return {
     eventType: f.eventType as PlantEventType,
     note: f.note,
     description: f.description.trim() || undefined,
-    daysFromNow,
+    daysFromStart,
     durationDays: f.durationDays !== '' ? Number(f.durationDays) : undefined,
     estimatedCost: f.estimatedCost.trim() || undefined,
     tasks: f.tasks.length > 0
@@ -388,12 +388,6 @@ function EventDatePanel({
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [form, setForm] = useState<DraftFormState>(() => makeEmptyForm(selectedDate ?? undefined));
 
-  // Reset to list mode when selected date changes
-  useEffect(() => {
-    setMode('list');
-    setEditingIdx(null);
-  }, [selectedDate]);
-
   const handleFormChange = useCallback((field: keyof DraftFormState, value: string) => {
     if (field === 'tasks') {
       try {
@@ -608,6 +602,7 @@ export function EventCalendarEditor({
       {/* Event date panel */}
       <div className="min-h-0 flex-1 overflow-hidden">
         <EventDatePanel
+          key={selectedDate ?? 'none'}
           selectedDate={selectedDate}
           eventsForDate={selectedDateEvents}
           allEvents={events}

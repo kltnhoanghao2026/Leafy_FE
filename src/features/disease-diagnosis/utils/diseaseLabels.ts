@@ -1,13 +1,23 @@
 const DISEASE_LABELS: Record<string, string> = {
   healthy: "Khỏe mạnh",
   miner: "Sâu đục lá",
-  phoma: "Bệnh Phoma",
+  phoma: "Đốm nâu",
   red_spider_mite: "Nhện đỏ",
   rust: "Gỉ sắt",
 };
 
-const normalizeDiseaseKey = (value: string) =>
+export const SUPPORTED_DISEASES = Object.keys(DISEASE_LABELS).filter(
+  (key) => key !== "healthy",
+);
+
+export const normalizeDiseaseKey = (value: string) =>
   value.trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+
+export const isSupportedDisease = (value?: string | null): boolean => {
+  if (!value) return false;
+  const key = normalizeDiseaseKey(value);
+  return SUPPORTED_DISEASES.includes(key);
+};
 
 export const getDiseaseLabel = (value?: string | null) => {
   if (!value) {

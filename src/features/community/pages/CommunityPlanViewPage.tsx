@@ -1,16 +1,14 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
   BadgeCheck,
   Bot,
-  CalendarDays,
   CheckCircle2,
   Clock,
   DollarSign,
   FlaskConical,
-  Leaf,
   Play,
   RefreshCw,
   ShieldAlert,
@@ -21,24 +19,11 @@ import {
 import { ROUTES } from "../../../lib/routes";
 import {
   useApplyPlanMutation,
-  usePlantEventsByPlan,
   useTreatmentPlanDetail,
 } from "../../plant-management";
+import { EmbeddedEventList } from "../../plant-management/plan/components/EmbeddedEventList";
 import { ApplyPlanDialog } from "../../plant-management/plan/components/ApplyPlanDialog";
-import {
-  EVENT_TYPE_LABELS,
-  formatDate,
-  TREATMENT_STATUS_LABELS,
-} from "../../plant-management/shared/components/displayUtils";
-import type { TreatmentStatus } from "../../plant-management/shared/types";
-
-const STATUS_STYLE: Record<TreatmentStatus, string> = {
-  PENDING:   "bg-amber-50 text-amber-700 border-amber-200",
-  APPLYING:  "bg-purple-50 text-purple-700 border-purple-200",
-  ACTIVE:    "bg-green-50 text-green-700 border-green-200",
-  COMPLETED: "bg-blue-50 text-blue-700 border-blue-200",
-  CANCELLED: "bg-red-50 text-red-600 border-red-200",
-};
+import { formatDate } from "../../plant-management/shared/components/displayUtils";
 
 const SEVERITY_COLOR: Record<string, string> = {
   LOW:      "text-green-600 bg-green-50",
@@ -53,29 +38,8 @@ export function CommunityPlanViewPage() {
 
   const planQuery = useTreatmentPlanDetail(planId);
   const plan = planQuery.data;
-  const eventsQuery = usePlantEventsByPlan(planId, !!planId && !!plan);
   const applyPlan = useApplyPlanMutation();
-  const events = eventsQuery.data ?? [];
-
-  const previewEvents = useMemo(() => {
-    if (!events.length) return [];
-    const anchors = events.map((e) => e.calculatedStartDate).filter(Boolean) as string[];
-    anchors.sort();
-    const anchorMs = anchors[0] ? new Date(anchors[0] + "T00:00:00").getTime() : null;
-    return events.map((e) => ({
-      eventType: e.eventType,
-      note: e.note ?? "",
-      description: e.description ?? undefined,
-      daysFromNow: e.calculatedStartDate && anchorMs != null
-        ? Math.round((new Date(e.calculatedStartDate + "T00:00:00").getTime() - anchorMs) / 86400000)
-        : 0,
-      durationDays: e.durationDays ?? undefined,
-      phiDays: e.phiDays ?? undefined,
-      ppeRequired: e.ppeRequired ?? undefined,
-      mrlNote: e.mrlNote ?? undefined,
-      estimatedCost: e.estimatedCost ?? undefined,
-    }));
-  }, [events]);
+  const events = plan?.events ?? [];
 
   if (planQuery.isLoading) {
     return (
@@ -294,7 +258,7 @@ export function CommunityPlanViewPage() {
           </section>
 
           {/* Author info */}
-          {(plan.ownerInfo || plan.creatorInfo) && (
+          {(plan.ownerInfo || plan.creatorInfo || plan.sourceType === 'RAG_GEN') && (
             <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
               <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-slate-400" strokeWidth={2} />
@@ -316,7 +280,20 @@ export function CommunityPlanViewPage() {
                     </div>
                   </div>
                 )}
-                {plan.creatorInfo && (
+                {plan.sourceType === 'RAG_GEN' ? (
+                  <div className="flex items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-200 text-indigo-800">
+                      <Bot className="w-4 h-4" strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-sm font-bold text-indigo-900">Leafy AI</p>
+                        <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-indigo-600" strokeWidth={2.5} />
+                      </div>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Trợ lý AI</p>
+                    </div>
+                  </div>
+                ) : plan.creatorInfo && plan.creatorInfo.id !== plan.ownerInfo?.id && (
                   <div className="flex items-center gap-3 rounded-2xl bg-emerald-50 px-4 py-3">
                     {plan.creatorInfo.avatar
                       ? <img src={plan.creatorInfo.avatar} alt={plan.creatorInfo.fullName ?? ""} className="h-9 w-9 rounded-full object-cover shrink-0" />
@@ -329,6 +306,72 @@ export function CommunityPlanViewPage() {
                       </div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Chuyên gia tư vấn</p>
                     </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* AI source */}
+          {plan.sourceType === 'RAG_GEN' && (
+            <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+              <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
+                <Bot className="w-4 h-4 text-slate-400" strokeWidth={2} />
+                Tài liệu & Nguồn tham khảo AI
+              </h2>
+              <div className="space-y-4 text-sm">
+                {plan.sourceDocuments && plan.sourceDocuments.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-slate-400" />
+                      Tài liệu chuyên môn ({plan.sourceDocuments.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {plan.sourceDocuments.map((doc, idx) => (
+                        <div key={idx} className="rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100">
+                          <p className="font-bold text-slate-800 text-sm mb-1">{doc.title || doc.filename}</p>
+                          {doc.contentSnippet && (
+                            <p className="text-xs text-slate-500 line-clamp-2">{doc.contentSnippet}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {plan.webSearchResults && plan.webSearchResults.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5 mt-4">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      Tìm kiếm Web ({plan.webSearchResults.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {plan.webSearchResults.map((res, idx) => (
+                        <a 
+                          key={idx} 
+                          href={res.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block rounded-2xl bg-slate-50 px-4 py-3 border border-slate-100 hover:bg-indigo-50 hover:border-indigo-100 transition-colors group"
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="font-bold text-indigo-900 text-sm group-hover:underline">{res.title}</p>
+                            <ExternalLink className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                          </div>
+                          {res.snippet && (
+                            <p className="text-xs text-slate-500 line-clamp-2">{res.snippet}</p>
+                          )}
+                          <p className="text-[10px] text-slate-400 mt-2 truncate font-mono">{res.url}</p>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(!plan.sourceDocuments || plan.sourceDocuments.length === 0) && (!plan.webSearchResults || plan.webSearchResults.length === 0) && (
+                  <div className="rounded-2xl bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nguồn nội bộ</p>
+                    <p className="font-bold text-slate-700">{plan.source || <span className="italic text-slate-400">Không rõ</span>}</p>
                   </div>
                 )}
               </div>
@@ -358,80 +401,7 @@ export function CommunityPlanViewPage() {
         </h2>
         <p className="mb-5 text-sm font-semibold text-slate-400">Các sự kiện trong kế hoạch này</p>
 
-        {eventsQuery.isLoading && (
-          <div className="space-y-3">
-            {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-2xl bg-slate-100" />)}
-          </div>
-        )}
-        {!eventsQuery.isLoading && !events.length && (
-          <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-sm font-bold text-slate-400">
-            Chưa có sự kiện nào.
-          </p>
-        )}
-
-        <div className="space-y-3">
-          {events.map((event, idx) => (
-            <article key={event.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#245A34]/10 text-[#245A34] text-xs font-black">
-                  {idx + 1}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-black text-slate-900">
-                      {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
-                    </h3>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${event.planned ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
-                      {event.planned ? "Đã lên lịch" : "Ghi nhận"}
-                    </span>
-                  </div>
-                  {(event.note || event.description) && (
-                    <p className="mt-1 text-sm font-semibold text-slate-600 leading-relaxed">
-                      {event.note || event.description}
-                    </p>
-                  )}
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Bắt đầu</p>
-                      <p className="text-xs font-bold text-slate-700 mt-0.5">{formatDate(event.calculatedStartDate) || "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Kết thúc</p>
-                      <p className="text-xs font-bold text-slate-700 mt-0.5">{formatDate(event.calculatedEndDate) || "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Thời gian (ngày)</p>
-                      <p className="text-xs font-bold text-slate-700 mt-0.5">{event.durationDays ?? "—"}</p>
-                    </div>
-                    <div className="rounded-xl bg-white px-3 py-2 border border-slate-100">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">PHI (ngày)</p>
-                      <p className="text-xs font-bold text-slate-700 mt-0.5">{event.phiDays ?? "—"}</p>
-                    </div>
-                  </div>
-                  {(event.ppeRequired || event.mrlNote || event.estimatedCost) && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {event.ppeRequired && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                          <ShieldAlert className="w-3 h-3" strokeWidth={2.5} />PPE: {event.ppeRequired}
-                        </span>
-                      )}
-                      {event.mrlNote && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                          <Leaf className="w-3 h-3" strokeWidth={2.5} />MRL: {event.mrlNote}
-                        </span>
-                      )}
-                      {event.estimatedCost && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                          <DollarSign className="w-3 h-3" strokeWidth={2.5} />{event.estimatedCost}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
+        <EmbeddedEventList events={events} />
       </section>
 
       {/* Apply dialog */}

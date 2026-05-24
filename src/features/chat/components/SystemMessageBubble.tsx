@@ -10,10 +10,10 @@ interface NamedTarget {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function buildTargets(metadata: Record<string, any>): NamedTarget[] {
-  const targetIds: string[] = Array.isArray(metadata.targetIds) ? metadata.targetIds : [];
-  const payload: Record<string, any> = metadata.payload ?? {};
-  const targetNames: string[] = Array.isArray(payload.targetNames) ? payload.targetNames : [];
+function buildTargets(metadata: Record<string, unknown>): NamedTarget[] {
+  const targetIds: string[] = Array.isArray(metadata.targetIds) ? metadata.targetIds as string[] : [];
+  const payload: Record<string, unknown> = (metadata.payload as Record<string, unknown>) ?? {};
+  const targetNames: string[] = Array.isArray(payload.targetNames) ? payload.targetNames as string[] : [];
   const targetName: string = payload.targetName ? String(payload.targetName) : '';
 
   if (targetIds.length === 0) return [];
@@ -45,10 +45,10 @@ function TargetLinks({ targets }: { targets: NamedTarget[] }) {
 }
 
 // ── Main render ───────────────────────────────────────────────────────────────
-function buildSystemContent(metadata: Record<string, any>): React.ReactNode {
+function buildSystemContent(metadata: Record<string, unknown>): React.ReactNode {
   const action = String(metadata.action ?? '');
   const actorName = String(metadata.actorName ?? 'Ai đó');
-  const payload: Record<string, any> = metadata.payload ?? {};
+  const payload: Record<string, unknown> = (metadata.payload as Record<string, unknown>) ?? {};
   const newName: string = payload.newName ? String(payload.newName) : '';
   const targets = buildTargets(metadata);
 

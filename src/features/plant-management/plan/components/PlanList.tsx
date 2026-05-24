@@ -2,7 +2,7 @@ import { ClipboardList } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ROUTES } from '../../../../lib/routes';
 import type { PlanResponse } from "../../shared/types";
-import { formatDate, TREATMENT_STATUS_LABELS } from "../../shared/components/displayUtils";
+import { formatDate } from "../../shared/components/displayUtils";
 
 interface PlanListProps {
   plans: PlanResponse[];
@@ -63,7 +63,7 @@ export function PlanList({
                   to={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
                   className="text-base font-black text-slate-900 hover:text-[#245A34] hover:underline"
                 >
-                  {plan.planName || plan.diseaseName || plan.question || "Kế hoạch điều trị"}
+                  {plan.planName || plan.diseaseName || "Kế hoạch điều trị"}
                 </Link>
                 <p className="mt-1 text-sm font-semibold text-slate-500">
                   {plan.successIndicators || "Chưa có mô tả kết quả mong muốn"}

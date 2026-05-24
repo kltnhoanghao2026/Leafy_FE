@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   ArrowLeft,
   MapPin,
@@ -153,7 +153,6 @@ function ZoneCard({ zone }: { zone: FarmZoneDto }) {
 
 export function FarmPlotDetailPage() {
   const { plotId = "" } = useParams<{ plotId: string }>();
-  const navigate = useNavigate();
   const { provinceMap } = useProvinces();
 
   const { data: plot, isLoading, isError } = useAdminFarmPlotDetail(plotId);

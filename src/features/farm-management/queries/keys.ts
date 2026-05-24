@@ -5,4 +5,6 @@ export const farmManagementKeys = {
     [...farmManagementKeys.plotsRoot(), ownerProfileId] as const,
   zonesRoot: () => [...farmManagementKeys.all(), "zones"] as const,
   zones: (plotId: string) => [...farmManagementKeys.zonesRoot(), plotId] as const,
+  zonesByOwner: (ownerProfileId: string) =>
+    [...farmManagementKeys.zonesRoot(), "owner", ownerProfileId] as const,
 };

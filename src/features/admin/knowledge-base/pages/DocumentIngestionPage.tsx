@@ -117,7 +117,7 @@ export function DocumentIngestionPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-800">Cơ sở tri thức</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Tải lên tài liệu PDF, DOCX, TXT — xem trước chunks — rồi nhập vào hệ thống AI.
+          Tải lên tài liệu PDF, DOCX, TXT, Markdown — xem trước chunks — rồi nhập vào hệ thống AI.
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export function DocumentIngestionPage() {
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".pdf,.docx,.txt"
+                  accept=".pdf,.docx,.txt,.md,.markdown"
                 />
 
                 {file ? (
@@ -162,6 +162,15 @@ export function DocumentIngestionPage() {
                       <p className="text-xs text-slate-500 mt-0.5">
                         {(file.size / 1024 / 1024).toFixed(2)} MB
                       </p>
+                      {file.name.endsWith(".md") || file.name.endsWith(".markdown") ? (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 rounded-full ring-1 ring-indigo-100">
+                          Markdown — phân đoạn theo tiêu đề
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-[10px] font-medium text-slate-500 bg-slate-50 rounded-full">
+                          Phân đoạn cố định
+                        </span>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -184,7 +193,7 @@ export function DocumentIngestionPage() {
                         Nhấn để tải lên hoặc kéo thả tệp
                       </p>
                       <p className="text-xs text-slate-500 mt-1">
-                        Hỗ trợ PDF, DOCX, TXT (Tối đa 20MB)
+                        Hỗ trợ PDF, DOCX, TXT, Markdown (tối đa 20MB)
                       </p>
                     </div>
                   </div>

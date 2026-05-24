@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Ruler,
@@ -99,7 +99,6 @@ function formatArea(val: number | null) {
 
 export function FarmZoneDetailPage() {
   const { zoneId = "" } = useParams<{ zoneId: string }>();
-  const navigate = useNavigate();
 
   const { data: zone, isLoading, isError } = useAdminFarmZoneDetail(zoneId);
   const { data: parentPlot } = useAdminFarmPlotDetail(zone?.farmPlotId ?? "");

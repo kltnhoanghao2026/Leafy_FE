@@ -23,13 +23,12 @@ import {
   Wind,
 } from "lucide-react";
 import {
-  CHART_TYPES,
-  CHART_TYPE_LABEL_KEYS,
   IoTMetricCard,
   type MetricData,
   type SensorChartType,
   type SensorTrend,
 } from "../../metrics-view/components/IoTMetricCard";
+import { CHART_TYPES, CHART_TYPE_LABEL_KEYS } from "../../metrics-view/utils/chartHelpers";
 import { CompareChart } from "../../metrics-view/components/CompareChart";
 import { SensorChartModal } from "../../metrics-view/components/SensorChartModal";
 import { useAlertEvents } from "../../alerts/queries";

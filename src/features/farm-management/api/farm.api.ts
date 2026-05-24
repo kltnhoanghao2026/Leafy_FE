@@ -56,6 +56,13 @@ export const farmApi = {
     return unwrapApiData(response.data);
   },
 
+  getZonesByOwnerProfileId: async (ownerProfileId: string) => {
+    const response = await apiClient.get<
+      ApiEnvelope<FarmZoneResponse[]> | FarmZoneResponse[]
+    >(API_ENDPOINTS.FARMS.ZONES_BY_OWNER, { params: { ownerProfileId } });
+    return unwrapApiData(response.data);
+  },
+
   createZone: async (plotId: string, payload: CreateFarmZoneRequest) => {
     const response = await apiClient.post<
       ApiEnvelope<FarmZoneResponse> | FarmZoneResponse

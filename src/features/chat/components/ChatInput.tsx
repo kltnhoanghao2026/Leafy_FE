@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Send, Paperclip, Image as ImageIcon, Smile, Mic, X, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { chatApi } from '../api/chatApi';
@@ -91,29 +91,15 @@ export function ChatInput({
   editTarget,
   onCancelEdit
 }: ChatInputProps) {
-  const [input, setInput] = useState('');
+  const [inputValue, setInputValue] = useState(editTarget?.content ?? '');
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
-  // Pre-fill input when editTarget changes
-  useEffect(() => {
-    if (editTarget) {
-      setInput(editTarget.content || '');
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.style.height = 'auto';
-        textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
-      }
-    } else if (replyTarget) {
-      if (textareaRef.current) textareaRef.current.focus();
-    }
-  }, [editTarget, replyTarget]);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    setInputValue(e.target.value);
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 128)}px`;
@@ -176,7 +162,7 @@ export function ChatInput({
         queryClient.invalidateQueries({ queryKey: ['chat-messages-v2', conversationId] });
       }
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      setInput('');
+      setInputValue('');
       setPendingFiles([]);
       if (onCancelReply) onCancelReply();
       if (onCancelEdit) onCancelEdit();
@@ -190,7 +176,7 @@ export function ChatInput({
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (isDisbanded) return;
-    const hasText = input.trim().length > 0;
+    const hasText = inputValue.trim().length > 0;
     const uploadedFiles = pendingFiles.filter(pf => !pf.uploading && !pf.error && pf.result);
     if (!hasText && uploadedFiles.length === 0) return;
     if (pendingFiles.some(pf => pf.uploading)) return;
@@ -214,12 +200,12 @@ export function ChatInput({
       };
     }
 
-    sendMutation.mutate({ content: input.trim(), attachments, replyTo });
+    sendMutation.mutate({ content: inputValue.trim(), attachments, replyTo });
   };
 
   const isUploading = pendingFiles.some(pf => pf.uploading);
   const canSend = !sendMutation.isPending && !isDisbanded && !isUploading &&
-    (input.trim().length > 0 || pendingFiles.some(pf => !pf.uploading && !pf.error && pf.result));
+    (inputValue.trim().length > 0 || pendingFiles.some(pf => !pf.uploading && !pf.error && pf.result));
 
   // If group setting blocks member from sending messages, show a notice banner
   if (!canSendMessages && !isDisbanded) {
@@ -284,7 +270,7 @@ export function ChatInput({
         <div className="flex-1 relative flex items-end bg-gray-100 rounded-[24px] border border-transparent focus-within:border-green-500 focus-within:bg-white focus-within:shadow-sm transition-all overflow-hidden">
           <textarea
             ref={textareaRef}
-            value={input}
+            value={inputValue}
             onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); }
@@ -302,7 +288,7 @@ export function ChatInput({
         </div>
 
         <div className="pb-1 shrink-0 ml-1">
-          {canSend || input.trim() ? (
+          {canSend || inputValue.trim() ? (
             <button type="submit" disabled={!canSend}
               className="bg-green-600 text-white rounded-full p-2.5 flex items-center justify-center hover:bg-green-700 transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
               {isUploading

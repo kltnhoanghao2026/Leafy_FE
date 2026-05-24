@@ -128,9 +128,11 @@ export function ChatMessages({
     if (conversationId && unreadCount > 0) {
       chatApiMarkRead.markAsRead(conversationId).then(() => {
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.invalidateQueries({ queryKey: ['sidebar', 'conversations'] });
       });
     }
-  }, [conversationId, queryClient]);  // intentionally omit unreadCount to run once per conv
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, queryClient]); // intentionally omit unreadCount to run once per conv
 
   // ── Delete mutation ───────────────────────────────────────────────────────
   const deleteMutation = useMutation({

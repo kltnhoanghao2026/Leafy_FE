@@ -17,7 +17,8 @@ export type EventType =
   | "HEALTH_RECOVERY"
   | "PHENOLOGY"
   | "REPOT"
-  | "HARVEST";
+  | "HARVEST"
+  | "ALERT_TRIGGERED";
 
 export type TreatmentStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 
@@ -65,7 +66,7 @@ export interface PlantEventDto {
   eventType: EventType;
   note: string;
   description: string | null;
-  daysFromNow: number | null;
+  daysFromStart: number | null;
   durationDays: number | null;
   planned: boolean;
   calculatedStartDate: string | null;
@@ -75,6 +76,8 @@ export interface PlantEventDto {
   mrlNote: string | null;
   estimatedCost: string | null;
   sourcePlanId: string | null;
+  /** File IDs of images/videos attached to this event via file-service. */
+  attachmentIds?: string[] | null;
   createdAt: string;
   lastModifiedAt: string | null;
   active: boolean;

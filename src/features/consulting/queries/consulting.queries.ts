@@ -3,11 +3,28 @@ import { profilesApi } from '../../profiles/api/profilesApi';
 import { consultingApi } from '../api/consulting.api';
 import { consultingKeys } from './consulting.keys';
 import { plantEventApi } from '../../plant-management/calendarview/api/plant-event.api';
+import { toPageResponse } from '../../plant-management/shared/api/apiUtils';
+import type { ConsultationRequestResponse, SpringPage } from '../../profiles/api/profilesApi';
 import type {
   PlantEventCreateRequest,
   PlantEventsCalendarParams,
   PlanCreateRequest,
 } from '../../plant-management/shared/types';
+
+export const useConsultingPendingCount = () =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'pending-count'],
+    queryFn: async () => {
+      const res = await profilesApi.getPendingConsultations({ page: 0, size: 1 });
+      const d = res.data;
+      if (d && typeof d === 'object' && 'data' in d) {
+        const page = toPageResponse<ConsultationRequestResponse>((d as SpringPage<ConsultationRequestResponse>).data);
+        return page.totalElements ?? 0;
+      }
+      return 0;
+    },
+    staleTime: 30_000,
+  });
 
 export const useConsultingFarmers = () =>
   useQuery({
@@ -139,5 +156,18 @@ export const useConsultingFarmerCalendar = (
     queryKey: [...consultingKeys.all(), 'farmer-calendar', params],
     queryFn: () => plantEventApi.getPlantEventsCalendar(params),
     enabled: enabled && Boolean(params.startDate && params.endDate && params.profileId),
+    staleTime: 30_000,
+  });
+
+export const useConsultingCalendar = (
+  farmerProfileId: string,
+  startDate: string,
+  endDate: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'consulting-calendar', farmerProfileId, startDate, endDate],
+    queryFn: () => consultingApi.getConsultingCalendar(farmerProfileId, startDate, endDate),
+    enabled: enabled && Boolean(farmerProfileId && startDate && endDate),
     staleTime: 30_000,
   });

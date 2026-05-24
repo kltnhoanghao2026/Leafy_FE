@@ -75,9 +75,12 @@ export function ChatArea({ conversation, currentUserId, wsConnected, onToggleInf
 
   // Reset live messages and action states when switching conversations
   useEffect(() => {
-    setLiveMessages([]);
-    setReplyTarget(null);
-    setEditTarget(null);
+    const timer = setTimeout(() => {
+      setLiveMessages([]);
+      setReplyTarget(null);
+      setEditTarget(null);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [conversation?.id]);
 
   if (!conversation) return <EmptyState />;
@@ -152,6 +155,7 @@ export function ChatArea({ conversation, currentUserId, wsConnected, onToggleInf
 
       {/* ── Input ────────────────────────────────────────────────────────────── */}
       <ChatInput
+        key={editTarget?.id ?? 'default'}
         conversationId={conversation.id}
         isDisbanded={isDisbanded}
         canSendMessages={canSendMessages}

@@ -4,7 +4,6 @@ interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
   readonly VITE_API_PROXY_TARGET?: string
   readonly VITE_IOT_TEST_DATA_BASE_URL?: string
-  readonly VITE_IOT_TEST_DATA_PROXY_TARGET?: string
   readonly VITE_ENABLE_IOT_DEMO_TOOLS?: string
   readonly VITE_IOT_FARM_PLOT_ID?: string
   readonly VITE_FIREBASE_API_KEY?: string

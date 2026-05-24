@@ -114,8 +114,9 @@ export function GroupMembersView({ conversationId, currentRole, onAddMember }: {
 
   const handleSearch = (val: string) => {
     setQuery(val);
-    clearTimeout((window as any)._memberSearchTimer);
-    (window as any)._memberSearchTimer = setTimeout(() => setDebouncedQuery(val), 400);
+    const currentTimer = (window as unknown as { _memberSearchTimer?: ReturnType<typeof setTimeout> })._memberSearchTimer;
+    clearTimeout(currentTimer);
+    (window as unknown as { _memberSearchTimer: ReturnType<typeof setTimeout> })._memberSearchTimer = setTimeout(() => setDebouncedQuery(val), 400);
   };
 
   const sorted = [...members].sort((a, b) => {

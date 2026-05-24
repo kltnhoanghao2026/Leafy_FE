@@ -3,14 +3,17 @@ import { profilesApi } from '../../profiles/api/profilesApi';
 import { Avatar } from '../../../components/ui/Avatar';
 import type { UserNotificationResponse } from '../types';
 import { useTranslation } from '../../../i18n';
-import { 
-  MessageCircle, 
-  ThumbsUp, 
-  UserPlus, 
-  MessageSquare, 
+import {
+  MessageCircle,
+  ThumbsUp,
+  UserPlus,
+  MessageSquare,
   Bell,
   ClipboardCheck,
-  ClipboardList
+  ClipboardList,
+  Shield,
+  ShieldCheck,
+  ShieldX,
 } from 'lucide-react';
 
 interface NotificationItemProps {
@@ -60,6 +63,12 @@ export function NotificationItem({ notification, onClick, isCompact = false }: N
         return { Icon: ClipboardList, colorClass: 'text-emerald-500 bg-emerald-50 border-emerald-100' };
       case 'PLAN_APPLIED':
         return { Icon: ClipboardCheck, colorClass: 'text-green-600 bg-green-50 border-green-100' };
+      case 'CONSULTING_DATA_ACCESS_REQUEST':
+        return { Icon: Shield, colorClass: 'text-amber-500 bg-amber-50 border-amber-100' };
+      case 'CONSULTING_DATA_ACCESS_APPROVED':
+        return { Icon: ShieldCheck, colorClass: 'text-emerald-600 bg-emerald-50 border-emerald-100' };
+      case 'CONSULTING_DATA_ACCESS_DENIED':
+        return { Icon: ShieldX, colorClass: 'text-red-500 bg-red-50 border-red-100' };
       case 'SYSTEM':
       default:
         return { Icon: Bell, colorClass: 'text-slate-500 bg-slate-50 border-slate-200' };

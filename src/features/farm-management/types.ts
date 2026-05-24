@@ -23,6 +23,7 @@ export interface FarmPlotResponse {
 export interface FarmZoneResponse {
   id: string;
   farmPlotId: string;
+  ownerProfileId?: string;
   zoneName: string;
   zoneCode: string | null;
   description: string | null;

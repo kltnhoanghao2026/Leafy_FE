@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -8,12 +8,16 @@ import {
   ClipboardList,
   MapPin,
   Sprout,
+  ShieldCheck,
+  ShieldOff,
+  Calendar,
 } from 'lucide-react';
 import { ROUTES } from '../../../lib/routes';
 import {
   useConsultingFarmers,
   useConsultingFarmerSummaryBulk,
 } from '../queries/consulting.queries';
+import { usePrivacySettingsByProfileId } from '../../settings/queries';
 import { Avatar } from '../../../components/ui/Avatar';
 import { FarmPlotsTab } from '../components/FarmPlotsTab';
 import { PlantsTab } from '../components/PlantsTab';
@@ -25,6 +29,34 @@ import type { ConsultationRequestResponse } from '../../profiles/api/profilesApi
 
 type MainTab = 'profile' | 'info' | 'calendar' | 'planning';
 type InfoTab = 'plots' | 'plants';
+
+// ── Sharing Badge ───────────────────────────────────────────────────────────────
+
+interface SharingBadgeProps {
+  icon: React.ReactNode;
+  label: string;
+  enabled: boolean;
+}
+
+function SharingBadge({ icon, label, enabled }: SharingBadgeProps) {
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+        enabled
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+          : 'bg-slate-100 text-slate-400 border border-slate-200'
+      }`}
+    >
+      <span className={enabled ? 'text-emerald-600' : 'text-slate-400'}>{icon}</span>
+      <span className="truncate">{label}</span>
+      {enabled ? (
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 ml-auto shrink-0" strokeWidth={2.5} />
+      ) : (
+        <ShieldOff className="w-3.5 h-3.5 text-slate-400 ml-auto shrink-0" strokeWidth={2.5} />
+      )}
+    </div>
+  );
+}
 
 // ── TabBar ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +99,8 @@ export function ConsultingFarmerPage() {
 
   const { data: farmers } = useConsultingFarmers();
   const { data: summaryMap } = useConsultingFarmerSummaryBulk(fid ? [fid] : [], !!fid);
+  const { data: privacySettings } = usePrivacySettingsByProfileId(fid);
+
   const farmer = useMemo(
     () =>
       ((farmers ?? []) as ConsultationRequestResponse[]).find(
@@ -170,21 +204,57 @@ export function ConsultingFarmerPage() {
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-3 sm:max-w-sm">
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Vườn</p>
-                  <p className="text-2xl font-black text-slate-800">{summary?.plotCount ?? '—'}</p>
+              {/* Stats — only shown when at least one data category is shared */}
+              {(privacySettings?.shareFarmPlotsWithConsultants || privacySettings?.sharePlantsWithConsultants || privacySettings?.sharePlantEventsWithConsultants) && (
+                <div className="grid grid-cols-3 gap-3 sm:max-w-sm">
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Vườn</p>
+                    <p className="text-2xl font-black text-slate-800">{summary?.plotCount ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Khu</p>
+                    <p className="text-2xl font-black text-slate-800">{summary?.zoneCount ?? '—'}</p>
+                  </div>
+                  <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cây</p>
+                    <p className="text-2xl font-black text-slate-800">{summary?.plantCount ?? '—'}</p>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Khu</p>
-                  <p className="text-2xl font-black text-slate-800">{summary?.zoneCount ?? '—'}</p>
+              )}
+
+              {/* Privacy Sharing Status */}
+              {privacySettings && (
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck className="w-4 h-4 text-[#245A34]" strokeWidth={2.5} />
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+                      Chia sẻ dữ liệu với chuyên gia
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <SharingBadge
+                      icon={<MapPin className="w-3.5 h-3.5" />}
+                      label="Trang trại"
+                      enabled={privacySettings.shareFarmPlotsWithConsultants}
+                    />
+                    <SharingBadge
+                      icon={<Sprout className="w-3.5 h-3.5" />}
+                      label="Cây trồng"
+                      enabled={privacySettings.sharePlantsWithConsultants}
+                    />
+                    <SharingBadge
+                      icon={<Calendar className="w-3.5 h-3.5" />}
+                      label="Sự kiện"
+                      enabled={privacySettings.sharePlantEventsWithConsultants}
+                    />
+                    <SharingBadge
+                      icon={<ClipboardList className="w-3.5 h-3.5" />}
+                      label="Kế hoạch"
+                      enabled={privacySettings.sharePlansWithConsultants}
+                    />
+                  </div>
                 </div>
-                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Cây</p>
-                  <p className="text-2xl font-black text-slate-800">{summary?.plantCount ?? '—'}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -192,20 +262,18 @@ export function ConsultingFarmerPage() {
             <>
               {/* Info sub-tabs */}
               <div className="flex gap-1 bg-slate-50 rounded-xl p-1 self-start">
-                {(
-                  [
-                    {
-                      id: 'plots' as InfoTab,
-                      label: 'Trang trại',
-                      icon: <MapPin className="w-3.5 h-3.5" strokeWidth={2.5} />,
-                    },
-                    {
-                      id: 'plants' as InfoTab,
-                      label: 'Cây trồng',
-                      icon: <Sprout className="w-3.5 h-3.5" strokeWidth={2.5} />,
-                    },
-                  ] as { id: InfoTab; label: string; icon: React.ReactNode }[]
-                ).map((tab) => (
+                {[
+                  {
+                    id: 'plots' as InfoTab,
+                    label: 'Trang trại',
+                    icon: <MapPin className="w-3.5 h-3.5" strokeWidth={2.5} />,
+                  },
+                  {
+                    id: 'plants' as InfoTab,
+                    label: 'Cây trồng',
+                    icon: <Sprout className="w-3.5 h-3.5" strokeWidth={2.5} />,
+                  },
+                ].map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
@@ -222,13 +290,13 @@ export function ConsultingFarmerPage() {
                 ))}
               </div>
 
-              {infoTab === 'plots' && <FarmPlotsTab farmerProfileId={fid} />}
-              {infoTab === 'plants' && <PlantsTab farmerProfileId={fid} />}
+              {infoTab === 'plots' && <FarmPlotsTab farmerProfileId={fid} privacySettings={privacySettings} />}
+              {infoTab === 'plants' && <PlantsTab farmerProfileId={fid} privacySettings={privacySettings} />}
             </>
           )}
 
-          {mainTab === 'calendar' && <CalendarTab farmerProfileId={fid} />}
-          {mainTab === 'planning' && <PlanningTab farmerProfileId={fid} />}
+          {mainTab === 'calendar' && <CalendarTab farmerProfileId={fid} privacySettings={privacySettings} />}
+          {mainTab === 'planning' && <PlanningTab farmerProfileId={fid} privacySettings={privacySettings} />}
         </div>
       </div>
     </div>

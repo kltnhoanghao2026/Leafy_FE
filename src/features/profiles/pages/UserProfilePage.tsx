@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Award, MapPin, MessageCircle, Loader2, CalendarDays, UserPlus, Check,
@@ -9,9 +9,11 @@ import toast from 'react-hot-toast'
 import { Avatar } from '../../../components/ui/Avatar'
 import { ROUTES } from '../../../lib/routes'
 import { profilesApi } from '../api/profilesApi'
+import { chatApi } from '../../chat/api/chatApi'
 import { PostCard } from '../../community/components/PostCard'
 import { mapPostResponseToPost } from '../../community/mappers'
 import { FollowersList } from '../components/FollowersList'
+import { FollowingList } from '../components/FollowingList'
 
 const ROLE_LABELS: Record<string, string> = { FARMER: 'Nông dân', EXPERT: 'Chuyên gia' }
 
@@ -35,11 +37,12 @@ function useUserPosts(userId: string | undefined) {
 
 export function UserProfilePage() {
   const { profileId } = useParams<{ profileId: string }>()
+  const navigate = useNavigate()
   const qc = useQueryClient()
   const { data: profile, isLoading, error } = usePublicProfile(profileId ?? '')
   const { data: posts = [] } = useUserPosts(profile?.id)
 
-  const [activeTab, setActiveTab] = useState<'posts' | 'followers'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'followers' | 'following' | 'certificates'>('posts')
   const [localFollowing, setLocalFollowing] = useState<boolean | null>(null)
   const [localConsulted, setLocalConsulted] = useState<boolean | null>(null)
 
@@ -81,6 +84,19 @@ export function UserProfilePage() {
     onError: () => toast.error('Có lỗi xảy ra khi hủy yêu cầu.'),
   })
 
+  const textMutation = useMutation({
+    mutationFn: async (profileId: string) => {
+      const conv = await chatApi.getOrCreateConversation(profileId)
+      return conv
+    },
+    onSuccess: (conversation) => {
+      navigate(ROUTES.DASHBOARD.CHAT, {
+        state: { openConversationId: conversation.id },
+      })
+    },
+    onError: () => toast.error('Không thể mở cuộc trò chuyện.'),
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -115,7 +131,8 @@ export function UserProfilePage() {
     followMutation.isPending ||
     unfollowMutation.isPending ||
     consultMutation.isPending ||
-    cancelConsultMutation.isPending
+    cancelConsultMutation.isPending ||
+    textMutation.isPending
 
   return (
     <div className="pb-20 animate-fade-in bg-slate-50 min-h-screen -mt-6">
@@ -163,6 +180,7 @@ export function UserProfilePage() {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap justify-center md:justify-end gap-2 md:pb-2 shrink-0">
+                {/* Follow / Following */}
                 <button
                   onClick={() =>
                     isFollowing
@@ -180,6 +198,7 @@ export function UserProfilePage() {
                   {isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
                 </button>
 
+                {/* Consult (experts only) */}
                 {isExpert && (
                   <button
                     onClick={() =>
@@ -195,9 +214,23 @@ export function UserProfilePage() {
                     }`}
                   >
                     {isConsulted ? <X className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
-                    {isConsulted ? 'Hủy tư vấn' : 'Nhắn tin'}
+                    {isConsulted ? 'Hủy tư vấn' : 'Yêu cầu tư vấn'}
                   </button>
                 )}
+
+                {/* Text / Message */}
+                <button
+                  onClick={() => textMutation.mutate(profile.id)}
+                  disabled={actionPending}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[14px] font-bold transition-colors bg-[#10B981] text-white hover:bg-[#059669] disabled:opacity-60"
+                >
+                  {textMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MessageCircle className="w-4 h-4" />
+                  )}
+                  Nhắn tin
+                </button>
               </div>
             </div>
 
@@ -206,6 +239,12 @@ export function UserProfilePage() {
               <button 
                 onClick={() => setActiveTab('posts')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'posts' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Bài viết</button>
+              <button 
+                onClick={() => setActiveTab('certificates')}
+                className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'certificates' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Chứng chỉ</button>
+              <button 
+                onClick={() => setActiveTab('following')}
+                className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'following' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Đang theo dõi</button>
               <button 
                 onClick={() => setActiveTab('followers')}
                 className={`font-bold px-4 pb-3 pt-3 whitespace-nowrap transition-colors ${activeTab === 'followers' ? 'text-[#10B981] border-b-4 border-[#10B981]' : 'text-slate-600 hover:bg-slate-50 rounded-lg'}`}>Người theo dõi</button>
@@ -240,34 +279,6 @@ export function UserProfilePage() {
               )}
             </div>
           </div>
-
-          {/* Certificates */}
-          {profile.certificates && profile.certificates.length > 0 && (
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100">
-              <h2 className="text-[16px] font-bold text-slate-800 mb-4">Chứng chỉ</h2>
-              <div className="space-y-3">
-                {profile.certificates.map((cert) => (
-                  <div key={cert.id} className="flex gap-3">
-                    <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
-                      <Award className="w-5 h-5 text-slate-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-bold text-slate-800 truncate">{cert.title}</p>
-                      <p className="text-[12px] text-slate-500">{cert.issuedBy}</p>
-                      {cert.issueDate && (
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {new Date(cert.issueDate).toLocaleDateString('vi-VN')}
-                          {cert.expired && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-500 font-bold rounded-full">Hết hạn</span>
-                          )}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ─── Right Column: Posts ─── */}
@@ -291,6 +302,51 @@ export function UserProfilePage() {
           )}
         </div>
       </div>
+      )}
+
+      {activeTab === 'certificates' && (
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h2 className="text-[16px] font-bold text-slate-800 mb-4">Chứng chỉ</h2>
+            {profile.certificates && profile.certificates.length > 0 ? (
+              <div className="space-y-4">
+                {profile.certificates.map((cert) => (
+                  <div key={cert.id} className="flex gap-4 p-4 rounded-xl border border-slate-100 hover:border-[#10B981]/30 transition-colors">
+                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center shrink-0">
+                      <Award className="w-6 h-6 text-slate-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[15px] font-bold text-slate-800">{cert.title}</p>
+                      <p className="text-[13px] text-slate-500 mt-0.5">{cert.issuedBy}</p>
+                      {cert.issueDate && (
+                        <p className="text-[12px] text-slate-400 mt-1">
+                          Ngày cấp: {new Date(cert.issueDate).toLocaleDateString('vi-VN')}
+                          {cert.expired && (
+                            <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-500 font-bold rounded-full text-[11px]">Hết hạn</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <Award className="w-8 h-8 text-slate-300" />
+                </div>
+                <h3 className="text-[16px] font-bold text-slate-800 mb-1">Chưa có chứng chỉ</h3>
+                <p className="text-[14px] text-slate-500">Người dùng này chưa có chứng chỉ nào được duyệt.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'following' && (
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <FollowingList profileId={profile.id} />
+        </div>
       )}
 
       {activeTab === 'followers' && (

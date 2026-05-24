@@ -36,19 +36,6 @@ export function formatDate(iso: string | null): string {
   }
 }
 
-export function FileTypeIcon({ fileType }: { fileType?: string }) {
-  switch ((fileType as KnownFileType) ?? "OTHER") {
-    case "PDF":
-      return <FileText className="w-4 h-4 text-red-500" strokeWidth={2} />;
-    case "IMAGE":
-      return <ImageIcon className="w-4 h-4 text-sky-500" strokeWidth={2} />;
-    case "DOCUMENT":
-      return <FileText className="w-4 h-4 text-blue-500" strokeWidth={2} />;
-    default:
-      return <FileIcon className="w-4 h-4 text-slate-400" strokeWidth={2} />;
-  }
-}
-
 export function fileTypeIconBg(fileType?: string): string {
   switch ((fileType as KnownFileType) ?? "OTHER") {
     case "PDF":
@@ -85,5 +72,18 @@ export function fileTypeBadgeStyle(fileType?: string): string {
       return "bg-blue-50 text-blue-600 ring-blue-200";
     default:
       return "bg-slate-50 text-slate-500 ring-slate-200";
+  }
+}
+
+export function FileTypeIcon({ fileType }: { fileType?: string }) {
+  switch (fileType ?? "OTHER") {
+    case "PDF":
+      return <FileText className="w-4 h-4 text-red-500" strokeWidth={2} />;
+    case "IMAGE":
+      return <ImageIcon className="w-4 h-4 text-sky-500" strokeWidth={2} />;
+    case "DOCUMENT":
+      return <FileText className="w-4 h-4 text-blue-500" strokeWidth={2} />;
+    default:
+      return <FileIcon className="w-4 h-4 text-slate-400" strokeWidth={2} />;
   }
 }

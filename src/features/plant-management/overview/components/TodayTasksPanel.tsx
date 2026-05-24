@@ -41,10 +41,11 @@ function EventCard({
   const pct = hasTasks ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
   const hasFarmScope = !!(event.farmZoneId || event.farmPlotId);
-  const progressTotal = event.progressTotal ?? 0;
-  const progressCompleted = event.progressCompleted ?? 0;
-  const progressPct = progressTotal > 0 ? Math.round((progressCompleted / progressTotal) * 100) : 0;
-  const allProgressDone = progressTotal > 0 && progressCompleted === progressTotal;
+  const children = event.children ?? [];
+  const childrenTotal = children.length;
+  const childrenCompleted = children.filter(c => c.completed).length;
+  const childrenPct = childrenTotal > 0 ? Math.round((childrenCompleted / childrenTotal) * 100) : 0;
+  const allChildrenDone = childrenTotal > 0 && childrenCompleted === childrenTotal;
 
   return (
     <div
@@ -98,20 +99,20 @@ function EventCard({
           )}
 
           {/* Farm-level progress bar */}
-          {hasFarmScope && progressTotal > 0 && (
+          {hasFarmScope && childrenTotal > 0 && (
             <div className="mt-1.5 flex items-center gap-2">
-              <BarChart2 className="h-3 w-3 shrink-0" style={{ color: allProgressDone ? '#10B981' : dotColor }} />
+              <BarChart2 className="h-3 w-3 shrink-0" style={{ color: allChildrenDone ? '#10B981' : dotColor }} />
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                 <div
                   className="h-1.5 rounded-full transition-all duration-500"
-                  style={{ width: `${progressPct}%`, backgroundColor: allProgressDone ? '#10B981' : dotColor }}
+                  style={{ width: `${childrenPct}%`, backgroundColor: allChildrenDone ? '#10B981' : dotColor }}
                 />
               </div>
               <span
                 className="text-[10px] font-black tabular-nums"
-                style={{ color: allProgressDone ? '#10B981' : dotColor }}
+                style={{ color: allChildrenDone ? '#10B981' : dotColor }}
               >
-                {progressCompleted}/{progressTotal} cây
+                {childrenCompleted}/{childrenTotal} cây
               </span>
             </div>
           )}

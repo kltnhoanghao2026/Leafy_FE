@@ -17,7 +17,7 @@ const today = toLocalDateOnly(todayDate);
 
 function toPreviewEvent(evt: PlantEventCreateRequest, idx: number): PlantEventResponse {
   const startDate =
-    evt.daysFromNow != null ? addLocalDays(todayDate, evt.daysFromNow) : today;
+    evt.daysFromStart != null ? addLocalDays(todayDate, evt.daysFromStart) : today;
   const endDate =
     evt.durationDays != null && evt.durationDays > 0
       ? addLocalDays(startDate, evt.durationDays - 1)
@@ -31,7 +31,7 @@ function toPreviewEvent(evt: PlantEventCreateRequest, idx: number): PlantEventRe
     eventType: evt.eventType,
     note: evt.note ?? null,
     description: evt.description ?? null,
-    daysFromNow: evt.daysFromNow ?? null,
+    daysFromStart: evt.daysFromStart ?? null,
     durationDays: evt.durationDays ?? null,
     planned: true,
     calculatedStartDate: startDate,
