@@ -144,6 +144,7 @@ export function RegisterForm() {
               onChange={handleChange}
               className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#245A34] focus:border-[#245A34] sm:text-sm transition-colors"
               placeholder="••••••••"
+              autoComplete="new-password"
             />
             <button
               type="button"
@@ -178,6 +179,7 @@ export function RegisterForm() {
               onChange={handleChange}
               className="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#245A34] focus:border-[#245A34] sm:text-sm transition-colors"
               placeholder="••••••••"
+              autoComplete="new-password"
             />
             <button
               type="button"
