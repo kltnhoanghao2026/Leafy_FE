@@ -1,0 +1,173 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { profilesApi } from '../../profiles/api/profilesApi';
+import { consultingApi } from '../api/consulting.api';
+import { consultingKeys } from './consulting.keys';
+import { plantEventApi } from '../../plant-management/calendarview/api/plant-event.api';
+import { toPageResponse } from '../../plant-management/shared/api/apiUtils';
+import type { ConsultationRequestResponse, SpringPage } from '../../profiles/api/profilesApi';
+import type {
+  PlantEventCreateRequest,
+  PlantEventsCalendarParams,
+  PlanCreateRequest,
+} from '../../plant-management/shared/types';
+
+export const useConsultingPendingCount = () =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'pending-count'],
+    queryFn: async () => {
+      const res = await profilesApi.getPendingConsultations({ page: 0, size: 1 });
+      const d = res.data;
+      if (d && typeof d === 'object' && 'data' in d) {
+        const page = toPageResponse<ConsultationRequestResponse>((d as SpringPage<ConsultationRequestResponse>).data);
+        return page.totalElements ?? 0;
+      }
+      return 0;
+    },
+    staleTime: 30_000,
+  });
+
+export const useConsultingFarmers = () =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'farmers'],
+    queryFn: async () => {
+      const response = await profilesApi.getAcceptedConsultations({ size: 100 });
+      const data = response.data;
+      if (data && typeof data === 'object' && 'data' in data) {
+        const page = (data as { data: { content?: unknown[] } }).data;
+        return page.content ?? [];
+      }
+      return [];
+    },
+  });
+
+export const useConsultingFarmerSummaryBulk = (farmerProfileIds: string[], enabled = true) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'summary-bulk', farmerProfileIds],
+    queryFn: () => consultingApi.getBulkConsultingSummary(farmerProfileIds),
+    enabled: enabled && farmerProfileIds.length > 0,
+    staleTime: 60_000,
+  });
+
+export const useConsultingFarmPlots = (farmerProfileId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.farmPlots(farmerProfileId),
+    queryFn: () => consultingApi.getConsultingFarmPlots(farmerProfileId),
+    enabled: enabled && !!farmerProfileId,
+  });
+
+export const useConsultingFarmPlot = (farmPlotId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.farmPlot(farmPlotId),
+    queryFn: () => consultingApi.getConsultingFarmPlot(farmPlotId),
+    enabled: enabled && !!farmPlotId,
+  });
+
+export const useConsultingFarmZones = (farmPlotId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.farmZones(farmPlotId),
+    queryFn: () => consultingApi.getConsultingFarmZones(farmPlotId),
+    enabled: enabled && !!farmPlotId,
+  });
+
+export const useConsultingPlants = (farmerProfileId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.plants(farmerProfileId),
+    queryFn: () => consultingApi.getConsultingPlants(farmerProfileId),
+    enabled: enabled && !!farmerProfileId,
+  });
+
+export const useConsultingPlantById = (plantId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.plant(plantId),
+    queryFn: () => consultingApi.getConsultingPlantById(plantId),
+    enabled: enabled && !!plantId,
+  });
+
+export const useConsultingPlantEvents = (
+  farmerProfileId: string,
+  plantId: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: consultingKeys.plantEvents(plantId),
+    queryFn: () => consultingApi.getConsultingPlantEvents(farmerProfileId, plantId),
+    enabled: enabled && !!farmerProfileId && !!plantId,
+  });
+
+export const useCreateConsultingPlantEvent = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      farmerProfileId,
+      payload,
+    }: {
+      farmerProfileId: string;
+      payload: PlantEventCreateRequest;
+    }) => consultingApi.createConsultingPlantEvent(farmerProfileId, payload),
+    onSuccess: async (event) => {
+      await queryClient.invalidateQueries({
+        queryKey: consultingKeys.plantEvents(event.plantId ?? ''),
+      });
+    },
+    meta: {
+      successMessage: 'Đã thêm sự kiện cho cây trồng.',
+    },
+  });
+};
+
+export const useConsultingPlansByFarmer = (farmerProfileId: string, enabled = true) =>
+  useQuery({
+    queryKey: consultingKeys.plans(farmerProfileId),
+    queryFn: () => consultingApi.getConsultingPlans(farmerProfileId),
+    enabled: enabled && !!farmerProfileId,
+  });
+
+export const useCreateConsultingPlan = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      farmerProfileId,
+      payload,
+    }: {
+      farmerProfileId: string;
+      payload: PlanCreateRequest;
+    }) => consultingApi.createConsultingPlan(farmerProfileId, payload),
+    onSuccess: async (plan, { farmerProfileId }) => {
+      await queryClient.invalidateQueries({
+        queryKey: consultingKeys.plans(farmerProfileId),
+      });
+      if (plan.plantId) {
+        await queryClient.invalidateQueries({
+          queryKey: consultingKeys.plant(plan.plantId),
+        });
+      }
+    },
+    meta: {
+      successMessage: 'Đã tạo kế hoạch điều trị.',
+    },
+  });
+};
+
+export const useConsultingFarmerCalendar = (
+  params: PlantEventsCalendarParams,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'farmer-calendar', params],
+    queryFn: () => plantEventApi.getPlantEventsCalendar(params),
+    enabled: enabled && Boolean(params.startDate && params.endDate && params.profileId),
+    staleTime: 30_000,
+  });
+
+export const useConsultingCalendar = (
+  farmerProfileId: string,
+  startDate: string,
+  endDate: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'consulting-calendar', farmerProfileId, startDate, endDate],
+    queryFn: () => consultingApi.getConsultingCalendar(farmerProfileId, startDate, endDate),
+    enabled: enabled && Boolean(farmerProfileId && startDate && endDate),
+    staleTime: 30_000,
+  });
