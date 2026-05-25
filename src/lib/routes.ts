@@ -49,6 +49,8 @@ export const ROUTES = {
       `/dashboard/plans/${planId}/edit`,
     PLAN_APPLY_DETAIL: (applyId: string) =>
       `/dashboard/plans/applies/${applyId}`,
+    PLAN_RAG_DETAIL: (planId: string) =>
+      `/dashboard/plans/rag/${planId}`,
     PLANT_EVENTS_CALENDAR: "/dashboard/plant-events/calendar",
     DISEASE_DIAGNOSIS: "/dashboard/disease-diagnosis",
     DIAGNOSIS_HISTORY: "/dashboard/disease-diagnosis/history",
@@ -334,6 +336,7 @@ export const API_ENDPOINTS = {
     BULK_APPLY_STATUS: "/plans/applies/bulk/status",
     BULK_DELETE: "/plans/bulk",
     BULK_APPLY_CUSTOM: "/plans/applies/bulk-custom",
+    APPLY_TO_ALL_FARMS: (planId: string) => `/plans/${planId}/apply-to-all-farms`,
     MY: "/plans/me",
     MY_APPLIES: "/plans/applies/me",
     PUBLIC: "/plans/public",
@@ -376,6 +379,13 @@ export const API_ENDPOINTS = {
     GENERATE_PLAN_PREVIEW: "/rag/v1/plans/generate-preview",
     GENERATE_PLAN_V2: "/rag/v2/plans/generate",
     GENERATE_PLAN_V2_STREAM: "/rag/v2/plans/generate/stream",
+  },
+
+  // RAG plan listing/detail (from rag-service MongoDB via plan_controller.py)
+  RAG_PLANS: {
+    LIST: "/rag/v2/plans",
+    ITEM: (planId: string) => `/rag/v2/plans/${planId}`,
+    ADMIN_ALL: "/rag/v2/plans/admin/all",
   },
 
   DISEASES: {

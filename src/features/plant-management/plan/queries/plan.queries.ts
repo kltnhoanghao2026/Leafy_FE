@@ -11,6 +11,7 @@ import type {
   BulkPlanStatusUpdateRequest,
   TreatmentStatus,
   PlanDto,
+  ApplyToAllFarmsRequest,
 } from "../../shared/types";
 import { plantManagementKeys } from "../../shared/queries/keys";
 
@@ -191,6 +192,39 @@ export const useApplyPlanMutation = () => {
       planId: string;
       payload: PlanApplyRequest;
     }) => treatmentPlanApi.applyPlan(planId, payload),
+    onSuccess: async (_, { planId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.plan(planId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: plantManagementKeys.planApplies(planId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.plansRoot(), "my-applies"],
+        }),
+      ]);
+    },
+    meta: {
+      // successMessage removed per user request
+    },
+  });
+};
+
+export const useApplyPlanToAllFarmsMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      planId,
+      payload,
+    }: {
+      planId: string;
+      payload: ApplyToAllFarmsRequest;
+    }) => treatmentPlanApi.applyPlanToAllFarms(planId, payload),
     onSuccess: async (_, { planId }) => {
       await Promise.all([
         queryClient.invalidateQueries({

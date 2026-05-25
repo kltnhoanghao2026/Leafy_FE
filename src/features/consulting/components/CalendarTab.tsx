@@ -1,9 +1,15 @@
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { CalendarDays, CalendarRange, Clock, GripVertical, ShieldOff } from 'lucide-react';
-import { useConsultingCalendar } from '../queries/consulting.queries';
+import { CalendarDays, CalendarRange, Clock, GripVertical, ShieldOff, Filter } from 'lucide-react';
+import {
+  useConsultingCalendarFiltered,
+  useConsultingFarmPlots,
+  useConsultingAllZones,
+  useConsultingPlants,
+} from '../queries/consulting.queries';
 import { useToggleTaskMutation } from '../../plant-management';
 import { CalendarViewPanel } from '../../plant-management/calendarview/components/CalendarViewPanel';
 import { EventListPanel } from '../../plant-management/calendarview/components/EventListPanel';
+import { ConsultingCalendarFilterModal } from './ConsultingCalendarFilterModal';
 import {
   toLocalDateOnly,
   addLocalDays,
@@ -21,6 +27,7 @@ import type {
 import type { EventListPanelProps } from '../../plant-management/calendarview/components/EventListPanel';
 import type { PlantEventResponse } from '../../plant-management/shared/types';
 import type { PrivacySettings } from '../../settings/types';
+import type { FilterState } from '../../plant-management/calendarview/schemas/calendar.types';
 
 interface CalendarTabProps {
   farmerProfileId: string;
@@ -67,6 +74,16 @@ export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabPro
   const containerRef = useRef<HTMLDivElement>(null);
   const toggleTask = useToggleTaskMutation();
 
+  // Filter state
+  const [farmPlotId,      setFarmPlotId]      = useState('');
+  const [farmZoneId,      setFarmZoneId]      = useState('');
+  const [plantId,         setPlantId]         = useState('');
+  const [targetType,       setTargetType]       = useState('');
+  const [eventType,        setEventType]        = useState('');
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+
+  const activeFilterCount = [farmPlotId, farmZoneId, plantId, targetType, eventType].filter(Boolean).length;
+
   const onSplitterMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const onMove = (ev: MouseEvent) => {
@@ -100,10 +117,28 @@ export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabPro
     return getMonthBounds(tlMonth);
   }, [activeView, currentMonth, currentWeekMonday, tlMonth]);
 
-  const calendarQuery = useConsultingCalendar(
+  // Farmer's data for filter dropdowns
+  const { data: farmerPlots, isLoading: isLoadingPlots } = useConsultingFarmPlots(
+    farmerProfileId, shared && !!farmerProfileId,
+  );
+  const { data: farmerZones, isLoading: isLoadingZones } = useConsultingAllZones(
+    farmerProfileId, shared && !!farmerProfileId,
+  );
+  const { data: farmerPlants, isLoading: isLoadingPlants } = useConsultingPlants(
+    farmerProfileId, shared && !!farmerProfileId,
+  );
+
+  const calendarQuery = useConsultingCalendarFiltered(
     farmerProfileId,
     startDate,
     endDate,
+    {
+      farmPlotId: farmPlotId || undefined,
+      farmZoneId: farmZoneId || undefined,
+      plantId: plantId || undefined,
+      targetType: targetType || undefined,
+      eventType: eventType || undefined,
+    },
     shared && !!farmerProfileId,
   );
 
@@ -235,9 +270,25 @@ export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabPro
     onToggleTask: (event, idx) => void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx }),
   };
 
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFarmPlotId(newFilters.farmPlotId);
+    setFarmZoneId(newFilters.farmZoneId);
+    setPlantId(newFilters.plantId);
+    setTargetType(newFilters.targetType);
+    setEventType(newFilters.eventType);
+  };
+
+  const handleClearFilters = () => {
+    setFarmPlotId('');
+    setFarmZoneId('');
+    setPlantId('');
+    setTargetType('');
+    setEventType('');
+  };
+
   return (
     <div className="pt-4 flex flex-1 min-h-0 flex-col gap-3">
-      {/* View type switcher */}
+      {/* Header with Filter button */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           {!shared && (
@@ -250,27 +301,43 @@ export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabPro
             Lịch sự kiện cây trồng
           </p>
         </div>
-        <div className="flex rounded-xl bg-slate-100 p-1">
-          {VIEW_TABS.map(({ id, label, Icon }) => {
-            const isActive = activeView === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveView(id)}
-                className={`flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs font-bold transition-all ${
-                  isActive
-                    ? 'bg-white text-[#2F7F34] shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Icon
-                  className={`h-3.5 w-3.5 ${isActive ? 'text-[#2F7F34]' : 'text-slate-400'}`}
-                />
-                {label}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          {shared && (
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Bộ lọc
+              {activeFilterCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#245A34] text-[10px] font-black text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          )}
+          <div className="flex rounded-xl bg-slate-100 p-1">
+            {VIEW_TABS.map(({ id, label, Icon }) => {
+              const isActive = activeView === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveView(id)}
+                  className={`flex items-center gap-1.5 rounded-[10px] px-3 py-2 text-xs font-bold transition-all ${
+                    isActive
+                      ? 'bg-white text-[#2F7F34] shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  <Icon
+                    className={`h-3.5 w-3.5 ${isActive ? 'text-[#2F7F34]' : 'text-slate-400'}`}
+                  />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -300,6 +367,28 @@ export function CalendarTab({ farmerProfileId, privacySettings }: CalendarTabPro
           <EventListPanel {...eventListPanelProps} />
         </div>
       </div>
+
+      <ConsultingCalendarFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        filters={{
+          farmPlotId,
+          farmZoneId,
+          plantId,
+          targetType,
+          eventType,
+          selectedApplyId: '',
+        }}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+        farmerProfileId={farmerProfileId}
+        farmerPlots={farmerPlots ?? []}
+        farmerZones={farmerZones ?? []}
+        farmerPlants={farmerPlants ?? []}
+        isLoadingPlots={isLoadingPlots}
+        isLoadingZones={isLoadingZones}
+        isLoadingPlants={isLoadingPlants}
+      />
     </div>
   );
 }

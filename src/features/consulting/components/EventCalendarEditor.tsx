@@ -530,10 +530,12 @@ export function EventCalendarEditor({
     const map = new Map<string, PlantEventResponse[]>();
     for (const evt of previewEvents) {
       const start = evt.calculatedStartDate;
-      const end = evt.calculatedEndDate ?? start;
+      const end = evt.durationDays != null && evt.durationDays > 0
+        ? addLocalDays(start, evt.durationDays - 1)
+        : (evt.calculatedEndDate ?? start);
       if (!start) continue;
       const startD = new Date(start + 'T00:00:00');
-      const endD = new Date((end ?? start) + 'T00:00:00');
+      const endD = new Date(end + 'T00:00:00');
       for (let d = new Date(startD); d <= endD; d.setDate(d.getDate() + 1)) {
         const key = toLocalDateOnly(d);
         if (!map.has(key)) map.set(key, []);
@@ -549,7 +551,9 @@ export function EventCalendarEditor({
     return previewEvents.filter((evt) => {
       const start = evt.calculatedStartDate;
       if (!start) return false;
-      const end = evt.calculatedEndDate ?? start;
+      const end = evt.durationDays != null && evt.durationDays > 0
+        ? addLocalDays(start, evt.durationDays - 1)
+        : (evt.calculatedEndDate ?? start);
       return selectedDate >= start && selectedDate <= end;
     });
   }, [previewEvents, selectedDate]);

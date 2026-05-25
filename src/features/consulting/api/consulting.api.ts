@@ -43,6 +43,12 @@ export const consultingApi = {
     return unwrapApiData(response.data);
   },
 
+  getConsultingAllZones: async (farmerProfileId: string): Promise<FarmZoneResponse[]> => {
+    const plots = await consultingApi.getConsultingFarmPlots(farmerProfileId);
+    const zoneArrays = await Promise.all(plots.map(plot => consultingApi.getConsultingFarmZones(plot.id)));
+    return zoneArrays.flat();
+  },
+
   getConsultingPlants: async (farmerProfileId: string): Promise<PlantResponse[]> => {
     const response = await apiClient.get<
       ApiEnvelope<PageResponse<PlantResponse>> | PageResponse<PlantResponse>
@@ -120,6 +126,31 @@ export const consultingApi = {
     >(API_ENDPOINTS.CONSULTING.CALENDAR, {
       params: { farmerProfileId, startDate, endDate },
     });
+    return unwrapApiData(response.data);
+  },
+
+  getConsultingCalendarFiltered: async (
+    farmerProfileId: string,
+    startDate: string,
+    endDate: string,
+    filters: {
+      farmPlotId?: string;
+      farmZoneId?: string;
+      plantId?: string;
+      targetType?: string;
+      eventType?: string;
+    },
+  ): Promise<PlantEventResponse[]> => {
+    const params: Record<string, string> = { farmerProfileId, startDate, endDate };
+    if (filters.farmPlotId) params.farmPlotId = filters.farmPlotId;
+    if (filters.farmZoneId) params.farmZoneId = filters.farmZoneId;
+    if (filters.plantId) params.plantId = filters.plantId;
+    if (filters.targetType) params.targetType = filters.targetType;
+    if (filters.eventType) params.eventType = filters.eventType;
+    const response = await apiClient.get<ApiEnvelope<PlantEventResponse[]> | PlantEventResponse[]>(
+      API_ENDPOINTS.CONSULTING.CALENDAR,
+      { params },
+    );
     return unwrapApiData(response.data);
   },
 };
