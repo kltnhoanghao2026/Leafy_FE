@@ -106,6 +106,7 @@ export function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={isPending}
+              autoComplete="current-password"
             />
             <button
               type="button"

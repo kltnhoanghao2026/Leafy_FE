@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react";
-import { LayoutGrid, Leaf, MinusCircle } from "lucide-react";
+import { LayoutGrid, Leaf, MinusCircle, TreePine } from "lucide-react";
 import type { ExcludeSectionProps } from "../schemas/apply-dialog.schema";
 
 interface ExcludeSectionOwnProps extends ExcludeSectionProps {
@@ -19,6 +19,7 @@ export function ExcludeSection({
   onClearPlants,
   showZones,
   showPlants,
+  zoneSubtitle,
   isOpen,
   onToggle,
   totalExcluded,
@@ -78,7 +79,7 @@ export function ExcludeSection({
                   return (
                     <label
                       key={z.id}
-                      className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition-all ${
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 transition-all ${
                         excluded ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
@@ -86,13 +87,25 @@ export function ExcludeSection({
                         type="checkbox"
                         checked={excluded}
                         onChange={() => onToggleZone(z.id)}
-                        className="h-4 w-4 rounded accent-rose-500"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded accent-rose-500"
                       />
-                      <LayoutGrid className={`h-3.5 w-3.5 shrink-0 ${excluded ? "text-rose-400" : "text-slate-300"}`} />
-                      <span className={`truncate text-sm font-semibold ${excluded ? "text-rose-700 line-through" : "text-slate-700"}`}>
-                        {z.zoneName}
-                      </span>
-                      {excluded && <span className="ml-auto shrink-0 text-[10px] font-black text-rose-400">loại trừ</span>}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <LayoutGrid className={`h-3.5 w-3.5 shrink-0 ${excluded ? "text-rose-400" : "text-slate-300"}`} />
+                          <span className={`truncate text-sm font-semibold ${excluded ? "text-rose-700 line-through" : "text-slate-700"}`}>
+                            {z.zoneName}
+                          </span>
+                          {excluded && (
+                            <span className="shrink-0 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-black text-rose-500">loại trừ</span>
+                          )}
+                        </div>
+                        {zoneSubtitle && (
+                          <p className={`mt-0.5 truncate text-[10px] font-medium ${excluded ? "text-rose-400" : "text-slate-400"}`}>
+                            <TreePine className="mr-0.5 inline h-2.5 w-2.5" />
+                            {zoneSubtitle}
+                          </p>
+                        )}
+                      </div>
                     </label>
                   );
                 })}
@@ -124,7 +137,7 @@ export function ExcludeSection({
                   return (
                     <label
                       key={pl.id}
-                      className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 transition-all ${
+                      className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 transition-all ${
                         excluded ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white hover:border-slate-300"
                       }`}
                     >
@@ -132,13 +145,25 @@ export function ExcludeSection({
                         type="checkbox"
                         checked={excluded}
                         onChange={() => onTogglePlant(pl.id)}
-                        className="h-4 w-4 rounded accent-rose-500"
+                        className="mt-0.5 h-4 w-4 shrink-0 rounded accent-rose-500"
                       />
-                      <Leaf className={`h-3.5 w-3.5 shrink-0 ${excluded ? "text-rose-400" : "text-slate-300"}`} />
-                      <span className={`truncate text-sm font-semibold ${excluded ? "text-rose-700 line-through" : "text-slate-700"}`}>
-                        {pl.nickName ?? pl.plantNumber ?? pl.id}
-                      </span>
-                      {excluded && <span className="ml-auto shrink-0 text-[10px] font-black text-rose-400">loại trừ</span>}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <Leaf className={`h-3.5 w-3.5 shrink-0 ${excluded ? "text-rose-400" : "text-slate-300"}`} />
+                          <span className={`truncate text-sm font-semibold ${excluded ? "text-rose-700 line-through" : "text-slate-700"}`}>
+                            {pl.nickName ?? pl.plantNumber ?? pl.id}
+                          </span>
+                          {excluded && (
+                            <span className="shrink-0 rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-black text-rose-500">loại trừ</span>
+                          )}
+                        </div>
+                        {pl.farmZoneId && (
+                          <p className={`mt-0.5 truncate text-[10px] font-medium ${excluded ? "text-rose-400" : "text-slate-400"}`}>
+                            <LayoutGrid className="mr-0.5 inline h-2.5 w-2.5" />
+                            {pl.farmZoneId}
+                          </p>
+                        )}
+                      </div>
                     </label>
                   );
                 })}

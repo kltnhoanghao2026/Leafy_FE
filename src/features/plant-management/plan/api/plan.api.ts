@@ -16,6 +16,7 @@ import type {
   PublicPlanListParams,
   PlanResponse,
   TreatmentStatus,
+  ApplyToAllFarmsRequest,
 } from "../../shared/types";
 import { unwrapApiData, unwrapPageContent, toPageResponse } from "../../shared/api/apiUtils";
 
@@ -133,6 +134,13 @@ export const treatmentPlanApi = {
     const response = await apiClient.post<
       ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
     >(API_ENDPOINTS.PLANS.APPLY(planId), payload);
+    return unwrapApiData(response.data);
+  },
+
+  applyPlanToAllFarms: async (planId: string, payload: ApplyToAllFarmsRequest) => {
+    const response = await apiClient.post<
+      ApiEnvelope<PlanApplyResponse> | PlanApplyResponse
+    >(API_ENDPOINTS.PLANS.APPLY_TO_ALL_FARMS(planId), payload);
     return unwrapApiData(response.data);
   },
 

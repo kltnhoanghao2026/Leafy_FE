@@ -12,12 +12,26 @@ import type {
 
 // ── Conversion ────────────────────────────────────────────────────────────────
 
-const todayDate = new Date();
-const today = toLocalDateOnly(todayDate);
+// ── PlanPreviewCalendar ───────────────────────────────────────────────────────
 
-function toPreviewEvent(evt: PlantEventCreateRequest, idx: number): PlantEventResponse {
+interface Props {
+  /** Events to preview */
+  draftEvents: PlantEventCreateRequest[];
+  /**
+   * Base date used to compute each event's calendar position.
+   * Defaults to today when omitted.
+   */
+  baseDate?: Date;
+}
+
+function toPreviewEvent(
+  evt: PlantEventCreateRequest,
+  idx: number,
+  baseDate: Date,
+  baseDateOnly: string,
+): PlantEventResponse {
   const startDate =
-    evt.daysFromStart != null ? addLocalDays(todayDate, evt.daysFromStart) : today;
+    evt.daysFromStart != null ? addLocalDays(baseDate, evt.daysFromStart) : baseDateOnly;
   const endDate =
     evt.durationDays != null && evt.durationDays > 0
       ? addLocalDays(startDate, evt.durationDays - 1)
@@ -49,16 +63,16 @@ function toPreviewEvent(evt: PlantEventCreateRequest, idx: number): PlantEventRe
   };
 }
 
-// ── PlanPreviewCalendar ───────────────────────────────────────────────────────
+export function PlanPreviewCalendar({ draftEvents, baseDate }: Props) {
+  const resolvedBaseDate = baseDate ?? new Date();
+  const resolvedBaseDateOnly = toLocalDateOnly(resolvedBaseDate);
 
-interface Props {
-  draftEvents: PlantEventCreateRequest[];
-}
-
-export function PlanPreviewCalendar({ draftEvents }: Props) {
   const events = useMemo(
-    () => draftEvents.map((evt, i) => toPreviewEvent(evt, i)),
-    [draftEvents],
+    () =>
+      draftEvents.map((evt, i) =>
+        toPreviewEvent(evt, i, resolvedBaseDate, resolvedBaseDateOnly),
+      ),
+    [draftEvents, resolvedBaseDate, resolvedBaseDateOnly],
   );
 
   if (draftEvents.length === 0) {

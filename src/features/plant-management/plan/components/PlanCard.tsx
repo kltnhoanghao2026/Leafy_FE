@@ -20,7 +20,7 @@ export interface PlanCardProps {
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
   onDelete?: (plan: PlanResponse) => void;
-  /** Called when the user clicks "Áp dụng" on a public plan card */
+  /** Called when the user clicks "Áp dụng" on a plan card */
   onApply?: () => void;
   detailUrl: string;
   variant?: "grid" | "list";
@@ -172,7 +172,7 @@ function PlanCardGrid({
         >
           {t('plantManagement.common.viewDetail')}
         </Link>
-        {isPublicView && onApply && (
+        {onApply && (
           <button
             type="button"
             onClick={onApply}
@@ -314,7 +314,7 @@ function PlanCardList({
         >
           {t('plantManagement.common.viewShort')}
         </Link>
-        {isPublicView && onApply && (
+        {onApply && (
           <button
             type="button"
             onClick={onApply}

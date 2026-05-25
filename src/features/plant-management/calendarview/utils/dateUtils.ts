@@ -17,9 +17,6 @@ export function buildEventsByDate(
   for (const evt of events) {
     const start = evt.calculatedStartDate;
     if (!start) continue;
-    // Use durationDays to derive the inclusive end date, matching hover/event-row logic.
-    // calculatedEndDate may be computed as start + durationDays (inclusive), so subtract 1
-    // when durationDays is available to get the correct visual span.
     const end = evt.durationDays != null && evt.durationDays > 0
       ? addLocalDays(start, evt.durationDays - 1)
       : (evt.calculatedEndDate ?? start);

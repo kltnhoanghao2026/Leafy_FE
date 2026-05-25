@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  CalendarDays, Check, ClipboardList,
+  CalendarDays, Check, ClipboardList, Sparkles,
   Globe, Layers, Loader2, Lock, Minus, Play, Plus, RefreshCw, Search,
   Trash2, Users, X,
 } from "lucide-react";
@@ -10,9 +10,11 @@ import { ROUTES } from "../../../../lib/routes";
 import { PagedGrid } from "../../../../components/ui/PagedGrid";
 import { FilterCard } from "../../../../components/ui/FilterCard";
 import { PlanCard } from "../components/PlanCard";
+import { RagPlanCard } from "../components/RagPlanCard";
 import { PlanApplyCard } from "../components/PlanApplyCard";
 import {
   useBulkApplyPlansMutation,
+  useBulkApplyCustomMutation,
   useBulkDeletePlansMutation,
   useBulkUpdateApplyStatusMutation,
   useCancelApplyMutation,
@@ -21,19 +23,20 @@ import {
   useMyPlans,
   usePlants,
   usePublicPlans,
+  useRagPlans,
   useUpdateApplyStatusMutation,
+  useApplyPlanToAllFarmsMutation,
 } from "../..";
-import { useBulkApplyCustomMutation } from "../queries/plan.queries";
 import { CancelApplyDialog } from "../components/CancelApplyDialog";
 import { useSearchPlans } from "../../../search/queries";
-import type { PlanApplyRequest, PlanResponse, PlanSourceType, PublicPlanListParams, TreatmentStatus } from "../../shared/types";
+import type { ApplyToAllFarmsRequest, PlanApplyRequest, PlanResponse, PlanSourceType, PublicPlanListParams, RagPlanResponse, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
 import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
 import { BulkApplyCustomDialog } from "../components/BulkApplyCustomDialog";
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type ViewTab = "my" | "public" | "applied";
+type ViewTab = "my" | "public" | "applied" | "rag";
 
 const STATUS_OPTIONS: Array<{ value: TreatmentStatus | ""; label: string }> = [
   { value: "", label: "Tất cả trạng thái" },
@@ -84,6 +87,7 @@ export function PlansPage() {
   const pubPlansQuery = usePublicPlans({ search: search || undefined, sourceType: sourceTypeFilter || undefined, severityLevel: severityLevelFilter || undefined, urgency: urgencyFilter || undefined, page, size: pageSize } satisfies PublicPlanListParams);
   const myAppliesQuery = useMyApplies({ status: applyStatusFilter || undefined, page, size: pageSize });
   const plantsQuery   = usePlants();
+  const ragPlansQuery = useRagPlans({ page, size: pageSize });
 
   // ES-powered search for public plans (when search term has >= 2 chars)
   const hasEsSearch = viewTab === "public" && search.trim().length >= 2;
@@ -111,8 +115,11 @@ export function PlansPage() {
         confidenceScore: item.confidenceScore ?? 0,
         severityLevel: item.severityLevel ?? "",
         applyCount: item.applyCount ?? 0,
+        successApplyCount: (item as unknown as { successApplyCount?: number }).successApplyCount ?? null,
+        failedApplyCount: (item as unknown as { failedApplyCount?: number }).failedApplyCount ?? null,
         applies: [],
         isPublic: item.isPublic ?? true,
+        isConsulted: false,
         sourceType: item.sourceType as PlanSourceType ?? 'USER_CREATED',
         ownerInfo: null,
         creatorInfo: item.creatorInfo ? {
@@ -147,6 +154,7 @@ export function PlansPage() {
   const bulkDeletePlans  = useBulkDeletePlansMutation();
   const bulkApplyPlans   = useBulkApplyPlansMutation();
   const bulkApplyCustom  = useBulkApplyCustomMutation();
+  const applyToAllFarms  = useApplyPlanToAllFarmsMutation();
   const updateApplyStatus = useUpdateApplyStatusMutation();
   const cancelApply     = useCancelApplyMutation();
 
@@ -161,9 +169,10 @@ export function PlansPage() {
     return m;
   }, [myPlansQuery.data]);
 
-  const activeQuery = viewTab === "my" ? myPlansQuery : viewTab === "public" ? effectivePubQuery : myAppliesQuery;
-  const paginatedPlans = viewTab !== "applied" ? (activeQuery.data?.content ?? []) : [];
+  const activeQuery = viewTab === "my" ? myPlansQuery : viewTab === "public" ? effectivePubQuery : viewTab === "rag" ? ragPlansQuery : myAppliesQuery;
+  const paginatedPlans = viewTab === "rag" ? [] : viewTab !== "applied" ? (activeQuery.data?.content ?? []) : [];
   const paginatedApplies = viewTab === "applied" ? (myAppliesQuery.data?.content ?? []) : [];
+  const paginatedRagPlans = viewTab === "rag" ? (ragPlansQuery.data ?? []) : [];
   const totalPages = activeQuery.data?.totalPages ?? 0;
 
   // Reset page & selection when tab / filters change
@@ -186,14 +195,14 @@ export function PlansPage() {
   const toggleSelect = (id: string) =>
     setSelectedIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
-  const allPageSelected  = paginatedPlans.length > 0 && paginatedPlans.every((p) => selectedIds.has(p.id));
-  const somePageSelected = paginatedPlans.some((p) => selectedIds.has(p.id)) && !allPageSelected;
+  const allPageSelected  = paginatedPlans.length > 0 && paginatedPlans.every((p: PlanResponse) => selectedIds.has(p.id));
+  const somePageSelected = paginatedPlans.some((p: PlanResponse) => selectedIds.has(p.id)) && !allPageSelected;
 
   const handleSelectAll = () => {
     if (allPageSelected) {
-      setSelectedIds((prev) => { const n = new Set(prev); paginatedPlans.forEach((p) => n.delete(p.id)); return n; });
+      setSelectedIds((prev) => { const n = new Set(prev); paginatedPlans.forEach((p: PlanResponse) => n.delete(p.id)); return n; });
     } else {
-      setSelectedIds((prev) => new Set([...prev, ...paginatedPlans.map((p) => p.id)]));
+      setSelectedIds((prev) => new Set([...prev, ...paginatedPlans.map((p: PlanResponse) => p.id)]));
     }
   };
 
@@ -254,6 +263,7 @@ export function PlansPage() {
       <div className="flex gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 w-fit">
         {([
           { key: "my" as const, icon: Lock, label: "Kế hoạch của tôi" },
+          { key: "rag" as const, icon: Sparkles, label: "Kế hoạch AI" },
           { key: "applied" as const, icon: Play, label: "Đã áp dụng" },
           { key: "public" as const, icon: Globe, label: "Cộng đồng" },
         ] as const).map(({ key, icon: Icon, label }) => (
@@ -280,6 +290,17 @@ export function PlansPage() {
           <p className="text-sm font-semibold text-blue-700">
             Đây là các kế hoạch điều trị được chia sẻ công khai bởi cộng đồng nông dân.
             Bạn có thể áp dụng chúng trực tiếp vào cây trồng hoặc lô đất của mình.
+          </p>
+        </div>
+      )}
+
+      {/* ── RAG Plans info banner ── */}
+      {viewTab === "rag" && (
+        <div className="flex items-start gap-3 rounded-2xl border border-purple-100 bg-purple-50 px-5 py-4">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-purple-500" />
+          <p className="text-sm font-semibold text-purple-700">
+            Đây là các kế hoạch được tạo bởi AI từ dữ liệu tài liệu chuyên môn và tìm kiếm web.
+            Nội dung được lưu trong hệ thống RAG.
           </p>
         </div>
       )}
@@ -573,11 +594,20 @@ export function PlansPage() {
       )}
 
       {/* ── Empty state ── */}
-      {!activeQuery.isLoading && !activeQuery.isError && viewTab !== "applied" && paginatedPlans.length === 0 && (
+      {!activeQuery.isLoading && !activeQuery.isError && viewTab !== "applied" && viewTab !== "rag" && paginatedPlans.length === 0 && (
         <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
           {viewTab === "public" ? <Globe className="mx-auto h-10 w-10 text-slate-300" /> : <ClipboardList className="mx-auto h-10 w-10 text-slate-300" />}
           <h3 className="mt-4 text-xl font-black text-slate-900">{emptyTitle}</h3>
           <p className="mt-2 text-sm font-semibold text-slate-500">{emptyDesc}</p>
+        </div>
+      )}
+      {!activeQuery.isLoading && !activeQuery.isError && viewTab === "rag" && paginatedRagPlans.length === 0 && (
+        <div className="rounded-[2rem] border border-dashed border-slate-200 bg-white p-10 text-center shadow-sm">
+          <Sparkles className="mx-auto h-10 w-10 text-slate-300" />
+          <h3 className="mt-4 text-xl font-black text-slate-900">Chưa có kế hoạch AI</h3>
+          <p className="mt-2 text-sm font-semibold text-slate-500">
+            Khi bạn tạo kế hoạch từ AI, danh sách sẽ hiển thị tại đây.
+          </p>
         </div>
       )}
       {!activeQuery.isLoading && !activeQuery.isError && viewTab === "applied" && paginatedApplies.length === 0 && (
@@ -589,7 +619,7 @@ export function PlansPage() {
       )}
 
       {/* ── Plan grid (my / public) ── */}
-      {viewTab !== "applied" && (
+      {viewTab !== "applied" && viewTab !== "rag" && (
         <PagedGrid
           viewMode={viewMode}
           page={page}
@@ -609,10 +639,33 @@ export function PlansPage() {
               selected={viewTab === "my" ? selectedIds.has(plan.id) : false}
               onToggleSelect={viewTab === "my" ? toggleSelect : undefined}
               onDelete={viewTab === "my" ? setDeleteTarget : undefined}
-              onApply={viewTab === "public" ? () => setApplyTarget(plan) : undefined}
+              onApply={() => setApplyTarget(plan)}
               detailUrl={ROUTES.DASHBOARD.PLAN_DETAIL(plan.id)}
               variant={viewMode}
               isPublicView={viewTab === "public"}
+            />
+          ))}
+        </PagedGrid>
+      )}
+
+      {/* ── RAG Plans grid ── */}
+      {viewTab === "rag" && (
+        <PagedGrid
+          viewMode={viewMode}
+          page={page}
+          totalPages={Math.ceil((ragPlansQuery.data?.length ?? 0) / pageSize)}
+          totalElements={ragPlansQuery.data?.length ?? 0}
+          itemLabel="kế hoạch AI"
+          onPageChange={setPage}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+        >
+          {paginatedRagPlans.map((plan: RagPlanResponse) => (
+            <RagPlanCard
+              key={plan.planId}
+              plan={plan}
+              variant={viewMode}
             />
           ))}
         </PagedGrid>
@@ -677,7 +730,7 @@ export function PlansPage() {
       )}
       {bulkApplyCustomOpen && (
         <BulkApplyCustomDialog
-          plans={paginatedPlans.filter((p) => selectedIds.has(p.id))}
+          plans={paginatedPlans.filter((p: PlanResponse) => selectedIds.has(p.id))}
           isSubmitting={bulkApplyCustom.isPending}
           onClose={() => setBulkApplyCustomOpen(false)}
           onSubmit={(payload) =>
@@ -686,17 +739,25 @@ export function PlansPage() {
         />
       )}
 
-      {/* ── Public Plans: apply dialog ── */}
+      {/* ── Apply dialog (shared for public + my plans; mode toggle inside) ── */}
       {applyTarget && (
         <ApplyPlanDialog
           plan={applyTarget}
-          isSubmitting={bulkApplyPlans.isPending}
+          isSubmitting={bulkApplyPlans.isPending || applyToAllFarms.isPending}
           onClose={() => setApplyTarget(null)}
-          onSubmit={(payload) =>
-            void bulkApplyPlans.mutateAsync({ planIds: [applyTarget.id], payload }).then(() => setApplyTarget(null))
-          }
+          onSubmit={(payload) => {
+            const isSpecificScope = "plantId" in payload || "farmPlotId" in payload || "farmZoneId" in payload;
+            if (isSpecificScope) {
+              void bulkApplyPlans.mutateAsync({ planIds: [applyTarget.id], payload: payload as PlanApplyRequest }).then(() => setApplyTarget(null));
+            } else {
+              void applyToAllFarms.mutateAsync({ planId: applyTarget.id, payload: payload as ApplyToAllFarmsRequest }).then(() => setApplyTarget(null));
+            }
+          }}
         />
       )}
+
+      {/* ── My Plans: apply dialog (specific scope + all-farms modes) ── */}
+      {/* Uses same applyTarget state; dispatch handled inside onSubmit above */}
 
       {/* ── Cancel apply dialog ── */}
       {cancelTarget && (
