@@ -21,3 +21,18 @@ export const useAlertEvents = (
     enabled,
   });
 };
+
+export const useOpenAlertCount = (enabled = true) =>
+  useQuery({
+    queryKey: alertKeys.openCount(),
+    queryFn: () =>
+      collectorApi.getAlertEvents({
+        status: "OPEN",
+        page: 0,
+        size: 1,
+        sortBy: "openedAt",
+        sortDir: "desc",
+      }),
+    select: (response) => response.data.totalItems ?? 0,
+    enabled,
+  });

@@ -11,6 +11,9 @@ export const notificationsEn: WidenStrings<typeof notificationsVi> = {
   markAllRead: 'Mark all as read',
   markAllReadAriaLabel: 'Mark all as read',
   bellAriaLabel: 'Notifications',
+  popoverTabsAriaLabel: 'Choose notification type',
+  popoverTabNotifications: 'Notifications',
+  popoverTabAlerts: 'Alerts',
 
   // ── Popover body states ───────────────────────────────────────────────────
   loadError: 'Could not load notifications.',
@@ -18,6 +21,10 @@ export const notificationsEn: WidenStrings<typeof notificationsVi> = {
   empty: 'No notifications yet.',
   allShown: 'All notifications shown',
   seeAll: 'See all notifications',
+  popoverAlertsError: 'Could not load alerts.',
+  popoverAlertsEmpty: 'No alerts need attention.',
+  popoverAlertsViewAll: 'View all alerts',
+  popoverAlertsFallbackMessage: 'New alert needs attention',
 
   // ── Notifications page ────────────────────────────────────────────────────
   pageTitle: 'Notifications',

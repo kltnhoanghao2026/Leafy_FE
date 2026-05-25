@@ -312,6 +312,30 @@ export const vi = {
         resolve: "Đánh dấu đã xử lý",
         resolving: "Đang xử lý...",
       },
+      bulk: {
+        selected: (count: number) => `Đã chọn ${count} cảnh báo`,
+        canAcknowledge: (count: number) =>
+          `${count} có thể đánh dấu đã xem`,
+        canResolve: (count: number) => `${count} có thể xử lý`,
+        acknowledge: "Đánh dấu đã xem",
+        acknowledgePending: "Đang đánh dấu...",
+        resolve: "Đánh dấu đã xử lý",
+        resolvePending: "Đang xử lý...",
+        clear: "Bỏ chọn",
+        ackSuccess: (count: number) =>
+          `Đã đánh dấu đã xem ${count} cảnh báo.`,
+        resolveSuccess: (count: number) =>
+          `Đã đánh dấu đã xử lý ${count} cảnh báo.`,
+        partialAck: (success: number, total: number, failed: number) =>
+          `Đã đánh dấu đã xem ${success}/${total} cảnh báo. ${failed} cảnh báo thất bại.`,
+        partialResolve: (success: number, total: number, failed: number) =>
+          `Đã đánh dấu đã xử lý ${success}/${total} cảnh báo. ${failed} cảnh báo thất bại.`,
+        noEligibleAck: "Không có cảnh báo nào có thể đánh dấu đã xem.",
+        noEligibleResolve: "Không có cảnh báo nào có thể đánh dấu đã xử lý.",
+        selectAllPage: "Chọn tất cả cảnh báo trên trang hiện tại",
+        selectAlert: (type: string, time: string) =>
+          `Chọn cảnh báo ${type} mở lúc ${time}`,
+      },
       states: {
         loading: "Đang tải cảnh báo",
         empty: "Không có cảnh báo",
@@ -943,8 +967,17 @@ export const vi = {
         missingLocation: "Hãy chọn đầy đủ vườn và khu vực trước khi kết nối.",
         qrEmpty: "Nội dung QR đang trống. Hãy dán JSON từ mã QR vào ô kiểm thử.",
         qrInvalidJson: "QR không hợp lệ: nội dung phải là JSON hợp lệ.",
+        qrNotLeafyDevice: "Mã QR này không phải thiết bị IoT Leafy.",
+        qrUnsupportedVersion: "Phiên bản mã QR thiết bị chưa được hỗ trợ.",
         qrMissingFields: (fields: string) => `QR thiếu thông tin bắt buộc: ${fields}.`,
         qrMissingRequired: "QR không hợp lệ: thiếu deviceUid, deviceCode hoặc deviceType.",
+        setupInfoTitle: "Thông tin thiết lập thiết bị",
+        setupInfoFirmware: "Firmware",
+        setupInfoWifi: "Wi-Fi thiết lập",
+        setupInfoPortal: "Cổng thiết lập",
+        setupInfoHint:
+          "Nếu cổng thiết lập không tự mở, hãy kết nối Wi-Fi của thiết bị và mở địa chỉ cổng thiết lập.",
+        setupInfoOpenPortal: "Mở cổng thiết lập",
         errorAuth:
           "Phiên đăng nhập đã hết hạn hoặc thiếu thông tin người dùng. Hãy đăng nhập lại rồi thử kết nối thiết bị.",
         errorDuplicate: "Thiết bị này đã tồn tại. Hãy kiểm tra lại deviceUid hoặc deviceCode.",

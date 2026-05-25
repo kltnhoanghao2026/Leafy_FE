@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -6,6 +8,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import {
+  alertKeys,
   useAcknowledgeAlert,
   useAlertEvents,
   useResolveAlert,
@@ -17,25 +20,24 @@ import type {
   AlertSeverity,
   AlertStatus,
 } from "../../../types/iot";
-import {
-  formatDateTime,
-  formatNumber,
-} from "../../metrics-view/utils/format";
+import { formatDateTime } from "../../metrics-view/utils/format";
 import { Select } from "../../../components/ui/Select";
 import { useTranslation } from "../../../i18n";
 import {
   formatAlertStatusLabel,
   formatAlertTypeLabel,
-  formatSensorLabel,
   formatSeverityLabel,
 } from "../../iot/utils/iotTranslation";
-import { useInferredSensorTypeOptions } from "../hooks/useInferredSensorTypeOptions";
 import {
   alertSeverityClasses,
   alertStatusClasses,
 } from "../utils/alertLabels";
+import { collectorApi } from "../../../lib/api/collectorApi";
+import { AlertMessageSummary } from "../components/AlertMessageSummary";
 
 type TimeRange = "all" | "24h" | "7d" | "30d";
+type BulkAction = "acknowledge" | "resolve";
+type BulkMessageTone = "success" | "warning";
 
 const severityOptions: AlertSeverity[] = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const statusOptions: AlertStatus[] = [
@@ -45,127 +47,14 @@ const statusOptions: AlertStatus[] = [
   "CLOSED",
 ];
 
-const appendUnit = (value: string, unit?: string) => (unit ? `${value} ${unit}` : value);
+const canAcknowledgeAlert = (alert: AlertEventItemResponse) =>
+  alert.status === "OPEN";
 
-const normalizeDiseaseKey = (value: string) =>
-  value.trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+const canResolveAlert = (alert: AlertEventItemResponse) =>
+  alert.status === "OPEN" || alert.status === "ACKNOWLEDGED";
 
-const parseDiseaseAlertMessage = (message?: string | null) => {
-  if (!message) return null;
-  const match = message.match(/disease detected from camera image:\s*(.+?)(?:\s*\(confidence\s*([0-9.]+)\))?$/i);
-  if (!match?.[1]) return null;
-  return {
-    diseaseName: match[1].trim(),
-    confidence: match[2] ? Number(match[2]) : null,
-  };
-};
-
-const formatDiseaseLabel = (
-  t: ReturnType<typeof useTranslation>["t"],
-  diseaseName?: string | null,
-) => {
-  if (!diseaseName) return t("iot.alerts.disease.unknown");
-  const key = `iot.alerts.disease.names.${normalizeDiseaseKey(diseaseName)}` as Parameters<typeof t>[0];
-  const translated = t(key) as string;
-  return translated && translated !== key ? translated : diseaseName;
-};
-
-const readableAlertDescription = (
-  t: ReturnType<typeof useTranslation>["t"],
-  alert: AlertEventItemResponse,
-  sensorLabel: string,
-  unit?: string,
-) => {
-  const min = alert.thresholdMin != null ? appendUnit(formatNumber(alert.thresholdMin), unit) : "";
-  const max = alert.thresholdMax != null ? appendUnit(formatNumber(alert.thresholdMax), unit) : "";
-
-  if (alert.alertType === "DISEASE_DETECTED") {
-    const disease = formatDiseaseLabel(t, parseDiseaseAlertMessage(alert.message)?.diseaseName);
-    return t("iot.alerts.message.diseaseDetected")(disease);
-  }
-
-  if (alert.alertType === "THRESHOLD_HIGH" || (alert.thresholdMax != null && alert.thresholdMin == null)) {
-    return t("iot.alerts.message.thresholdHigh")(sensorLabel, max);
-  }
-
-  if (alert.alertType === "THRESHOLD_LOW" || (alert.thresholdMin != null && alert.thresholdMax == null)) {
-    return t("iot.alerts.message.thresholdLow")(sensorLabel, min);
-  }
-
-  if (alert.alertType === "THRESHOLD_RANGE" || (alert.thresholdMin != null && alert.thresholdMax != null)) {
-    return t("iot.alerts.message.thresholdRange")(sensorLabel, min, max);
-  }
-
-  return t("iot.alerts.message.conditionTriggered")(sensorLabel);
-};
-
-function AlertMessageSummary({
-  alert,
-  t,
-}: {
-  alert: AlertEventItemResponse;
-  t: ReturnType<typeof useTranslation>["t"];
-}) {
-  const { sensorOptions, isLoading } = useInferredSensorTypeOptions(
-    alert.deviceId ?? "",
-    alert.zoneId ?? "",
-  );
-  const sensor = sensorOptions.find((option) => option.id === alert.sensorTypeId);
-  const sensorLabel = sensor
-    ? formatSensorLabel(t, sensor.code, sensor.name)
-    : t("iot.alerts.value.unknownSensorData");
-  const unit = sensor?.unit;
-  const diseaseInfo = parseDiseaseAlertMessage(alert.message);
-  const isDiseaseAlert = alert.alertType === "DISEASE_DETECTED";
-
-  if (isDiseaseAlert) {
-    const disease = formatDiseaseLabel(t, diseaseInfo?.diseaseName);
-    const confidence = alert.triggerValue ?? diseaseInfo?.confidence ?? null;
-
-    return (
-      <>
-        <p className="mt-1 text-xs font-semibold text-slate-500">
-          {t("iot.alerts.message.diseaseDetected")(disease)}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-slate-400">
-          {confidence == null
-            ? t("iot.alerts.disease.confidenceUnknown")
-            : t("iot.alerts.disease.confidence")(formatNumber(confidence * 100))}
-        </p>
-      </>
-    );
-  }
-
-  const measuredValue =
-    alert.triggerValue === null || alert.triggerValue === undefined
-      ? t("iot.alerts.value.noReading")
-      : t("iot.alerts.value.measured")(appendUnit(formatNumber(alert.triggerValue), unit));
-
-  const rangeText =
-    alert.thresholdMin !== null && alert.thresholdMax !== null
-      ? t("iot.alerts.value.safeRange")(
-          appendUnit(formatNumber(alert.thresholdMin), unit),
-          appendUnit(formatNumber(alert.thresholdMax), unit),
-        )
-      : alert.thresholdMax !== null && alert.thresholdMax !== undefined
-        ? t("iot.alerts.value.maxThreshold")(appendUnit(formatNumber(alert.thresholdMax), unit))
-        : alert.thresholdMin !== null && alert.thresholdMin !== undefined
-          ? t("iot.alerts.value.minThreshold")(appendUnit(formatNumber(alert.thresholdMin), unit))
-          : "";
-
-  return (
-    <>
-      <p className="mt-1 text-xs font-semibold text-slate-500">
-        {isLoading
-          ? t("iot.alerts.message.loadingSensor")
-          : readableAlertDescription(t, alert, sensorLabel, unit)}
-      </p>
-      <p className="mt-1 text-xs font-semibold text-slate-400">
-        {rangeText ? `${measuredValue}; ${rangeText}` : measuredValue}
-      </p>
-    </>
-  );
-}
+const parseAlertStatusParam = (value: string | null): AlertStatus | "" =>
+  statusOptions.includes(value as AlertStatus) ? (value as AlertStatus) : "";
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
   if (range === "all") {
@@ -193,15 +82,27 @@ const timeRangeToIsoWindow = (range: TimeRange) => {
 
 export function AlertsPage() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const focusedAlertId = searchParams.get("alertId");
+  const focusedStatus = parseAlertStatusParam(searchParams.get("status"));
   const [selectedFarmPlotId, setSelectedFarmPlotId] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [selectedTimeRange, setSelectedTimeRange] =
     useState<TimeRange>("all");
   const [severity, setSeverity] = useState<AlertSeverity | "">("");
-  const [status, setStatus] = useState<AlertStatus | "">("");
+  const [status, setStatus] = useState<AlertStatus | "">(focusedStatus);
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(20);
+  const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [bulkAction, setBulkAction] = useState<BulkAction | null>(null);
+  const [bulkMessage, setBulkMessage] = useState<{
+    tone: BulkMessageTone;
+    text: string;
+  } | null>(null);
 
   const {
     profileQuery,
@@ -253,10 +154,67 @@ export function AlertsPage() {
   const resolveAlert = useResolveAlert();
   const pagedAlerts = alertEventsQuery.data;
   const alerts = pagedAlerts?.items ?? [];
+  const selectedAlerts = useMemo(
+    () => alerts.filter((alert) => selectedAlertIds.has(alert.id)),
+    [alerts, selectedAlertIds],
+  );
+  const selectedCount = selectedAlertIds.size;
+  const acknowledgeEligibleAlerts = selectedAlerts.filter(canAcknowledgeAlert);
+  const resolveEligibleAlerts = selectedAlerts.filter(canResolveAlert);
+  const currentPageAlertIds = useMemo(
+    () => alerts.map((alert) => alert.id),
+    [alerts],
+  );
+  const allCurrentPageSelected =
+    currentPageAlertIds.length > 0 &&
+    currentPageAlertIds.every((id) => selectedAlertIds.has(id));
+  const someCurrentPageSelected = currentPageAlertIds.some((id) =>
+    selectedAlertIds.has(id),
+  );
 
   const resetToFirstPage = () => setPage(0);
   const lifecycleActionError =
     acknowledgeAlert.isError || resolveAlert.isError;
+  const isBulkRunning = bulkAction !== null;
+
+  useEffect(() => {
+    setSelectedAlertIds(new Set());
+    setBulkMessage(null);
+  }, [
+    effectiveSelectedDeviceId,
+    page,
+    selectedFarmPlotId,
+    selectedTimeRange,
+    selectedZoneId,
+    severity,
+    size,
+    status,
+  ]);
+
+  useEffect(() => {
+    if (!focusedAlertId) {
+      return;
+    }
+
+    setSelectedFarmPlotId("");
+    setSelectedZoneId("");
+    setSelectedDeviceId("");
+    setSelectedTimeRange("all");
+    setSeverity("");
+    setStatus(focusedStatus || "OPEN");
+    setPage(0);
+  }, [focusedAlertId, focusedStatus]);
+
+  useEffect(() => {
+    if (!focusedAlertId || alertEventsQuery.isFetching) {
+      return;
+    }
+
+    const element = document.getElementById(`alert-event-${focusedAlertId}`);
+    if (typeof element?.scrollIntoView === "function") {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [alertEventsQuery.isFetching, focusedAlertId, alerts]);
 
   const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
     { value: "24h", label: t("iot.alerts.timeRanges.last24h") },
@@ -270,6 +228,99 @@ export function AlertsPage() {
 
   const isResolving = (alertId: string) =>
     resolveAlert.isPending && resolveAlert.variables === alertId;
+
+  const clearSelection = () => {
+    setSelectedAlertIds(new Set());
+    setBulkMessage(null);
+  };
+
+  const toggleAlertSelection = (alertId: string) => {
+    setSelectedAlertIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(alertId)) {
+        next.delete(alertId);
+      } else {
+        next.add(alertId);
+      }
+      return next;
+    });
+    setBulkMessage(null);
+  };
+
+  const toggleSelectAllCurrentPage = () => {
+    setSelectedAlertIds((previous) => {
+      const next = new Set(previous);
+
+      if (allCurrentPageSelected) {
+        currentPageAlertIds.forEach((id) => next.delete(id));
+      } else {
+        currentPageAlertIds.forEach((id) => next.add(id));
+      }
+
+      return next;
+    });
+    setBulkMessage(null);
+  };
+
+  const runBulkAction = async (action: BulkAction, ids: string[]) => {
+    if (ids.length === 0) {
+      setBulkMessage({
+        tone: "warning",
+        text:
+          action === "acknowledge"
+            ? t("iot.alerts.bulk.noEligibleAck")
+            : t("iot.alerts.bulk.noEligibleResolve"),
+      });
+      return;
+    }
+
+    setBulkAction(action);
+    setBulkMessage(null);
+
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          action === "acknowledge"
+            ? collectorApi.acknowledgeAlert(id)
+            : collectorApi.resolveAlert(id),
+        ),
+      );
+      const failedIds = ids.filter(
+        (_id, index) => results[index]?.status === "rejected",
+      );
+      const successCount = ids.length - failedIds.length;
+      const failedCount = failedIds.length;
+
+      setBulkMessage({
+        tone: failedCount > 0 ? "warning" : "success",
+        text:
+          action === "acknowledge"
+            ? failedCount > 0
+              ? t("iot.alerts.bulk.partialAck")(successCount, ids.length, failedCount)
+              : t("iot.alerts.bulk.ackSuccess")(successCount)
+            : failedCount > 0
+              ? t("iot.alerts.bulk.partialResolve")(successCount, ids.length, failedCount)
+              : t("iot.alerts.bulk.resolveSuccess")(successCount),
+      });
+      setSelectedAlertIds(new Set(failedIds));
+
+      await queryClient.invalidateQueries({ queryKey: alertKeys.all() });
+    } finally {
+      setBulkAction(null);
+    }
+  };
+
+  const handleBulkAcknowledge = () =>
+    void runBulkAction(
+      "acknowledge",
+      acknowledgeEligibleAlerts.map((alert) => alert.id),
+    );
+
+  const handleBulkResolve = () =>
+    void runBulkAction(
+      "resolve",
+      resolveEligibleAlerts.map((alert) => alert.id),
+    );
 
   const resolveDeviceLabel = (deviceId: string | null) => {
     if (!deviceId) return t("iot.alerts.scope.noDevice");
@@ -562,6 +613,73 @@ export function AlertsPage() {
             </div>
           </div>
 
+          {selectedCount > 0 ? (
+            <div className="border-b border-slate-100 bg-[#F8FBF8] p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm font-black text-[#1f4d2d]">
+                    {t("iot.alerts.bulk.selected")(selectedCount)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-600">
+                    {[
+                      t("iot.alerts.bulk.canAcknowledge")(
+                        acknowledgeEligibleAlerts.length,
+                      ),
+                      t("iot.alerts.bulk.canResolve")(
+                        resolveEligibleAlerts.length,
+                      ),
+                    ].join(" · ")}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleBulkAcknowledge}
+                    disabled={
+                      isBulkRunning || acknowledgeEligibleAlerts.length === 0
+                    }
+                    className="rounded-full border border-[#245A34]/20 bg-white px-4 py-2 text-xs font-black text-[#245A34] hover:bg-[#EEF6EF] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {bulkAction === "acknowledge"
+                      ? t("iot.alerts.bulk.acknowledgePending")
+                      : t("iot.alerts.bulk.acknowledge")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleBulkResolve}
+                    disabled={isBulkRunning || resolveEligibleAlerts.length === 0}
+                    className="rounded-full bg-[#245A34] px-4 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {bulkAction === "resolve"
+                      ? t("iot.alerts.bulk.resolvePending")
+                      : t("iot.alerts.bulk.resolve")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={clearSelection}
+                    disabled={isBulkRunning}
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {t("iot.alerts.bulk.clear")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {bulkMessage ? (
+            <div
+              role="alert"
+              className={`border-b p-4 text-sm font-bold ${
+                bulkMessage.tone === "success"
+                  ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                  : "border-amber-100 bg-amber-50 text-amber-700"
+              }`}
+            >
+              {bulkMessage.text}
+            </div>
+          ) : null}
+
           {alerts.length === 0 ? (
             <div className="p-10 text-center">
               <AlertTriangle className="mx-auto h-8 w-8 text-slate-400" />
@@ -577,6 +695,23 @@ export function AlertsPage() {
               <table className="min-w-full text-left" aria-label={t("iot.alerts.table.aria")}>
                 <thead className="bg-slate-50">
                   <tr>
+                    <th className="w-12 px-5 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={t("iot.alerts.bulk.selectAllPage")}
+                        checked={allCurrentPageSelected}
+                        ref={(element) => {
+                          if (element) {
+                            element.indeterminate =
+                              someCurrentPageSelected &&
+                              !allCurrentPageSelected;
+                          }
+                        }}
+                        onChange={toggleSelectAllCurrentPage}
+                        disabled={currentPageAlertIds.length === 0 || isBulkRunning}
+                        className="h-4 w-4 rounded border-slate-300 text-[#245A34] focus:ring-[#245A34]"
+                      />
+                    </th>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
                       {t("iot.alerts.table.alert")}
                     </th>
@@ -599,21 +734,44 @@ export function AlertsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {alerts.map((alert) => {
-                    const canAcknowledge = alert.status === "OPEN";
-                    const canResolve =
-                      alert.status === "OPEN" ||
-                      alert.status === "ACKNOWLEDGED";
+                    const canAcknowledge = canAcknowledgeAlert(alert);
+                    const canResolve = canResolveAlert(alert);
                     const acknowledgePending = isAcknowledging(alert.id);
                     const resolvePending = isResolving(alert.id);
                     const actionPending = acknowledgePending || resolvePending;
+                    const alertTypeLabel =
+                      alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType);
+                    const openedAtLabel =
+                      alert.display?.openedAt ?? formatDateTime(alert.openedAt);
 
                     return (
-                      <tr key={alert.id} className="hover:bg-slate-50/60">
+                      <tr
+                        key={alert.id}
+                        id={`alert-event-${alert.id}`}
+                        className={`scroll-mt-24 transition-colors ${
+                          focusedAlertId === alert.id
+                            ? "bg-emerald-50/70 ring-2 ring-inset ring-[#245A34]/25"
+                            : "hover:bg-slate-50/60"
+                        }`}
+                      >
+                        <td className="px-5 py-4 align-top">
+                          <input
+                            type="checkbox"
+                            aria-label={t("iot.alerts.bulk.selectAlert")(
+                              alertTypeLabel,
+                              openedAtLabel,
+                            )}
+                            checked={selectedAlertIds.has(alert.id)}
+                            onChange={() => toggleAlertSelection(alert.id)}
+                            disabled={isBulkRunning}
+                            className="h-4 w-4 rounded border-slate-300 text-[#245A34] focus:ring-[#245A34]"
+                          />
+                        </td>
                         <td className="px-5 py-4 align-top">
                           <p className="text-sm font-black text-slate-800">
-                            {alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType)}
+                            {alertTypeLabel}
                           </p>
-                          <AlertMessageSummary alert={alert} t={t} />
+                          <AlertMessageSummary alert={alert} />
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
@@ -642,18 +800,18 @@ export function AlertsPage() {
                           </p>
                         </td>
                         <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
-                          {alert.display?.openedAt ?? formatDateTime(alert.openedAt)}
+                          {openedAtLabel}
                         </td>
                         <td className="px-5 py-4 align-top">
                           <div className="flex flex-wrap gap-2">
                             <button
                               type="button"
                               onClick={() => acknowledgeAlert.mutate(alert.id)}
-                              disabled={!canAcknowledge || actionPending}
+                              disabled={!canAcknowledge || actionPending || isBulkRunning}
                               className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label={t("iot.alerts.aria.acknowledge")(
-                                alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType),
-                                alert.display?.openedAt ?? formatDateTime(alert.openedAt),
+                                alertTypeLabel,
+                                openedAtLabel,
                               )}
                             >
                               {acknowledgePending
@@ -663,11 +821,11 @@ export function AlertsPage() {
                             <button
                               type="button"
                               onClick={() => resolveAlert.mutate(alert.id)}
-                              disabled={!canResolve || actionPending}
+                              disabled={!canResolve || actionPending || isBulkRunning}
                               className="rounded-full bg-[#245A34] px-3 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
                               aria-label={t("iot.alerts.aria.resolve")(
-                                alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType),
-                                alert.display?.openedAt ?? formatDateTime(alert.openedAt),
+                                alertTypeLabel,
+                                openedAtLabel,
                               )}
                             >
                               {resolvePending

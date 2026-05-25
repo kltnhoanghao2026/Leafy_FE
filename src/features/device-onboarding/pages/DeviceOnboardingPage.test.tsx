@@ -253,10 +253,16 @@ describe("DeviceOnboardingPage", () => {
     fireEvent.change(screen.getByLabelText("Nội dung QR JSON"), {
       target: {
         value: JSON.stringify({
+          type: "LEAFY_IOT_DEVICE",
+          version: 1,
           deviceUid: "LEAFY-ESP32-001",
           deviceCode: "ESP32-001",
           deviceType: "ESP32_CAM_SENSOR",
           model: "Leafy IoT Module V1",
+          firmwareVersion: "leafy-esp32-0.1.0",
+          setupApSsid: "Leafy-Setup-YPE001",
+          setupPortalUrl: "http://192.168.4.1",
+          mqttPass: "secret",
         }),
       },
     });
@@ -264,6 +270,10 @@ describe("DeviceOnboardingPage", () => {
 
     expect(screen.getByText("Leafy IoT Module V1")).toBeInTheDocument();
     expect(screen.getByText("LEAFY-ESP32-001")).toBeInTheDocument();
+    expect(screen.getByText("Thông tin thiết lập thiết bị")).toBeInTheDocument();
+    expect(screen.getByText("leafy-esp32-0.1.0")).toBeInTheDocument();
+    expect(screen.getByText("Leafy-Setup-YPE001")).toBeInTheDocument();
+    expect(screen.getByText("http://192.168.4.1")).toBeInTheDocument();
 
     await waitFor(() =>
       expect(screen.getByLabelText("Chọn vườn")).not.toBeDisabled(),
@@ -300,6 +310,12 @@ describe("DeviceOnboardingPage", () => {
         farmPlotId: "farm-1",
         zoneId: "zone-1",
       });
+      expect(connectBody).not.toHaveProperty("type");
+      expect(connectBody).not.toHaveProperty("version");
+      expect(connectBody).not.toHaveProperty("setupApSsid");
+      expect(connectBody).not.toHaveProperty("setupPortalUrl");
+      expect(connectBody).not.toHaveProperty("firmwareVersion");
+      expect(connectBody).not.toHaveProperty("mqttPass");
     });
   });
 

@@ -13,6 +13,9 @@ export interface DeviceOnboardingDraft {
   deviceCode: string;
   deviceType: string;
   model: string;
+  firmwareVersion: string;
+  setupApSsid: string;
+  setupPortalUrl: string;
   deviceName: string;
   farmPlotId: string;
   zoneId: string;
@@ -21,10 +24,15 @@ export interface DeviceOnboardingDraft {
 }
 
 export interface DeviceQrPayload {
+  type?: "LEAFY_IOT_DEVICE";
+  version?: 1;
   deviceUid: string;
   deviceCode: string;
   deviceType: string;
   model?: string | null;
+  firmwareVersion?: string | null;
+  setupApSsid?: string | null;
+  setupPortalUrl?: string | null;
 }
 
 export interface DeviceOnboardingResult {
