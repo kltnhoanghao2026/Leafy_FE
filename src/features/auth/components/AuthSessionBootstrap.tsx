@@ -7,6 +7,7 @@ import { useAuthStore } from "../../../store/authStore";
 import { API_ENDPOINTS } from "../../../lib/routes";
 import type { ApiEnvelope } from "../../../shared/types/api";
 import { getOrCreateDeviceId } from "../../../lib/clientDevice";
+import { getApiBaseUrl } from "../../../lib/apiBaseUrl";
 
 export function AuthSessionBootstrap() {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -18,7 +19,7 @@ export function AuthSessionBootstrap() {
   const setAccountRole = useAuthStore((state) => state.setAccountRole);
   const setIsInitializing = useAuthStore((state) => state.setIsInitializing);
 
-  const baseURL = import.meta.env.VITE_API_BASE_URL || "/api";
+  const baseURL = getApiBaseUrl();
 
   useEffect(() => {
     if (accessToken) {

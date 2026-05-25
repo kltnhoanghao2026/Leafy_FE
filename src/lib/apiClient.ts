@@ -4,13 +4,14 @@ import type { ApiEnvelope } from "../shared/types/api";
 import { getOrCreateDeviceId } from "./clientDevice";
 import { useAuthStore } from "../store/authStore";
 import { API_ENDPOINTS } from "./routes";
+import { getApiBaseUrl } from "./apiBaseUrl";
 
 // ---------------------------------------------------------------------------
 // Axios instance
 // ---------------------------------------------------------------------------
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "/api",
+  baseURL: getApiBaseUrl(),
   headers: { "Content-Type": "application/json" },
   withCredentials: true, // Send/receive HttpOnly refresh-token cookie
 });
