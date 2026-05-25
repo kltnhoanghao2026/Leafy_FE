@@ -6,6 +6,7 @@ import { CSVExportButton } from "./CSVExportButton";
 import type { SensorTrend } from "./IoTMetricCard";
 import { calculateStatistics, type AnalyticsPoint } from "../utils/chartAnalytics";
 import { useTranslation } from "../../../i18n";
+import { formatSeverityLabel } from "../../iot/utils/iotTranslation";
 
 export interface CompareSeries {
   sensorCode: string;
@@ -184,7 +185,7 @@ export function CompareChart({
                       y={valueToY(point.value)}
                       height={chartHeight}
                       severity={point.alertSeverity}
-                          label={point.alertMessage || `${point.alertSeverity} ${t("iot.metrics.alert")}`}
+                          label={point.alertMessage || `${formatSeverityLabel(t, point.alertSeverity)} ${t("iot.metrics.alert")}`}
                     />
                   );
                 })
@@ -246,7 +247,7 @@ export function CompareChart({
                       ) : null}
                       {match?.alertSeverity ? (
                         <span className="text-red-200">
-                          {match.alertSeverity}
+                          {formatSeverityLabel(t, match.alertSeverity)}
                         </span>
                       ) : null}
                     </p>

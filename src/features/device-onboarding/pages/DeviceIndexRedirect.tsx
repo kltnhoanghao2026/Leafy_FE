@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
-import { Cpu, Plus, RefreshCw, Search } from "lucide-react";
+import { Cpu, LogOut, Plus, RefreshCw, Search, Settings2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { Select } from "../../../components/ui/Select";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
@@ -16,6 +17,15 @@ import {
   formatDeviceStatusLabel,
   formatDeviceTypeLabel,
 } from "../../iot/utils/iotTranslation";
+import { useFarmPlots, useFarmZonesByOwner } from "../../farm-management/queries";
+import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
+import { useMyProfile } from "../../settings/queries";
+import { EditDeviceModal } from "../../device-detail/components/EditDeviceModal";
+import { ReleaseDeviceConfirmDialog } from "../../device-detail/components/ReleaseDeviceConfirmDialog";
+import {
+  useReleaseDeviceMutation,
+  useUpdateDeviceMutation,
+} from "../../device-detail/queries";
 import { useMyDevices } from "../queries";
 
 const DEVICE_STATUSES: DeviceStatus[] = ["ONLINE", "OFFLINE", "UNKNOWN"];
@@ -62,7 +72,55 @@ function readableDeviceName(
   return device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
 }
 
-function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
+function formatFarmPlotName(plot: FarmPlotResponse) {
+  return plot.code ? `${plot.name} (${plot.code})` : plot.name;
+}
+
+function formatFarmZoneName(zone: FarmZoneResponse) {
+  return zone.zoneCode ? `${zone.zoneName} (${zone.zoneCode})` : zone.zoneName;
+}
+
+function resolveFarmPlotLabel(
+  device: DeviceResponse,
+  farmPlotMap: Map<string, FarmPlotResponse>,
+  isLoading: boolean,
+  t: TFunction,
+) {
+  if (!device.farmPlotId) return t("iot.devices.index.farmUnassigned");
+  const plot = farmPlotMap.get(device.farmPlotId);
+  if (plot) return formatFarmPlotName(plot);
+  return isLoading ? t("iot.devices.index.locationLoading") : t("iot.devices.index.farmUnknown");
+}
+
+function resolveFarmZoneLabel(
+  device: DeviceResponse,
+  farmZoneMap: Map<string, FarmZoneResponse>,
+  isLoading: boolean,
+  t: TFunction,
+) {
+  if (!device.zoneId) return t("iot.devices.index.zoneUnassigned");
+  const zone = farmZoneMap.get(device.zoneId);
+  if (zone) return formatFarmZoneName(zone);
+  return isLoading ? t("iot.devices.index.locationLoading") : t("iot.devices.index.zoneUnknown");
+}
+
+function DeviceCard({
+  device,
+  farmLabel,
+  zoneLabel,
+  t,
+  onEdit,
+  onRelease,
+  isActionPending,
+}: {
+  device: DeviceResponse;
+  farmLabel: string;
+  zoneLabel: string;
+  t: TFunction;
+  onEdit: (device: DeviceResponse) => void;
+  onRelease: (device: DeviceResponse) => void;
+  isActionPending?: boolean;
+}) {
   const deviceName = readableDeviceName(t, device);
 
   return (
@@ -97,7 +155,7 @@ function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
                 {t("iot.common.farm")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.farmPlotId ? t("iot.devices.index.farmAssigned") : t("iot.devices.index.farmUnassigned")}
+                {farmLabel}
               </p>
             </div>
             <div>
@@ -105,7 +163,7 @@ function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
                 {t("iot.common.zone")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.zoneId ? t("iot.devices.index.zoneAssigned") : t("iot.devices.index.zoneUnassigned")}
+                {zoneLabel}
               </p>
             </div>
             <div>
@@ -134,6 +192,26 @@ function DeviceCard({ device, t }: { device: DeviceResponse; t: TFunction }) {
           >
             {t("iot.devices.index.viewDetail")}
           </Link>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <button
+              type="button"
+              onClick={() => onEdit(device)}
+              disabled={isActionPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Settings2 className="h-4 w-4" />
+              {t("iot.devices.actions.edit")}
+            </button>
+            <button
+              type="button"
+              onClick={() => onRelease(device)}
+              disabled={isActionPending}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-200 px-3 py-2 text-sm font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <LogOut className="h-4 w-4" />
+              {t("iot.devices.actions.release")}
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -147,6 +225,18 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function getDeviceManagementErrorMessage(error: unknown, t: TFunction, action: "edit" | "release") {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  if (message.includes("403")) return t("iot.devices.release.forbidden");
+  if (message.includes("404")) {
+    return action === "edit"
+      ? t("iot.devices.edit.notFound")
+      : t("iot.devices.release.notFound");
+  }
+  if (message.includes("400")) return t("iot.devices.edit.invalidName");
+  return message || (action === "edit" ? t("iot.devices.edit.error") : t("iot.devices.release.error"));
+}
+
 export function DeviceIndexRedirect() {
   const { t } = useTranslation();
   const [page, setPage] = useState(0);
@@ -155,6 +245,8 @@ export function DeviceIndexRedirect() {
   const [provisioningStatus, setProvisioningStatus] = useState<
     ProvisioningStatus | ""
   >("CLAIMED");
+  const [editingDevice, setEditingDevice] = useState<DeviceResponse | null>(null);
+  const [releasingDevice, setReleasingDevice] = useState<DeviceResponse | null>(null);
 
   const params = useMemo<MyDevicesParams>(
     () => ({
@@ -170,8 +262,25 @@ export function DeviceIndexRedirect() {
   );
 
   const devicesQuery = useMyDevices(params);
+  const updateDeviceMutation = useUpdateDeviceMutation();
+  const releaseDeviceMutation = useReleaseDeviceMutation();
   const devices = devicesQuery.data?.items ?? [];
   const totalItems = devicesQuery.data?.totalItems ?? 0;
+  const profileQuery = useMyProfile();
+  const ownerProfileId = profileQuery.data?.id ?? "";
+  const hasLocationAssigned = devices.some((device) => device.farmPlotId || device.zoneId);
+  const farmPlotsQuery = useFarmPlots(ownerProfileId, Boolean(ownerProfileId && hasLocationAssigned));
+  const farmZonesQuery = useFarmZonesByOwner(ownerProfileId, Boolean(ownerProfileId && hasLocationAssigned));
+  const farmPlotMap = useMemo(
+    () => new Map((farmPlotsQuery.data ?? []).map((plot) => [plot.id, plot])),
+    [farmPlotsQuery.data],
+  );
+  const farmZoneMap = useMemo(
+    () => new Map((farmZonesQuery.data ?? []).map((zone) => [zone.id, zone])),
+    [farmZonesQuery.data],
+  );
+  const isLocationLoading =
+    profileQuery.isLoading || farmPlotsQuery.isLoading || farmZonesQuery.isLoading;
   const allOption = useMemo(() => ({ value: "", label: t("iot.devices.index.all") }), [t]);
   const statusOptions = useMemo(
     () => [
@@ -193,6 +302,8 @@ export function DeviceIndexRedirect() {
     ],
     [allOption, t],
   );
+  const isActionPending =
+    updateDeviceMutation.isPending || releaseDeviceMutation.isPending;
 
   return (
     <section className="space-y-6">
@@ -325,11 +436,20 @@ export function DeviceIndexRedirect() {
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-1 text-sm font-bold text-slate-500">
-            <span>{t("iot.devices.index.count", totalItems)}</span>
+            <span>{t("iot.devices.index.count")(totalItems)}</span>
             {devicesQuery.isFetching ? <span>{t("iot.devices.index.updating")}</span> : null}
           </div>
           {devices.map((device) => (
-            <DeviceCard key={device.id} device={device} t={t} />
+            <DeviceCard
+              key={device.id}
+              device={device}
+              farmLabel={resolveFarmPlotLabel(device, farmPlotMap, isLocationLoading, t)}
+              zoneLabel={resolveFarmZoneLabel(device, farmZoneMap, isLocationLoading, t)}
+              t={t}
+              onEdit={setEditingDevice}
+              onRelease={setReleasingDevice}
+              isActionPending={isActionPending}
+            />
           ))}
           <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
             <button
@@ -341,8 +461,7 @@ export function DeviceIndexRedirect() {
               {t("iot.devices.index.previousPage")}
             </button>
             <span className="text-sm font-bold text-slate-500">
-              {t(
-                "iot.devices.index.page",
+              {t("iot.devices.index.page")(
                 (devicesQuery.data?.page ?? page) + 1,
                 Math.max(devicesQuery.data?.totalPages ?? 1, 1),
               )}
@@ -358,6 +477,44 @@ export function DeviceIndexRedirect() {
           </div>
         </div>
       )}
+      <EditDeviceModal
+        open={Boolean(editingDevice)}
+        device={editingDevice}
+        onClose={() => setEditingDevice(null)}
+        isSubmitting={updateDeviceMutation.isPending}
+        onSubmit={async (payload) => {
+          if (!editingDevice) return;
+          try {
+            await updateDeviceMutation.mutateAsync({
+              deviceId: editingDevice.id,
+              payload,
+            });
+            toast.success(t("iot.devices.edit.success"));
+            setEditingDevice(null);
+            await devicesQuery.refetch();
+          } catch (error) {
+            toast.error(getDeviceManagementErrorMessage(error, t, "edit"));
+            throw error;
+          }
+        }}
+      />
+      <ReleaseDeviceConfirmDialog
+        open={Boolean(releasingDevice)}
+        deviceName={releasingDevice ? readableDeviceName(t, releasingDevice) : undefined}
+        onClose={() => setReleasingDevice(null)}
+        isSubmitting={releaseDeviceMutation.isPending}
+        onConfirm={async () => {
+          if (!releasingDevice) return;
+          try {
+            await releaseDeviceMutation.mutateAsync({ deviceId: releasingDevice.id });
+            toast.success(t("iot.devices.release.success"));
+            setReleasingDevice(null);
+            await devicesQuery.refetch();
+          } catch (error) {
+            toast.error(getDeviceManagementErrorMessage(error, t, "release"));
+          }
+        }}
+      />
     </section>
   );
 }

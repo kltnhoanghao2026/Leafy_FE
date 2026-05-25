@@ -12,12 +12,12 @@ import {
 } from "../queries";
 import { useAlertScopeOptions } from "../hooks/useAlertScopeOptions";
 import type {
+  AlertEventItemResponse,
   AlertEventsParams,
   AlertSeverity,
   AlertStatus,
 } from "../../../types/iot";
 import {
-  compactId,
   formatDateTime,
   formatNumber,
 } from "../../metrics-view/utils/format";
@@ -26,8 +26,10 @@ import { useTranslation } from "../../../i18n";
 import {
   formatAlertStatusLabel,
   formatAlertTypeLabel,
+  formatSensorLabel,
   formatSeverityLabel,
 } from "../../iot/utils/iotTranslation";
+import { useInferredSensorTypeOptions } from "../hooks/useInferredSensorTypeOptions";
 import {
   alertSeverityClasses,
   alertStatusClasses,
@@ -42,6 +44,128 @@ const statusOptions: AlertStatus[] = [
   "RESOLVED",
   "CLOSED",
 ];
+
+const appendUnit = (value: string, unit?: string) => (unit ? `${value} ${unit}` : value);
+
+const normalizeDiseaseKey = (value: string) =>
+  value.trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+
+const parseDiseaseAlertMessage = (message?: string | null) => {
+  if (!message) return null;
+  const match = message.match(/disease detected from camera image:\s*(.+?)(?:\s*\(confidence\s*([0-9.]+)\))?$/i);
+  if (!match?.[1]) return null;
+  return {
+    diseaseName: match[1].trim(),
+    confidence: match[2] ? Number(match[2]) : null,
+  };
+};
+
+const formatDiseaseLabel = (
+  t: ReturnType<typeof useTranslation>["t"],
+  diseaseName?: string | null,
+) => {
+  if (!diseaseName) return t("iot.alerts.disease.unknown");
+  const key = `iot.alerts.disease.names.${normalizeDiseaseKey(diseaseName)}` as Parameters<typeof t>[0];
+  const translated = t(key) as string;
+  return translated && translated !== key ? translated : diseaseName;
+};
+
+const readableAlertDescription = (
+  t: ReturnType<typeof useTranslation>["t"],
+  alert: AlertEventItemResponse,
+  sensorLabel: string,
+  unit?: string,
+) => {
+  const min = alert.thresholdMin != null ? appendUnit(formatNumber(alert.thresholdMin), unit) : "";
+  const max = alert.thresholdMax != null ? appendUnit(formatNumber(alert.thresholdMax), unit) : "";
+
+  if (alert.alertType === "DISEASE_DETECTED") {
+    const disease = formatDiseaseLabel(t, parseDiseaseAlertMessage(alert.message)?.diseaseName);
+    return t("iot.alerts.message.diseaseDetected")(disease);
+  }
+
+  if (alert.alertType === "THRESHOLD_HIGH" || (alert.thresholdMax != null && alert.thresholdMin == null)) {
+    return t("iot.alerts.message.thresholdHigh")(sensorLabel, max);
+  }
+
+  if (alert.alertType === "THRESHOLD_LOW" || (alert.thresholdMin != null && alert.thresholdMax == null)) {
+    return t("iot.alerts.message.thresholdLow")(sensorLabel, min);
+  }
+
+  if (alert.alertType === "THRESHOLD_RANGE" || (alert.thresholdMin != null && alert.thresholdMax != null)) {
+    return t("iot.alerts.message.thresholdRange")(sensorLabel, min, max);
+  }
+
+  return t("iot.alerts.message.conditionTriggered")(sensorLabel);
+};
+
+function AlertMessageSummary({
+  alert,
+  t,
+}: {
+  alert: AlertEventItemResponse;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const { sensorOptions, isLoading } = useInferredSensorTypeOptions(
+    alert.deviceId ?? "",
+    alert.zoneId ?? "",
+  );
+  const sensor = sensorOptions.find((option) => option.id === alert.sensorTypeId);
+  const sensorLabel = sensor
+    ? formatSensorLabel(t, sensor.code, sensor.name)
+    : t("iot.alerts.value.unknownSensorData");
+  const unit = sensor?.unit;
+  const diseaseInfo = parseDiseaseAlertMessage(alert.message);
+  const isDiseaseAlert = alert.alertType === "DISEASE_DETECTED";
+
+  if (isDiseaseAlert) {
+    const disease = formatDiseaseLabel(t, diseaseInfo?.diseaseName);
+    const confidence = alert.triggerValue ?? diseaseInfo?.confidence ?? null;
+
+    return (
+      <>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          {t("iot.alerts.message.diseaseDetected")(disease)}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-slate-400">
+          {confidence == null
+            ? t("iot.alerts.disease.confidenceUnknown")
+            : t("iot.alerts.disease.confidence")(formatNumber(confidence * 100))}
+        </p>
+      </>
+    );
+  }
+
+  const measuredValue =
+    alert.triggerValue === null || alert.triggerValue === undefined
+      ? t("iot.alerts.value.noReading")
+      : t("iot.alerts.value.measured")(appendUnit(formatNumber(alert.triggerValue), unit));
+
+  const rangeText =
+    alert.thresholdMin !== null && alert.thresholdMax !== null
+      ? t("iot.alerts.value.safeRange")(
+          appendUnit(formatNumber(alert.thresholdMin), unit),
+          appendUnit(formatNumber(alert.thresholdMax), unit),
+        )
+      : alert.thresholdMax !== null && alert.thresholdMax !== undefined
+        ? t("iot.alerts.value.maxThreshold")(appendUnit(formatNumber(alert.thresholdMax), unit))
+        : alert.thresholdMin !== null && alert.thresholdMin !== undefined
+          ? t("iot.alerts.value.minThreshold")(appendUnit(formatNumber(alert.thresholdMin), unit))
+          : "";
+
+  return (
+    <>
+      <p className="mt-1 text-xs font-semibold text-slate-500">
+        {isLoading
+          ? t("iot.alerts.message.loadingSensor")
+          : readableAlertDescription(t, alert, sensorLabel, unit)}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">
+        {rangeText ? `${measuredValue}; ${rangeText}` : measuredValue}
+      </p>
+    </>
+  );
+}
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
   if (range === "all") {
@@ -160,38 +284,6 @@ export function AlertsPage() {
     return zone?.zoneName || t("iot.alerts.scope.missingZone");
   };
 
-  const readableAlertValue = (alert: {
-    triggerValue: number | null;
-    thresholdMin: number | null;
-    thresholdMax: number | null;
-  }) => {
-    const value =
-      alert.triggerValue === null || alert.triggerValue === undefined
-        ? t("iot.alerts.value.noReading")
-        : t("iot.alerts.value.measured")(formatNumber(alert.triggerValue));
-
-    if (alert.thresholdMin !== null && alert.thresholdMax !== null) {
-      return `${value}; ${t("iot.alerts.value.safeRange")(
-        formatNumber(alert.thresholdMin),
-        formatNumber(alert.thresholdMax),
-      )}`;
-    }
-
-    if (alert.thresholdMax !== null && alert.thresholdMax !== undefined) {
-      return `${value}; ${t("iot.alerts.value.maxThreshold")(
-        formatNumber(alert.thresholdMax),
-      )}`;
-    }
-
-    if (alert.thresholdMin !== null && alert.thresholdMin !== undefined) {
-      return `${value}; ${t("iot.alerts.value.minThreshold")(
-        formatNumber(alert.thresholdMin),
-      )}`;
-    }
-
-    return value;
-  };
-
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
@@ -221,7 +313,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.farmPlot")}
             </span>
             <Select
-              ariaLabel="Farm plot"
+              ariaLabel={t("iot.alerts.aria.farmPlot")}
               value={selectedFarmPlotId}
               onChange={(value) => {
                 setSelectedFarmPlotId(String(value));
@@ -251,7 +343,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.zone")}
             </span>
             <Select
-              ariaLabel="Zone"
+              ariaLabel={t("iot.alerts.aria.zone")}
               value={selectedZoneId}
               onChange={(value) => {
                 setSelectedZoneId(String(value));
@@ -279,7 +371,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.device")}
             </span>
             <Select
-              ariaLabel="Device"
+              ariaLabel={t("iot.alerts.aria.device")}
               value={effectiveSelectedDeviceId}
               onChange={(value) => {
                 setSelectedDeviceId(String(value));
@@ -307,7 +399,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.timeRange")}
             </span>
             <Select
-              ariaLabel="Time range"
+              ariaLabel={t("iot.alerts.aria.timeRange")}
               value={selectedTimeRange}
               onChange={(value) => {
                 setSelectedTimeRange(value as TimeRange);
@@ -323,7 +415,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.severity")}
             </span>
             <Select
-              ariaLabel="Severity"
+              ariaLabel={t("iot.alerts.aria.severity")}
               value={severity}
               onChange={(value) => {
                 setSeverity(value as AlertSeverity | "");
@@ -345,7 +437,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.status")}
             </span>
             <Select
-              ariaLabel="Status"
+              ariaLabel={t("iot.alerts.aria.status")}
               value={status}
               onChange={(value) => {
                 setStatus(value as AlertStatus | "");
@@ -367,7 +459,7 @@ export function AlertsPage() {
               {t("iot.alerts.filters.pageSize")}
             </span>
             <Select
-              ariaLabel="Page size"
+              ariaLabel={t("iot.alerts.aria.pageSize")}
               value={size}
               onChange={(value) => {
                 setSize(Number(value));
@@ -375,7 +467,7 @@ export function AlertsPage() {
               }}
               options={[10, 20, 50].map((option) => ({
                 value: option,
-                label: `${option} / page`,
+                label: `${option} / ${t("iot.alerts.filters.pageSize")}`,
               }))}
               className="mt-2"
             />
@@ -454,7 +546,7 @@ export function AlertsPage() {
                 onClick={() => setPage((current) => Math.max(current - 1, 0))}
                 disabled={!pagedAlerts.hasPrevious}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
+                aria-label={t("iot.alerts.aria.previousPage")}
               >
                 <ChevronLeft className="h-4 w-4" strokeWidth={3} />
               </button>
@@ -463,7 +555,7 @@ export function AlertsPage() {
                 onClick={() => setPage((current) => current + 1)}
                 disabled={!pagedAlerts.hasNext}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next page"
+                aria-label={t("iot.alerts.aria.nextPage")}
               >
                 <ChevronRight className="h-4 w-4" strokeWidth={3} />
               </button>
@@ -482,7 +574,7 @@ export function AlertsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left" aria-label="Alert events">
+              <table className="min-w-full text-left" aria-label={t("iot.alerts.table.aria")}>
                 <thead className="bg-slate-50">
                   <tr>
                     <th className="px-5 py-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
@@ -519,14 +611,9 @@ export function AlertsPage() {
                       <tr key={alert.id} className="hover:bg-slate-50/60">
                         <td className="px-5 py-4 align-top">
                           <p className="text-sm font-black text-slate-800">
-                            {formatAlertTypeLabel(t, alert.alertType)}
+                            {alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType)}
                           </p>
-                          <p className="mt-1 text-xs font-semibold text-slate-500">
-                            {alert.message}
-                          </p>
-                          <p className="mt-1 text-xs font-semibold text-slate-400">
-                            {readableAlertValue(alert)}
-                          </p>
+                          <AlertMessageSummary alert={alert} t={t} />
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
@@ -534,7 +621,7 @@ export function AlertsPage() {
                               alertSeverityClasses[alert.severity]
                             }`}
                           >
-                            {formatSeverityLabel(t, alert.severity)}
+                            {alert.display?.severity ?? formatSeverityLabel(t, alert.severity)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -543,7 +630,7 @@ export function AlertsPage() {
                               alertStatusClasses[alert.status]
                             }`}
                           >
-                            {formatAlertStatusLabel(t, alert.status)}
+                            {alert.display?.status ?? formatAlertStatusLabel(t, alert.status)}
                           </span>
                         </td>
                         <td className="px-5 py-4 align-top">
@@ -555,7 +642,7 @@ export function AlertsPage() {
                           </p>
                         </td>
                         <td className="px-5 py-4 align-top text-sm font-bold text-slate-600">
-                          {formatDateTime(alert.openedAt)}
+                          {alert.display?.openedAt ?? formatDateTime(alert.openedAt)}
                         </td>
                         <td className="px-5 py-4 align-top">
                           <div className="flex flex-wrap gap-2">
@@ -564,9 +651,10 @@ export function AlertsPage() {
                               onClick={() => acknowledgeAlert.mutate(alert.id)}
                               disabled={!canAcknowledge || actionPending}
                               className="rounded-full border border-slate-200 px-3 py-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                              aria-label={`Acknowledge alert ${compactId(
-                                alert.id,
-                              )}`}
+                              aria-label={t("iot.alerts.aria.acknowledge")(
+                                alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType),
+                                alert.display?.openedAt ?? formatDateTime(alert.openedAt),
+                              )}
                             >
                               {acknowledgePending
                                 ? t("iot.alerts.actions.acknowledging")
@@ -577,7 +665,10 @@ export function AlertsPage() {
                               onClick={() => resolveAlert.mutate(alert.id)}
                               disabled={!canResolve || actionPending}
                               className="rounded-full bg-[#245A34] px-3 py-2 text-xs font-black text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-40"
-                              aria-label={`Resolve alert ${compactId(alert.id)}`}
+                              aria-label={t("iot.alerts.aria.resolve")(
+                                alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType),
+                                alert.display?.openedAt ?? formatDateTime(alert.openedAt),
+                              )}
                             >
                               {resolvePending
                                 ? t("iot.alerts.actions.resolving")

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, LogOut, MapPin, Menu, Search, Settings, User, X } from 'lucide-react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ChevronDown, LogOut, Menu, Search, Settings, User, X } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 import { ROUTES } from '../lib/routes'
 import { NotificationPopover } from '../features/notifications/components/NotificationPopover'
 import { useMyProfile, useFilePreviewUrl } from '../features/settings/queries'
@@ -14,7 +14,6 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
-  const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -44,15 +43,6 @@ export function Header({ onMenuClick }: HeaderProps) {
     profile?.profilePicture ||
     undefined
 
-  const tabs = [
-    { name: 'Khu vực', path: ROUTES.DASHBOARD.ROOT },
-    { name: 'Cảm biến', path: ROUTES.DASHBOARD.DEVICE_ONBOARDING },
-  ]
-
-  const activeTabName = location.pathname.includes('/devices')
-    ? 'Cảm biến'
-    : 'Khu vực'
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const term = searchValue.trim()
@@ -70,7 +60,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     <header className="sticky top-0 z-30 bg-white border-b border-gray-100">
       <div className="flex items-center justify-between px-4 lg:px-8 h-16 gap-4">
 
-        {/* Left: Hamburger + Farm name */}
+        {/* Left: Hamburger */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={onMenuClick}
@@ -79,12 +69,6 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="hidden sm:flex items-center text-gray-900">
-            <MapPin className="w-5 h-5 text-[#245A34] mr-2" strokeWidth={2.5} />
-            <h1 className="text-[17px] font-bold tracking-tight">
-              Nông trại Cầu Đất
-            </h1>
-          </div>
         </div>
 
         {/* Centre: Search bar (grows to fill available space) */}
@@ -131,27 +115,8 @@ export function Header({ onMenuClick }: HeaderProps) {
 
         {/* Right: Actions */}
         <div className="flex items-center gap-4 shrink-0">
-          {/* Tab nav + weather (desktop only) */}
+          {/* Profile actions (desktop only) */}
           <div className="hidden lg:flex items-center gap-6">
-            {/* Tab Navigation */}
-            <nav className="flex space-x-6" aria-label="Page tabs">
-              {tabs.map((tab) => (
-                <Link
-                  key={tab.name}
-                  to={tab.path}
-                  className={`py-5 text-[14px] font-bold border-b-[3px] transition-colors whitespace-nowrap ${
-                    activeTabName === tab.name
-                      ? 'border-[#245A34] text-[#245A34]'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  {tab.name}
-                </Link>
-              ))}
-            </nav>
-
-            <div className="w-px h-6 bg-slate-200" />
-
             {/* Profile Dropdown */}
             <div ref={profileRef} className="relative">
               <button

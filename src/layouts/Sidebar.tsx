@@ -178,10 +178,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         {!collapsed && (
           <div className="ml-3 flex flex-col justify-center min-w-0">
             <span className="text-[15px] font-extrabold text-[#245A34] leading-tight tracking-tight truncate">
-              Coffee Monitor
-            </span>
-            <span className="text-[11px] font-semibold text-slate-400 truncate">
-              {t('nav.systemMonitor')}
+              Leafy
             </span>
           </div>
         )}

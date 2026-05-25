@@ -8,6 +8,8 @@ import type { EventMarkerData } from "../utils/chartAnalytics";
 import type { SensorThresholds } from "../utils/chartThresholds";
 import { CHART_TYPE_LABEL_KEYS } from "../utils/chartHelpers";
 import { useTranslation } from "../../../i18n";
+import { formatSeverityLabel } from "../../iot/utils/iotTranslation";
+import { useSettingsStore } from "../../settings/store/useSettingsStore";
 
 export type SensorChartType = "area" | "line" | "bar" | "scatter";
 type TimestampValue = string | number | Date | null | undefined;
@@ -78,7 +80,8 @@ const parseTime = (value?: TimestampValue): number => {
 const formatDisplayTime = (value?: TimestampValue): string | null => {
   const time = parseTime(value);
   if (Number.isNaN(time)) return null;
-  return new Intl.DateTimeFormat("en", {
+  const locale = useSettingsStore.getState().locale === "vi" ? "vi-VN" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -143,7 +146,8 @@ export function IoTMetricCard({
     formatDisplayTime(lastTrendPoint?.timestamp) ||
     t("iot.metrics.noData");
   const formatTooltipValue = (point: SensorTrend) => {
-    const formattedValue = new Intl.NumberFormat("en", {
+    const locale = useSettingsStore.getState().locale === "vi" ? "vi-VN" : "en-US";
+    const formattedValue = new Intl.NumberFormat(locale, {
       maximumFractionDigits: 2,
     }).format(point.value);
     const sampleSuffix = point.sampleCount
@@ -438,7 +442,7 @@ export function IoTMetricCard({
                       y={Math.max(10, point.y - 8)}
                       height={chartHeight}
                       severity={point.alertSeverity}
-                      label={point.alertMessage || `${point.alertSeverity} ${t("iot.metrics.alert")}`}
+                      label={point.alertMessage || `${formatSeverityLabel(t, point.alertSeverity)} ${t("iot.metrics.alert")}`}
                     />
                   ) : null}
                   {chartType !== "bar" ? (
@@ -515,7 +519,7 @@ export function IoTMetricCard({
                 ) : null}
                 {activePoint.alertSeverity ? (
                   <p className="text-[10px] uppercase tracking-wide text-red-200">
-                    {t("iot.metrics.alert")}: {activePoint.alertSeverity} - {activePoint.alertMessage || t("iot.metrics.outsideThreshold")}
+                    {t("iot.metrics.alert")}: {formatSeverityLabel(t, activePoint.alertSeverity)} - {activePoint.alertMessage || t("iot.metrics.outsideThreshold")}
                   </p>
                 ) : null}
                 {isOutOfThreshold(activePoint) ? (

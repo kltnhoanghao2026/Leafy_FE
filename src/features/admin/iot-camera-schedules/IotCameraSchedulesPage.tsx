@@ -13,15 +13,19 @@ import {
 import { MediaImage } from "../../community/components/MediaImage";
 import { useTranslation } from "../../../i18n";
 import {
+  formatCameraQualityLabel,
+  formatCameraResolutionLabel,
   formatMediaStatusLabel,
   formatScheduleRecurrenceLabel,
 } from "../../iot/utils/iotTranslation";
+import { formatEndpointDisplay } from "../../iot/utils/iotDisplay";
 import type {
   CameraScheduleRecurrence,
   DeviceCameraScheduleRequest,
   DeviceCameraScheduleResponse,
   DeviceMediaEventResponse,
 } from "../../../types/iot";
+import { formatDateTime } from "../../metrics-view/utils/format";
 import {
   useCameraSchedulesQuery,
   useCreateCameraScheduleMutation,
@@ -36,16 +40,6 @@ type EnabledFilter = "all" | "enabled" | "disabled";
 const recurrenceOptions: CameraScheduleRecurrence[] = ["DAILY", "WEEKLY", "NONE"];
 const resolutionOptions = ["QVGA", "VGA", "HD"] as const;
 const qualityOptions = ["LOW", "MEDIUM", "HIGH"] as const;
-
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("vi-VN", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
-};
 
 const formatBytes = (value?: number | null) =>
   value == null ? "-" : new Intl.NumberFormat("vi-VN").format(value);
@@ -158,7 +152,7 @@ function ScheduleForm({
         >
           {resolutionOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {formatCameraResolutionLabel(t, option)}
             </option>
           ))}
         </select>
@@ -172,7 +166,7 @@ function ScheduleForm({
         >
           {qualityOptions.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {formatCameraQualityLabel(t, option)}
             </option>
           ))}
         </select>
@@ -182,7 +176,7 @@ function ScheduleForm({
         <input
           value={uploadEndpoint ?? ""}
           onChange={(event) => setUploadEndpoint(event.target.value)}
-          placeholder="default"
+          placeholder={t("iot.cameraSchedules.uploadEndpointPlaceholder")}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
         />
       </label>
@@ -209,7 +203,11 @@ function ScheduleForm({
   );
 }
 
-function LastCaptureCell({ media }: { media?: DeviceMediaEventResponse | null }) {
+type DisplayableMediaEvent = DeviceMediaEventResponse & {
+  display?: { size: string };
+};
+
+function LastCaptureCell({ media }: { media?: DisplayableMediaEvent | null }) {
   const { t } = useTranslation();
 
   if (!media) {
@@ -244,8 +242,8 @@ function LastCaptureCell({ media }: { media?: DeviceMediaEventResponse | null })
         </span>
         <p className="mt-1 truncate text-xs font-semibold text-slate-500">
           {media.fileId
-            ? `${media.width ?? "-"}x${media.height ?? "-"} - ${formatBytes(media.sizeBytes)} bytes`
-            : media.error || media.requestId || t("iot.devices.media.waitingForUpload")}
+            ? media.display?.size ?? `${media.width ?? "-"}x${media.height ?? "-"} - ${formatBytes(media.sizeBytes)} bytes`
+            : media.error || t("iot.devices.media.waitingForUpload")}
         </p>
       </div>
     </div>
@@ -362,7 +360,11 @@ export function IotCameraSchedulesPage() {
               <tbody className="divide-y divide-slate-100">
                 {filteredSchedules.map((schedule) => (
                   <tr key={schedule.id} className="align-top">
-                    <td className="px-4 py-4 font-bold text-slate-900">{schedule.deviceUid}</td>
+                    <td className="px-4 py-4 font-bold text-slate-900">
+                      <span title={`${t("iot.cameraSchedules.technicalDeviceUid")}: ${schedule.deviceUid}`}>
+                        {schedule.display?.device ?? t("iot.common.unknown")}
+                      </span>
+                    </td>
                     <td className="px-4 py-4">
                       {schedule.enabled ? (
                         <span className="inline-flex items-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
@@ -376,19 +378,19 @@ export function IotCameraSchedulesPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-4 font-semibold text-slate-700">{schedule.timeOfDay}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-700">{schedule.display?.timeOfDay ?? schedule.timeOfDay}</td>
                     <td className="px-4 py-4 font-semibold text-slate-700">
-                      {formatScheduleRecurrenceLabel(t, schedule.recurrence)}
+                      {schedule.display?.recurrence ?? formatScheduleRecurrenceLabel(t, schedule.recurrence)}
                     </td>
                     <td className="px-4 py-4 text-xs font-semibold text-slate-500">
-                      <div>{t("iot.cameraSchedules.resolution")}: {schedule.resolution ?? "-"}</div>
-                      <div>{t("iot.cameraSchedules.quality")}: {schedule.quality ?? "-"}</div>
+                      <div>{t("iot.cameraSchedules.resolution")}: {schedule.display?.resolution ?? formatCameraResolutionLabel(t, schedule.resolution)}</div>
+                      <div>{t("iot.cameraSchedules.quality")}: {schedule.display?.quality ?? formatCameraQualityLabel(t, schedule.quality)}</div>
                       <div className="max-w-[180px] truncate">
-                        {t("iot.cameraSchedules.uploadEndpoint")}: {schedule.uploadEndpoint || "-"}
+                        {t("iot.cameraSchedules.uploadEndpoint")}: {schedule.display?.endpoint ?? formatEndpointDisplay(schedule.uploadEndpoint)}
                       </div>
                     </td>
-                    <td className="px-4 py-4 font-semibold text-slate-600">{formatDateTime(schedule.nextRunAt)}</td>
-                    <td className="px-4 py-4 font-semibold text-slate-600">{formatDateTime(schedule.lastRunAt)}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-600">{schedule.display?.nextRunAt ?? formatDateTime(schedule.nextRunAt)}</td>
+                    <td className="px-4 py-4 font-semibold text-slate-600">{schedule.display?.lastRunAt ?? formatDateTime(schedule.lastRunAt)}</td>
                     <td className="px-4 py-4">
                       <LastCaptureCell media={schedule.lastMediaEvent} />
                     </td>

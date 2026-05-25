@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "../../../i18n";
 import { collectorApi } from "../../../lib/api/collectorApi";
 import type { DeviceCameraScheduleRequest, DeviceCameraScheduleResponse } from "../../../types/iot";
+import { withScheduleDisplay } from "../../iot/utils/iotDisplay";
 
 export const cameraScheduleKeys = {
   all: ["iot-camera-schedules"] as const,
@@ -39,21 +40,33 @@ const updateScheduleCache = (
   return current;
 };
 
-export const useCameraSchedulesQuery = (enabled = true) =>
-  useQuery({
+export const useCameraSchedulesQuery = (enabled = true, refetchInterval?: number | false) => {
+  const { t } = useTranslation();
+
+  return useQuery({
     queryKey: cameraScheduleKeys.all,
     queryFn: () => collectorApi.getCameraSchedules(),
-    select: (response) => response.data,
+    select: (response) => response.data.map((schedule) => withScheduleDisplay(t, schedule)),
     enabled,
+    refetchInterval,
   });
+};
 
-export const useDeviceSchedulesQuery = (deviceUid?: string, enabled = true) =>
-  useQuery({
+export const useDeviceSchedulesQuery = (
+  deviceUid?: string,
+  enabled = true,
+  refetchInterval?: number | false,
+) => {
+  const { t } = useTranslation();
+
+  return useQuery({
     queryKey: cameraScheduleKeys.device(deviceUid),
     queryFn: () => collectorApi.getDeviceSchedules(deviceUid as string),
-    select: (response) => response.data,
+    select: (response) => response.data.map((schedule) => withScheduleDisplay(t, schedule)),
     enabled: enabled && Boolean(deviceUid),
+    refetchInterval,
   });
+};
 
 export const useCreateCameraScheduleMutation = () => {
   const queryClient = useQueryClient();

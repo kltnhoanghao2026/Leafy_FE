@@ -2,6 +2,7 @@ import type { TFunction } from "../../../i18n/context";
 import type {
   AlertSeverity,
   AlertStatus,
+  CameraScheduleTriggerType,
   DeviceConfigPushStatus,
   DeviceMediaEventStatus,
   DeviceStatus,
@@ -21,7 +22,8 @@ export type IoTAlertType =
   | "THRESHOLD_LOW"
   | "THRESHOLD_RANGE"
   | "DEVICE_OFFLINE"
-  | "DEVICE_ONLINE";
+  | "DEVICE_ONLINE"
+  | "DISEASE_DETECTED";
 
 export type IoTDeviceStatus =
   | DeviceStatus
@@ -34,9 +36,22 @@ export type IoTConfigStatus =
 
 export type IoTMediaStatus = DeviceMediaEventStatus;
 
+export type IoTMediaAnalysisStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "PROCESSED"
+  | "DISEASE_DETECTED"
+  | "FAILED";
+
 export type IoTChartRange = "H1" | "D1" | "D7" | "M1";
 
 export type IoTCameraScheduleRecurrence = "DAILY" | "WEEKLY" | "MONTHLY" | "NONE";
+
+export type IoTCameraResolution = "QVGA" | "VGA" | "HD";
+
+export type IoTCameraQuality = "LOW" | "MEDIUM" | "HIGH";
+
+export type IoTCameraTriggerType = CameraScheduleTriggerType;
 
 export type IoTDeviceType =
   | "ESP32_CAM_SENSOR"
@@ -74,6 +89,7 @@ const alertTypeLabelKeys = {
   THRESHOLD_RANGE: "iot.alertType.THRESHOLD_RANGE",
   DEVICE_OFFLINE: "iot.alertType.DEVICE_OFFLINE",
   DEVICE_ONLINE: "iot.alertType.DEVICE_ONLINE",
+  DISEASE_DETECTED: "iot.alertType.DISEASE_DETECTED",
 } as const satisfies Record<IoTAlertType, TranslationKey>;
 
 const deviceStatusLabelKeys = {
@@ -110,6 +126,14 @@ const mediaStatusLabelKeys = {
   TIMEOUT: "iot.devices.media.status.TIMEOUT",
 } as const satisfies Record<IoTMediaStatus, TranslationKey>;
 
+const mediaAnalysisStatusLabelKeys = {
+  PENDING: "iot.devices.media.analysis.status.PENDING",
+  PROCESSING: "iot.devices.media.analysis.status.PROCESSING",
+  PROCESSED: "iot.devices.media.analysis.status.PROCESSED",
+  DISEASE_DETECTED: "iot.devices.media.analysis.status.DISEASE_DETECTED",
+  FAILED: "iot.devices.media.analysis.status.FAILED",
+} as const satisfies Record<IoTMediaAnalysisStatus, TranslationKey>;
+
 const chartRangeLabelKeys = {
   H1: "iot.charts.H1",
   D1: "iot.charts.D1",
@@ -123,6 +147,23 @@ const scheduleRecurrenceLabelKeys = {
   MONTHLY: "iot.cameraSchedules.recurrenceMonthly",
   NONE: "iot.cameraSchedules.recurrenceNone",
 } as const satisfies Record<IoTCameraScheduleRecurrence, TranslationKey>;
+
+const cameraResolutionLabelKeys = {
+  QVGA: "iot.cameraSchedules.resolutionOptions.QVGA",
+  VGA: "iot.cameraSchedules.resolutionOptions.VGA",
+  HD: "iot.cameraSchedules.resolutionOptions.HD",
+} as const satisfies Record<IoTCameraResolution, TranslationKey>;
+
+const cameraQualityLabelKeys = {
+  LOW: "iot.cameraSchedules.qualityOptions.LOW",
+  MEDIUM: "iot.cameraSchedules.qualityOptions.MEDIUM",
+  HIGH: "iot.cameraSchedules.qualityOptions.HIGH",
+} as const satisfies Record<IoTCameraQuality, TranslationKey>;
+
+const cameraTriggerLabelKeys = {
+  MANUAL: "iot.cameraSchedules.triggerType.MANUAL",
+  SCHEDULED: "iot.cameraSchedules.triggerType.SCHEDULED",
+} as const satisfies Record<IoTCameraTriggerType, TranslationKey>;
 
 const fallbackBackendLabel = (value?: string | null) => {
   if (!value) return "";
@@ -228,6 +269,15 @@ export const formatMediaStatusLabel = (
   mediaStatusLabelKeys,
 );
 
+export const formatMediaAnalysisStatusLabel = (
+  t: TFunction,
+  status?: string | null,
+) => translateKnownValue<IoTMediaAnalysisStatus, typeof mediaAnalysisStatusLabelKeys>(
+  t,
+  status,
+  mediaAnalysisStatusLabelKeys,
+);
+
 export const formatChartRangeLabel = (
   t: TFunction,
   range?: string | null,
@@ -244,4 +294,31 @@ export const formatScheduleRecurrenceLabel = (
   t,
   recurrence,
   scheduleRecurrenceLabelKeys,
+);
+
+export const formatCameraResolutionLabel = (
+  t: TFunction,
+  resolution?: string | null,
+) => translateKnownValue<IoTCameraResolution, typeof cameraResolutionLabelKeys>(
+  t,
+  resolution,
+  cameraResolutionLabelKeys,
+);
+
+export const formatCameraQualityLabel = (
+  t: TFunction,
+  quality?: string | null,
+) => translateKnownValue<IoTCameraQuality, typeof cameraQualityLabelKeys>(
+  t,
+  quality,
+  cameraQualityLabelKeys,
+);
+
+export const formatCameraTriggerLabel = (
+  t: TFunction,
+  triggerType?: string | null,
+) => translateKnownValue<IoTCameraTriggerType, typeof cameraTriggerLabelKeys>(
+  t,
+  triggerType,
+  cameraTriggerLabelKeys,
 );

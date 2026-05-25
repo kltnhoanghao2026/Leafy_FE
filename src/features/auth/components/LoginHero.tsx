@@ -1,47 +1,46 @@
-import { Coffee } from 'lucide-react'
+import { Leaf, Radar, ShieldCheck } from 'lucide-react'
 
 export function LoginHero () {
   return (
-    <div className="relative flex flex-col justify-end w-full lg:w-[480px] h-[280px] lg:h-auto overflow-hidden bg-[#245A34] p-8 lg:p-10 text-white shrink-0">
-      {/* Background Image Placeholder */}
+    <div className="relative flex flex-col justify-end w-full lg:w-[480px] h-[320px] lg:h-auto overflow-hidden bg-[#245A34] p-8 lg:p-10 text-white shrink-0">
       <img
-        src="/images/coffee-bg.jpg"
-        alt="Coffee Cherries"
-        className="absolute inset-0 object-cover w-full h-full mix-blend-overlay opacity-60"
-        aria-hidden="true"
+        src="/images/coffee-garden.jpg"
+        alt="Vườn cà phê xanh"
+        className="absolute inset-0 object-cover w-full h-full"
       />
-      
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-[#1b432a] via-[#1b432a]/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#12301f] via-[#12301f]/75 to-[#12301f]/20" />
 
-      {/* Content */}
       <div className="relative z-10 flex flex-col justify-end h-full mt-auto">
         <div className="flex items-center gap-4 mb-4 lg:mb-6">
           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm">
-            <Coffee className="w-6 h-6 text-white text-opacity-90" />
+            <Leaf className="w-6 h-6 text-white text-opacity-90" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Coffee Monitor</h1>
-            <p className="text-sm font-medium text-green-100/90 text-shadow-sm">Hệ thống giám sát</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-sm">Leafy</h1>
           </div>
         </div>
 
-        <blockquote className="mb-6 lg:mb-10 text-base lg:text-[1.1rem] font-medium leading-relaxed italic text-green-50/95 max-w-sm">
-          "Nâng cao giá trị nông sản Việt"
-        </blockquote>
+        <p className="mb-6 lg:mb-10 text-base lg:text-[1.05rem] font-semibold leading-relaxed text-green-50/95 max-w-sm">
+          Theo dõi vườn cà phê, thiết bị IoT và cảnh báo canh tác trong một nơi.
+        </p>
 
-        <div className="flex items-center gap-8 pt-2">
-          <div>
-            <div className="text-3xl font-bold text-white drop-shadow-sm">1.2k+</div>
-            <div className="mt-1 text-xs font-semibold tracking-wider text-green-200/80 uppercase">
-              Nông hộ tin dùng
+        <div className="grid grid-cols-1 gap-3">
+          <div className="flex items-start gap-3 rounded-2xl bg-white/12 p-3 backdrop-blur-sm ring-1 ring-white/15">
+            <Radar className="mt-0.5 h-5 w-5 shrink-0 text-green-100" />
+            <div>
+              <div className="text-sm font-bold text-white">Dữ liệu theo thời gian</div>
+              <div className="mt-0.5 text-xs font-medium leading-relaxed text-green-50/85">
+                Xem cảm biến, camera và cảnh báo mới nhất của từng khu vực.
+              </div>
             </div>
           </div>
-          <div className="w-px h-10 bg-white/20" />
-          <div>
-            <div className="text-3xl font-bold text-white drop-shadow-sm">98%</div>
-            <div className="mt-1 text-xs font-semibold tracking-wider text-green-200/80 uppercase">
-              Độ chính xác
+          <div className="flex items-start gap-3 rounded-2xl bg-white/12 p-3 backdrop-blur-sm ring-1 ring-white/15">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-green-100" />
+            <div>
+              <div className="text-sm font-bold text-white">Quản lý chủ động</div>
+              <div className="mt-0.5 text-xs font-medium leading-relaxed text-green-50/85">
+                Nắm nhanh tình trạng vườn, khu vực và thiết bị đang vận hành.
+              </div>
             </div>
           </div>
         </div>

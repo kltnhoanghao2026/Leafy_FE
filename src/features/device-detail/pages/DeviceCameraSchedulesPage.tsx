@@ -3,8 +3,15 @@ import { useParams } from "react-router-dom";
 import { Loader2, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { MediaImage } from "../../community/components/MediaImage";
 import { useTranslation } from "../../../i18n";
-import { formatMediaStatusLabel, formatScheduleRecurrenceLabel } from "../../iot/utils/iotTranslation";
+import {
+  formatCameraQualityLabel,
+  formatCameraResolutionLabel,
+  formatMediaStatusLabel,
+  formatScheduleRecurrenceLabel,
+} from "../../iot/utils/iotTranslation";
+import { readableDeviceName } from "../../iot/utils/iotDisplay";
 import { useDeviceDetail } from "../queries";
+import { formatDateTime } from "../../metrics-view/utils/format";
 import type { DeviceCameraScheduleRequest, DeviceCameraScheduleResponse } from "../../../types/iot";
 import {
   useCreateDeviceCameraScheduleMutation,
@@ -30,13 +37,6 @@ const toInputTime = (value?: string | null) => value?.slice(0, 5) ?? "08:30";
 const normalizeTime = (value: string) => (value.length === 5 ? `${value}:00` : value);
 const getScheduleId = (schedule: DeviceCameraScheduleResponse) =>
   schedule.scheduleId ?? schedule.id;
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
-};
 
 function validate(payload: DeviceCameraScheduleRequest, t: ReturnType<typeof useTranslation>["t"]) {
   if (!payload.timeOfDay) return t("iot.cameraSchedules.validation.timeOfDay");
@@ -108,18 +108,18 @@ function ScheduleForm({
       <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
         {t("iot.cameraSchedules.resolution")}
         <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onChange={(e) => setResolution(e.target.value)} value={resolution ?? "VGA"}>
-          {resolutionOptions.map((option) => <option key={option}>{option}</option>)}
+          {resolutionOptions.map((option) => <option key={option} value={option}>{formatCameraResolutionLabel(t, option)}</option>)}
         </select>
       </label>
       <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
         {t("iot.cameraSchedules.quality")}
         <select className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onChange={(e) => setQuality(e.target.value)} value={quality ?? "MEDIUM"}>
-          {qualityOptions.map((option) => <option key={option}>{option}</option>)}
+          {qualityOptions.map((option) => <option key={option} value={option}>{formatCameraQualityLabel(t, option)}</option>)}
         </select>
       </label>
       <label className="flex flex-col gap-1 text-xs font-bold text-slate-500">
         {t("iot.cameraSchedules.uploadEndpoint")}
-        <input className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onChange={(e) => setUploadEndpoint(e.target.value)} placeholder="https://..." value={uploadEndpoint ?? ""} />
+        <input className="rounded-lg border border-slate-200 px-3 py-2 text-sm" onChange={(e) => setUploadEndpoint(e.target.value)} placeholder={t("iot.cameraSchedules.uploadEndpointPlaceholder")} value={uploadEndpoint ?? ""} />
       </label>
       <label className="flex items-center gap-2 pt-5 text-sm font-bold text-slate-700">
         <input checked={enabled} onChange={(e) => setEnabled(e.target.checked)} type="checkbox" />
@@ -138,6 +138,7 @@ export function DeviceCameraSchedulesPage() {
   const { deviceId = "" } = useParams();
   const { t } = useTranslation();
   const deviceQuery = useDeviceDetail(deviceId);
+  const device = deviceQuery.data;
   const deviceUid = deviceQuery.data?.deviceUid;
   const schedulesQuery = useDeviceSchedulesQuery(deviceUid);
   const createSchedule = useCreateDeviceCameraScheduleMutation();
@@ -159,7 +160,7 @@ export function DeviceCameraSchedulesPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-black text-slate-900">{t("iot.cameraSchedules.title")}</h1>
-        <p className="mt-1 text-sm font-semibold text-slate-500">{deviceUid}</p>
+        <p className="mt-1 text-sm font-semibold text-slate-500">{readableDeviceName(t, device)}</p>
       </header>
 
       <ScheduleForm
@@ -194,13 +195,13 @@ export function DeviceCameraSchedulesPage() {
           <article className="grid gap-4 border-b border-slate-100 p-4 md:grid-cols-[1fr_220px_auto]" key={scheduleId}>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <strong className="text-slate-900">{schedule.timeOfDay}</strong>
-                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">{formatScheduleRecurrenceLabel(t, schedule.recurrence)}</span>
-                <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-black text-slate-600">{schedule.enabled ? t("iot.cameraSchedules.enabled") : t("iot.cameraSchedules.disabled")}</span>
+                <strong className="text-slate-900">{schedule.display?.timeOfDay ?? schedule.timeOfDay}</strong>
+                <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">{schedule.display?.recurrence ?? formatScheduleRecurrenceLabel(t, schedule.recurrence)}</span>
+                <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-black text-slate-600">{schedule.display?.enabled ?? (schedule.enabled ? t("iot.cameraSchedules.enabled") : t("iot.cameraSchedules.disabled"))}</span>
               </div>
-              <p className="mt-2 text-sm font-semibold text-slate-500">{schedule.resolution ?? "VGA"} · {schedule.quality ?? "MEDIUM"} · {schedule.uploadEndpoint || "-"}</p>
-              <p className="text-sm font-semibold text-slate-500">{t("iot.cameraSchedules.lastRunAt")}: {formatDateTime(schedule.lastRunAt)}</p>
-              <p className="text-sm font-semibold text-slate-500">{t("iot.cameraSchedules.nextRunAt")}: {formatDateTime(schedule.nextRunAt)}</p>
+              <p className="mt-2 text-sm font-semibold text-slate-500">{schedule.display?.resolution ?? formatCameraResolutionLabel(t, schedule.resolution)} · {schedule.display?.quality ?? formatCameraQualityLabel(t, schedule.quality)} · {schedule.display?.endpoint ?? "-"}</p>
+              <p className="text-sm font-semibold text-slate-500">{t("iot.cameraSchedules.lastRunAt")}: {schedule.display?.lastRunAt ?? formatDateTime(schedule.lastRunAt)}</p>
+              <p className="text-sm font-semibold text-slate-500">{t("iot.cameraSchedules.nextRunAt")}: {schedule.display?.nextRunAt ?? formatDateTime(schedule.nextRunAt)}</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="h-16 w-24 overflow-hidden rounded-lg bg-slate-100">

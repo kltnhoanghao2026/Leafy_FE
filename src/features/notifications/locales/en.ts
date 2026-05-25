@@ -1,10 +1,11 @@
 import type { notificationsVi } from './vi';
+import type { WidenStrings } from '../../../i18n/types';
 
 /**
  * English locale for notifications feature.
  * Type-checked against Vietnamese source of truth.
  */
-export const notificationsEn: typeof notificationsVi = {
+export const notificationsEn: WidenStrings<typeof notificationsVi> = {
   // ── Popover header ────────────────────────────────────────────────────────
   title: 'Notifications',
   markAllRead: 'Mark all as read',

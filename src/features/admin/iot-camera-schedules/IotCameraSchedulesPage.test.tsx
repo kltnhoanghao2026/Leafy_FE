@@ -111,16 +111,16 @@ describe("IotCameraSchedulesPage", () => {
       route: "/admin/iot-camera-schedules",
     });
 
-    expect(await screen.findByText("leafy-cam-001")).toBeInTheDocument();
-    expect(screen.getByText("08:30:00")).toBeInTheDocument();
+    expect(await screen.findByText(/Thiết bị leafy-ca\.\.\.-001/)).toBeInTheDocument();
+    expect(screen.getByText("08:30")).toBeInTheDocument();
     expect(screen.getAllByText("Hang ngay").length).toBeGreaterThan(0);
     expect(await screen.findByRole("img", { name: "Anh chup gan nhat cua thiet bi" })).toHaveAttribute(
       "src",
       "https://files.example.test/file-1.jpg",
     );
     expect(screen.getByText(/640x480/)).toBeInTheDocument();
-    expect(screen.getAllByText(/VGA/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/MEDIUM/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Tiêu chuẩn/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Trung bình/).length).toBeGreaterThan(0);
   });
 
   it("runs schedule now and refreshes the displayed capture status", async () => {
@@ -131,11 +131,12 @@ describe("IotCameraSchedulesPage", () => {
       route: "/admin/iot-camera-schedules",
     });
 
-    await screen.findByText("leafy-cam-001");
+    await screen.findByText(/Thiết bị leafy-ca\.\.\.-001/);
     await user.click(screen.getByRole("button", { name: /Chay chup theo thiet bi/i }));
 
     await waitFor(() => expect(handlers.wasRunNowCalled()).toBe(true));
-    expect(await screen.findByText("request-2")).toBeInTheDocument();
+    expect(await screen.findByText("Đã gửi lệnh")).toBeInTheDocument();
+    expect(screen.queryByText("request-2")).not.toBeInTheDocument();
   });
 
   it("filters schedules by device UID and enabled state", async () => {
@@ -155,11 +156,11 @@ describe("IotCameraSchedulesPage", () => {
       route: "/admin/iot-camera-schedules",
     });
 
-    await screen.findByText("leafy-cam-001");
-    await user.type(screen.getByPlaceholderText("Loc theo device UID"), "disabled");
+    await screen.findByText(/Thiết bị leafy-ca\.\.\.-001/);
+    await user.type(screen.getByPlaceholderText("Lọc theo thiết bị"), "disabled");
 
-    expect(screen.queryByText("leafy-cam-001")).not.toBeInTheDocument();
-    expect(screen.getByText("disabled-cam")).toBeInTheDocument();
+    expect(screen.queryByText(/Thiết bị leafy-ca\.\.\.-001/)).not.toBeInTheDocument();
+    expect(screen.getByText(/disabled-cam/)).toBeInTheDocument();
 
     await user.selectOptions(screen.getByDisplayValue("Tat ca lich"), "enabled");
     expect(screen.queryByText("disabled-cam")).not.toBeInTheDocument();

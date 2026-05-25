@@ -10,9 +10,7 @@ import type {
 import {
   buildCreateZonePayload,
   buildUpdateZonePayload,
-  STATUS_LABELS,
   toZoneForm,
-  ZONE_STATUS_OPTIONS,
 } from "./formUtils";
 
 interface FarmZoneFormDialogProps {
@@ -156,24 +154,6 @@ export function FarmZoneFormDialog({
                 Thông tin nâng cao
               </summary>
               <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                {mode === "edit" ? (
-                  <Field label="Trạng thái" htmlFor="zone-status">
-                    <select
-                      id="zone-status"
-                      value={form.status}
-                      onChange={(event) =>
-                        updateForm({ status: event.target.value as typeof form.status })
-                      }
-                      className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none focus:border-[#245A34] focus:ring-2 focus:ring-[#245A34]/10"
-                    >
-                      {ZONE_STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {STATUS_LABELS[status]}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                ) : null}
                 <Field label="Mã khu vực" htmlFor="zone-code">
                   <input
                     id="zone-code"
