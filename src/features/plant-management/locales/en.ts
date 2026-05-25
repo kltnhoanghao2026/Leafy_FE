@@ -1,9 +1,10 @@
 // English translations for the plant-management feature module
 // Shape MUST mirror vi.ts exactly — TypeScript enforces this via PlantManagementTranslations.
 
+import type { WidenStrings } from '../../../i18n/types';
 import type { PlantManagementTranslations } from './vi';
 
-export const plantManagementEn: PlantManagementTranslations = {
+export const plantManagementEn: WidenStrings<PlantManagementTranslations> = {
   // ── Shared label maps ─────────────────────────────────────────────────────
   status: {
     ACTIVE: 'Growing',

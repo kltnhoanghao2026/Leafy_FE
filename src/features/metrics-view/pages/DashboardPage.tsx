@@ -29,19 +29,19 @@ import type {
   FarmPlotResponse,
   FarmPlotStatus,
   FarmZoneResponse,
-  FarmZoneStatus,
   UpdateFarmPlotRequest,
   UpdateFarmZoneRequest,
 } from "../../farm-management/types";
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
 import { FarmPlotFormDialog } from "../../farm-management/components/FarmPlotFormDialog";
 import { FarmZoneFormDialog } from "../../farm-management/components/FarmZoneFormDialog";
+import { useMyDevices } from "../../device-onboarding/queries";
 import { useDashboardOverview } from "../queries";
 import { formatDateTime, formatNumber } from "../utils/format";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
 
-const STATUS_STYLES: Record<FarmPlotStatus | FarmZoneStatus, string> = {
+const STATUS_STYLES: Record<FarmPlotStatus, string> = {
   ACTIVE: "border-emerald-100 bg-emerald-50 text-emerald-700",
   INACTIVE: "border-amber-100 bg-amber-50 text-amber-700",
   ARCHIVED: "border-slate-200 bg-slate-100 text-slate-600",
@@ -65,7 +65,7 @@ type DeleteTarget =
   | { type: "plot"; plot: FarmPlotResponse }
   | { type: "zone"; zone: FarmZoneResponse };
 
-function StatusPill({ status }: { status: FarmPlotStatus | FarmZoneStatus }) {
+function StatusPill({ status }: { status: FarmPlotStatus }) {
   const { t } = useTranslation();
   return (
     <span
@@ -162,7 +162,23 @@ export function DashboardPage() {
 
   const zonesQuery = useFarmZones(activePlotId ?? "", !!activePlotId);
   const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
-  const overviewQuery = useDashboardOverview(activePlotId ?? "", !!activePlotId);
+  const farmDevicesParams = useMemo(
+    () => ({
+      page: 0,
+      size: 1,
+      farmPlotId: activePlotId ?? undefined,
+    }),
+    [activePlotId],
+  );
+  const farmDevicesQuery = useMyDevices(farmDevicesParams, Boolean(activePlotId));
+  const farmDeviceCount = farmDevicesQuery.data?.totalItems ?? 0;
+  const canLoadOverview = Boolean(
+    activePlotId &&
+      !farmDevicesQuery.isLoading &&
+      !farmDevicesQuery.isError &&
+      farmDeviceCount > 0,
+  );
+  const overviewQuery = useDashboardOverview(activePlotId ?? "", canLoadOverview);
   const overview = overviewQuery.data;
 
   const createPlot = useCreateFarmPlot(ownerProfileId);
@@ -173,7 +189,6 @@ export function DashboardPage() {
   const deleteZone = useDeleteFarmZone(activePlotId ?? "");
 
   const activePlots = plots.filter((plot) => plot.status === "ACTIVE").length;
-  const activeZones = zones.filter((zone) => zone.status === "ACTIVE").length;
 
   const handleCreatePlot = async (
     payload: CreateFarmPlotRequest | UpdateFarmPlotRequest,
@@ -339,7 +354,11 @@ export function DashboardPage() {
         <MetricTile
           label={t("iot.dashboard.selectedFarmZones")}
           value={formatNumber(zones.length)}
-          detail={t("iot.dashboard.activeCount")(formatNumber(activeZones))}
+          detail={
+            selectedPlot
+              ? t("iot.dashboard.zoneMetricDescription")
+              : t("iot.dashboard.noFarmSelected")
+          }
           icon={Layers3}
         />
         <MetricTile
@@ -587,7 +606,24 @@ export function DashboardPage() {
                       <BarChart3 className="h-5 w-5 text-[#245A34]" strokeWidth={2.5} />
                     )}
                   </div>
-                  {overviewQuery.isError ? (
+                  {farmDevicesQuery.isLoading ? (
+                    <p className="mt-4 rounded-xl bg-white p-3 text-sm font-bold text-slate-600">
+                      {t("iot.dashboard.checkingFarmDevices")}
+                    </p>
+                  ) : farmDevicesQuery.isError ? (
+                    <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
+                      {t("iot.dashboard.farmDevicesCheckError")}
+                    </p>
+                  ) : farmDeviceCount === 0 ? (
+                    <div className="mt-4 rounded-xl border border-dashed border-emerald-200 bg-white p-4">
+                      <p className="text-sm font-black text-slate-800">
+                        {t("iot.dashboard.noFarmDevices")}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-500">
+                        {t("iot.dashboard.noFarmDevicesDescription")}
+                      </p>
+                    </div>
+                  ) : overviewQuery.isError ? (
                     <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-bold text-red-700">
                       {t("iot.dashboard.overviewError")}
                     </p>
@@ -700,7 +736,6 @@ export function DashboardPage() {
                             <h4 className="text-lg font-black text-slate-900">
                               {zone.zoneName}
                             </h4>
-                            <StatusPill status={zone.status} />
                           </div>
                           <p className="mt-1 text-sm font-semibold text-slate-500">
                             {zone.description || zone.zoneCode || t("iot.dashboard.noDescription")}

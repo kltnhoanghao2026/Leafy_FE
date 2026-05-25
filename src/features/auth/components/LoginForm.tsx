@@ -55,7 +55,7 @@ export function LoginForm() {
           Chào mừng bác trở lại!
         </h2>
         <p className="text-sm font-medium text-slate-500">
-          Hệ thống giám sát cà phê thông minh
+          Quản lý vườn, thiết bị IoT và cảnh báo trong một nơi.
         </p>
       </div>
 

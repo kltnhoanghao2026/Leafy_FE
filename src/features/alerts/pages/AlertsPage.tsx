@@ -12,6 +12,7 @@ import {
 } from "../queries";
 import { useAlertScopeOptions } from "../hooks/useAlertScopeOptions";
 import type {
+  AlertEventItemResponse,
   AlertEventsParams,
   AlertSeverity,
   AlertStatus,
@@ -25,8 +26,10 @@ import { useTranslation } from "../../../i18n";
 import {
   formatAlertStatusLabel,
   formatAlertTypeLabel,
+  formatSensorLabel,
   formatSeverityLabel,
 } from "../../iot/utils/iotTranslation";
+import { useInferredSensorTypeOptions } from "../hooks/useInferredSensorTypeOptions";
 import {
   alertSeverityClasses,
   alertStatusClasses,
@@ -41,6 +44,128 @@ const statusOptions: AlertStatus[] = [
   "RESOLVED",
   "CLOSED",
 ];
+
+const appendUnit = (value: string, unit?: string) => (unit ? `${value} ${unit}` : value);
+
+const normalizeDiseaseKey = (value: string) =>
+  value.trim().toLowerCase().replaceAll(" ", "_").replaceAll("-", "_");
+
+const parseDiseaseAlertMessage = (message?: string | null) => {
+  if (!message) return null;
+  const match = message.match(/disease detected from camera image:\s*(.+?)(?:\s*\(confidence\s*([0-9.]+)\))?$/i);
+  if (!match?.[1]) return null;
+  return {
+    diseaseName: match[1].trim(),
+    confidence: match[2] ? Number(match[2]) : null,
+  };
+};
+
+const formatDiseaseLabel = (
+  t: ReturnType<typeof useTranslation>["t"],
+  diseaseName?: string | null,
+) => {
+  if (!diseaseName) return t("iot.alerts.disease.unknown");
+  const key = `iot.alerts.disease.names.${normalizeDiseaseKey(diseaseName)}` as Parameters<typeof t>[0];
+  const translated = t(key) as string;
+  return translated && translated !== key ? translated : diseaseName;
+};
+
+const readableAlertDescription = (
+  t: ReturnType<typeof useTranslation>["t"],
+  alert: AlertEventItemResponse,
+  sensorLabel: string,
+  unit?: string,
+) => {
+  const min = alert.thresholdMin != null ? appendUnit(formatNumber(alert.thresholdMin), unit) : "";
+  const max = alert.thresholdMax != null ? appendUnit(formatNumber(alert.thresholdMax), unit) : "";
+
+  if (alert.alertType === "DISEASE_DETECTED") {
+    const disease = formatDiseaseLabel(t, parseDiseaseAlertMessage(alert.message)?.diseaseName);
+    return t("iot.alerts.message.diseaseDetected")(disease);
+  }
+
+  if (alert.alertType === "THRESHOLD_HIGH" || (alert.thresholdMax != null && alert.thresholdMin == null)) {
+    return t("iot.alerts.message.thresholdHigh")(sensorLabel, max);
+  }
+
+  if (alert.alertType === "THRESHOLD_LOW" || (alert.thresholdMin != null && alert.thresholdMax == null)) {
+    return t("iot.alerts.message.thresholdLow")(sensorLabel, min);
+  }
+
+  if (alert.alertType === "THRESHOLD_RANGE" || (alert.thresholdMin != null && alert.thresholdMax != null)) {
+    return t("iot.alerts.message.thresholdRange")(sensorLabel, min, max);
+  }
+
+  return t("iot.alerts.message.conditionTriggered")(sensorLabel);
+};
+
+function AlertMessageSummary({
+  alert,
+  t,
+}: {
+  alert: AlertEventItemResponse;
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const { sensorOptions, isLoading } = useInferredSensorTypeOptions(
+    alert.deviceId ?? "",
+    alert.zoneId ?? "",
+  );
+  const sensor = sensorOptions.find((option) => option.id === alert.sensorTypeId);
+  const sensorLabel = sensor
+    ? formatSensorLabel(t, sensor.code, sensor.name)
+    : t("iot.alerts.value.unknownSensorData");
+  const unit = sensor?.unit;
+  const diseaseInfo = parseDiseaseAlertMessage(alert.message);
+  const isDiseaseAlert = alert.alertType === "DISEASE_DETECTED";
+
+  if (isDiseaseAlert) {
+    const disease = formatDiseaseLabel(t, diseaseInfo?.diseaseName);
+    const confidence = alert.triggerValue ?? diseaseInfo?.confidence ?? null;
+
+    return (
+      <>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          {t("iot.alerts.message.diseaseDetected")(disease)}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-slate-400">
+          {confidence == null
+            ? t("iot.alerts.disease.confidenceUnknown")
+            : t("iot.alerts.disease.confidence")(formatNumber(confidence * 100))}
+        </p>
+      </>
+    );
+  }
+
+  const measuredValue =
+    alert.triggerValue === null || alert.triggerValue === undefined
+      ? t("iot.alerts.value.noReading")
+      : t("iot.alerts.value.measured")(appendUnit(formatNumber(alert.triggerValue), unit));
+
+  const rangeText =
+    alert.thresholdMin !== null && alert.thresholdMax !== null
+      ? t("iot.alerts.value.safeRange")(
+          appendUnit(formatNumber(alert.thresholdMin), unit),
+          appendUnit(formatNumber(alert.thresholdMax), unit),
+        )
+      : alert.thresholdMax !== null && alert.thresholdMax !== undefined
+        ? t("iot.alerts.value.maxThreshold")(appendUnit(formatNumber(alert.thresholdMax), unit))
+        : alert.thresholdMin !== null && alert.thresholdMin !== undefined
+          ? t("iot.alerts.value.minThreshold")(appendUnit(formatNumber(alert.thresholdMin), unit))
+          : "";
+
+  return (
+    <>
+      <p className="mt-1 text-xs font-semibold text-slate-500">
+        {isLoading
+          ? t("iot.alerts.message.loadingSensor")
+          : readableAlertDescription(t, alert, sensorLabel, unit)}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">
+        {rangeText ? `${measuredValue}; ${rangeText}` : measuredValue}
+      </p>
+    </>
+  );
+}
 
 const timeRangeToIsoWindow = (range: TimeRange) => {
   if (range === "all") {
@@ -157,38 +282,6 @@ export function AlertsPage() {
     if (!zoneId) return t("iot.alerts.scope.noZone");
     const zone = zoneMap.get(zoneId);
     return zone?.zoneName || t("iot.alerts.scope.missingZone");
-  };
-
-  const readableAlertValue = (alert: {
-    triggerValue: number | null;
-    thresholdMin: number | null;
-    thresholdMax: number | null;
-  }) => {
-    const value =
-      alert.triggerValue === null || alert.triggerValue === undefined
-        ? t("iot.alerts.value.noReading")
-        : t("iot.alerts.value.measured")(formatNumber(alert.triggerValue));
-
-    if (alert.thresholdMin !== null && alert.thresholdMax !== null) {
-      return `${value}; ${t("iot.alerts.value.safeRange")(
-        formatNumber(alert.thresholdMin),
-        formatNumber(alert.thresholdMax),
-      )}`;
-    }
-
-    if (alert.thresholdMax !== null && alert.thresholdMax !== undefined) {
-      return `${value}; ${t("iot.alerts.value.maxThreshold")(
-        formatNumber(alert.thresholdMax),
-      )}`;
-    }
-
-    if (alert.thresholdMin !== null && alert.thresholdMin !== undefined) {
-      return `${value}; ${t("iot.alerts.value.minThreshold")(
-        formatNumber(alert.thresholdMin),
-      )}`;
-    }
-
-    return value;
   };
 
   return (
@@ -520,12 +613,7 @@ export function AlertsPage() {
                           <p className="text-sm font-black text-slate-800">
                             {alert.display?.type ?? formatAlertTypeLabel(t, alert.alertType)}
                           </p>
-                          <p className="mt-1 text-xs font-semibold text-slate-500">
-                            {alert.display?.message ?? alert.message}
-                          </p>
-                          <p className="mt-1 text-xs font-semibold text-slate-400">
-                            {alert.display?.value ?? readableAlertValue(alert)}
-                          </p>
+                          <AlertMessageSummary alert={alert} t={t} />
                         </td>
                         <td className="px-5 py-4 align-top">
                           <span
