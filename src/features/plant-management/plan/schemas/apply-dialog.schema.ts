@@ -13,7 +13,8 @@ export interface ApplyPlanDialogProps {
   plan: PlanResponse;
   isSubmitting: boolean;
   onClose: () => void;
-  onSubmit: (payload: PlanApplyRequest) => void;
+  /** Receives either a specific-scope payload or an all-farms payload */
+  onSubmit: (payload: PlanApplyRequest | import("../../shared/types").ApplyToAllFarmsRequest) => void;
 }
 
 export interface BulkApplyPlanDialogProps {
@@ -93,6 +94,8 @@ export interface ExcludeSectionProps {
   onClearPlants: () => void;
   showZones?: boolean;
   showPlants?: boolean;
+  /** Shown below zone names in exclusion checkboxes (e.g. "Vườn: ..." for specific-scope) */
+  zoneSubtitle?: string;
 }
 
 // ── Scope Selector ─────────────────────────────────────────────────────────────

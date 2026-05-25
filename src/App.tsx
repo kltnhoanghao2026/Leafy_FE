@@ -103,6 +103,11 @@ const PlanApplyDetailPage = lazy(() =>
     default: module.PlanApplyDetailPage,
   })),
 );
+const RagPlanDetailPageForRagTab = lazy(() =>
+  import("./features/plant-management/plan/pages/RagPlanDetailPage").then((module) => ({
+    default: module.RagPlanDetailPage,
+  })),
+);
 const PlansPage = lazy(() =>
   import("./features/plant-management/plan/pages/PlansPage").then((module) => ({
     default: module.PlansPage,
@@ -433,6 +438,14 @@ function App() {
                 element={
                   <Suspense fallback={<PageLoader />}>
                     <PlanDetailPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="plans/rag/:planId"
+                element={
+                  <Suspense fallback={<PageLoader />}>
+                    <RagPlanDetailPageForRagTab />
                   </Suspense>
                 }
               />

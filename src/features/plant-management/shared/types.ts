@@ -349,6 +349,13 @@ export interface PlanApplyRequest {
   excludedFarmZoneIds?: string[];
 }
 
+export interface ApplyToAllFarmsRequest {
+  startDate: string;
+  trackingGranularity?: TrackingGranularity;
+  excludedFarmZoneIds?: string[];
+  excludedPlantIds?: string[];
+}
+
 export interface PlanApplyResponse {
   id: string;
   planId: string;
@@ -526,6 +533,67 @@ export interface PlanResponse {
   createdBy: string | null;
   lastModifiedBy: string | null;
   active: boolean;
+}
+
+// ── RAG Plan types (from rag-service MongoDB) ─────────────────────────────────
+
+export interface RagPlanSourceDocument {
+  title?: string;
+  content?: string;
+  url?: string;
+  score?: number;
+}
+
+export interface RagPlanWebSearchResult {
+  title?: string;
+  content?: string;
+  url?: string;
+  score?: number;
+}
+
+export interface RagPlanResponse {
+  planId: string;
+  planName: string | null;
+  diseaseName: string | null;
+  confidenceScore: number | null;
+  severityLevel: string | null;
+  requiredInputs: string[] | null;
+  safetyWarnings: string[] | null;
+  successIndicators: string | null;
+  estimatedCost: string | null;
+  sourceType: string | null;
+  source: string | null;
+  sourceDocuments: RagPlanSourceDocument[] | null;
+  webSearchResults: RagPlanWebSearchResult[] | null;
+  plantId: string | null;
+  farmPlotId: string | null;
+  farmZoneId: string | null;
+  schedule: RagPlanScheduleEvent[] | null;
+  isPublic: boolean | null;
+  active: boolean | null;
+  creatorId: string | null;
+  ownerId: string | null;
+  userId: string | null;
+  plantManagementPlanId: string | null;
+  createdAt: string | null;
+  lastModifiedAt: string | null;
+}
+
+export interface RagPlanScheduleEvent {
+  eventType: string;
+  note: string | null;
+  description: string | null;
+  daysFromStart: number | null;
+  durationDays: number | null;
+  phiDays: number | null;
+  ppeRequired: string | null;
+  mrlNote: string | null;
+  estimatedCost: string | null;
+}
+
+export interface RagPlanListParams {
+  page?: number;
+  size?: number;
 }
 
 // ── Agriculture Dashboard Stats ──────────────────────────────────────────────
