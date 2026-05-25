@@ -22,7 +22,8 @@ export type IoTAlertType =
   | "THRESHOLD_LOW"
   | "THRESHOLD_RANGE"
   | "DEVICE_OFFLINE"
-  | "DEVICE_ONLINE";
+  | "DEVICE_ONLINE"
+  | "DISEASE_DETECTED";
 
 export type IoTDeviceStatus =
   | DeviceStatus
@@ -88,6 +89,7 @@ const alertTypeLabelKeys = {
   THRESHOLD_RANGE: "iot.alertType.THRESHOLD_RANGE",
   DEVICE_OFFLINE: "iot.alertType.DEVICE_OFFLINE",
   DEVICE_ONLINE: "iot.alertType.DEVICE_ONLINE",
+  DISEASE_DETECTED: "iot.alertType.DISEASE_DETECTED",
 } as const satisfies Record<IoTAlertType, TranslationKey>;
 
 const deviceStatusLabelKeys = {

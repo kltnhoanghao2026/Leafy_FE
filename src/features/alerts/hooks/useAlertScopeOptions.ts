@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { useMyDevices } from "../../device-onboarding/queries";
-import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
+import {
+  useFarmPlots,
+  useFarmZones,
+  useFarmZonesByOwner,
+} from "../../farm-management/queries";
 import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
 import { useMyProfile } from "../../settings/queries/queries";
 import type { DeviceResponse, MyDevicesParams } from "../../../types/iot";
@@ -35,6 +39,7 @@ export const useAlertScopeOptions = ({
   const ownerProfileId = profileQuery.data?.id ?? "";
   const plotsQuery = useFarmPlots(ownerProfileId, enabled && !!ownerProfileId);
   const zonesQuery = useFarmZones(farmPlotId, enabled && !!farmPlotId);
+  const allZonesQuery = useFarmZonesByOwner(ownerProfileId, enabled && !!ownerProfileId);
   const devicesQuery = useMyDevices(
     deviceListParams(farmPlotId, zoneId),
     enabled,
@@ -45,6 +50,10 @@ export const useAlertScopeOptions = ({
     [plotsQuery.data],
   );
   const zones = useMemo(() => zonesQuery.data ?? [], [zonesQuery.data]);
+  const allZones = useMemo(
+    () => allZonesQuery.data ?? [],
+    [allZonesQuery.data],
+  );
   const devices = useMemo(
     () => devicesQuery.data?.items ?? [],
     [devicesQuery.data],
@@ -55,8 +64,8 @@ export const useAlertScopeOptions = ({
     [farmPlots],
   );
   const zoneMap = useMemo<Map<string, FarmZoneResponse>>(
-    () => toMap(zones),
-    [zones],
+    () => toMap([...allZones, ...zones]),
+    [allZones, zones],
   );
   const deviceMap = useMemo<Map<string, DeviceResponse>>(
     () => toMap(devices),
@@ -67,9 +76,11 @@ export const useAlertScopeOptions = ({
     profileQuery,
     plotsQuery,
     zonesQuery,
+    allZonesQuery,
     devicesQuery,
     farmPlots,
     zones,
+    allZones,
     devices,
     farmPlotMap,
     zoneMap,

@@ -59,12 +59,14 @@ export const collectorApi = {
       API_ENDPOINTS.IOT.DASHBOARD_OVERVIEW,
       {
         params: { farmPlotId },
+        headers: currentUserHeaders(),
       },
     ),
 
   getZoneOverview: (zoneId: string) =>
     apiClient.get<ZoneOverviewResponse>(
       API_ENDPOINTS.IOT.FARM_ZONE_OVERVIEW(zoneId),
+      { headers: currentUserHeaders() },
     ),
 
   getZoneChart: (zoneId: string, sensorCode: string, range: ChartRange) =>
@@ -72,6 +74,7 @@ export const collectorApi = {
       API_ENDPOINTS.IOT.FARM_ZONE_CHARTS(zoneId),
       {
         params: { sensorCode, range },
+        headers: currentUserHeaders(),
       },
     ),
 
@@ -101,21 +104,25 @@ export const collectorApi = {
   getDeviceDetail: (deviceId: string) =>
     apiClient.get<DeviceDetailResponse>(
       API_ENDPOINTS.IOT.DEVICE_DETAIL(deviceId),
+      { headers: currentUserHeaders() },
     ),
 
   getDeviceLatestReadings: (deviceId: string) =>
     apiClient.get<LatestReadingItemResponse[]>(
       API_ENDPOINTS.IOT.DEVICE_LATEST_READINGS(deviceId),
+      { headers: currentUserHeaders() },
     ),
 
   getDeviceChart: (deviceId: string, sensorCode: string, range: ChartRange) =>
     apiClient.get<SensorChartResponse>(API_ENDPOINTS.IOT.DEVICE_CHARTS(deviceId), {
       params: { sensorCode, range },
+      headers: currentUserHeaders(),
     }),
 
   getDeviceConfig: (deviceId: string) =>
     apiClient.get<DeviceConfigResponse>(
       API_ENDPOINTS.IOT.DEVICE_CONFIG(deviceId),
+      { headers: currentUserHeaders() },
     ),
 
   updateDeviceConfig: (deviceId: string, payload: UpdateDeviceConfigRequest) =>

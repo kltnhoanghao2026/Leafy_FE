@@ -175,12 +175,12 @@ describe("DeviceDetailPage camera media panel", () => {
 
     expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
     expect(await screen.findByText(/08:30/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Hang ngay/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Hằng ngày/).length).toBeGreaterThan(0);
     const images = await screen.findAllByRole("img");
     expect(images.some((image) => image.getAttribute("src") === "https://files.example.test/file-1.jpg")).toBe(true);
-    expect(screen.getByText(/coffee-rust/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Quan trọng/i).length).toBeGreaterThan(0);
-    expect(screen.getByText("Đã tạo cảnh báo")).toBeInTheDocument();
+    expect(screen.getAllByText("Đã tạo cảnh báo").length).toBeGreaterThan(0);
   });
 
   it("creates a client camera schedule through the device scoped endpoint", async () => {
@@ -189,7 +189,7 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     await screen.findByText(/08:30/);
-    await user.click(screen.getByRole("button", { name: /^Tao$/i }));
+    await user.click(screen.getByRole("button", { name: /^Tạo$/i }));
 
     await waitFor(() =>
       expect(handlers.getCreateSchedulePayload()).toMatchObject({
@@ -220,7 +220,7 @@ describe("DeviceDetailPage camera media panel", () => {
     );
   });
 
-  it("opens a media detail dialog from the history item", async () => {
+  it("updates inline media details from the history item", async () => {
     const user = userEvent.setup();
     setupHandlers();
     renderPage();
@@ -228,7 +228,6 @@ describe("DeviceDetailPage camera media panel", () => {
     await screen.findByText("Leafy Camera");
     await user.click(screen.getByRole("button", { name: /coffee-rust - Quan trọng/i }));
 
-    expect(screen.getByRole("dialog", { name: /Chi tiết ảnh/i })).toBeInTheDocument();
     expect(screen.getByText("Phân tích bệnh")).toBeInTheDocument();
     expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(1);
     expect(screen.getByText(/86%/)).toBeInTheDocument();

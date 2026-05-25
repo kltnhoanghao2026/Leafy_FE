@@ -32,11 +32,12 @@ import { CHART_TYPES, CHART_TYPE_LABEL_KEYS } from "../../metrics-view/utils/cha
 import { CompareChart } from "../../metrics-view/components/CompareChart";
 import { SensorChartModal } from "../../metrics-view/components/SensorChartModal";
 import { useAlertEvents } from "../../alerts/queries";
-import { ModalShell } from "../../../components/ui/ModalShell";
 import { MediaImage } from "../../community/components/MediaImage";
 import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
+import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
+import { useMyProfile } from "../../settings/queries";
 import {
   formatCameraQualityLabel,
   formatCameraResolutionLabel,
@@ -134,14 +135,6 @@ const SENSOR_CONFIG = [
   },
 ] as const;
 
-const isHttpUrl = (value: string) => {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-};
 const getScheduleId = (schedule: DeviceCameraScheduleResponse) =>
   schedule.scheduleId ?? schedule.id;
 
@@ -226,8 +219,53 @@ const statusTone = (status?: string | null): "green" | "red" | "orange" | "slate
   return "slate";
 };
 
+const friendlyAnalysisError = (error: string | null | undefined, t: TFunction) => {
+  if (!error) return null;
+  return t("iot.devices.media.analysis.failedFriendly");
+};
+
 const isOfflineClaimedDevice = (device?: DeviceDetailResponse) =>
   device?.provisioningStatus === "CLAIMED" && device?.status === "OFFLINE";
+
+const formatFarmPlotLabel = (
+  device: DeviceDetailResponse,
+  plots: Array<{ id: string; name: string; code?: string | null }>,
+  isLoading: boolean,
+  t: TFunction,
+) => {
+  if (!device.farmPlotId) {
+    return t("iot.devices.detail.farmPlotUnassigned");
+  }
+
+  const plot = plots.find((item) => item.id === device.farmPlotId);
+  if (plot) {
+    return plot.code ? `${plot.name} (${plot.code})` : plot.name;
+  }
+
+  return isLoading
+    ? t("iot.devices.detail.locationLoading")
+    : t("iot.devices.detail.farmPlotUnknown");
+};
+
+const formatFarmZoneLabel = (
+  device: DeviceDetailResponse,
+  zones: Array<{ id: string; zoneName: string; zoneCode?: string | null }>,
+  isLoading: boolean,
+  t: TFunction,
+) => {
+  if (!device.zoneId) {
+    return t("iot.devices.detail.zoneUnassigned");
+  }
+
+  const zone = zones.find((item) => item.id === device.zoneId);
+  if (zone) {
+    return zone.zoneCode ? `${zone.zoneName} (${zone.zoneCode})` : zone.zoneName;
+  }
+
+  return isLoading
+    ? t("iot.devices.detail.locationLoading")
+    : t("iot.devices.detail.zoneUnknown");
+};
 
 const isMediaWaiting = (media?: DeviceMediaEventResponse) =>
   media?.status === "REQUESTED" ||
@@ -314,12 +352,12 @@ function DeviceSensorCard({
   eventMarkers,
   exportFilename,
 }: DeviceSensorCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const knownSensor = SENSOR_CONFIG.find((sensor) => sensor.code === reading.sensorCode);
   const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange);
   const trend = useMemo(
     () => deriveAnalytics(chartToTrend(chartQuery.data, displayRange), alerts),
-    [alerts, chartQuery.data, displayRange],
+    [alerts, chartQuery.data, displayRange, locale],
   );
   const backendThresholds = useMemo(
     () => thresholdsFromAlertEvents(alerts),
@@ -444,23 +482,33 @@ function DeviceMediaPanel({
   const [scheduleRecurrence, setScheduleRecurrence] = useState<CameraScheduleRecurrence>("DAILY");
   const [scheduleResolution, setScheduleResolution] = useState<"QVGA" | "VGA" | "HD">("VGA");
   const [scheduleQuality, setScheduleQuality] = useState<"LOW" | "MEDIUM" | "HIGH">("MEDIUM");
-  const [uploadEndpoint, setUploadEndpoint] = useState("");
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [showAllMediaHistory, setShowAllMediaHistory] = useState(false);
   const latestMedia = mediaEvents[0];
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
   );
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
-  const selectedMedia = mediaEvents.find((event) => event.id === selectedMediaId) ?? null;
+  const selectedMedia =
+    mediaEvents.find((event) => event.id === selectedMediaId) ??
+    latestUploaded ??
+    latestMedia ??
+    null;
   const selectedMediaSource =
     selectedMedia?.analysis?.fileUrl ?? selectedMedia?.fileId ?? null;
   const selectedAnalysis = selectedMedia?.analysis;
+  const selectedAnalysisError = friendlyAnalysisError(selectedAnalysis?.error, t);
   const isWaiting = isCapturing || isPolling || isMediaWaiting(latestMedia);
   const failedLatest =
     latestMedia?.status === "FAILED" || latestMedia?.status === "TIMEOUT"
       ? latestMedia
       : null;
+  const compactHistoryLimit = 5;
+  const visibleMediaEvents = showAllMediaHistory
+    ? mediaEvents
+    : mediaEvents.slice(0, compactHistoryLimit);
+  const hiddenMediaCount = Math.max(mediaEvents.length - compactHistoryLimit, 0);
 
   useEffect(() => {
     if (selectedMediaId && !mediaEvents.some((event) => event.id === selectedMediaId)) {
@@ -468,12 +516,17 @@ function DeviceMediaPanel({
     }
   }, [mediaEvents, selectedMediaId]);
 
+  useEffect(() => {
+    if (mediaEvents.length <= compactHistoryLimit && showAllMediaHistory) {
+      setShowAllMediaHistory(false);
+    }
+  }, [mediaEvents.length, showAllMediaHistory]);
+
   const resetScheduleForm = () => {
     setScheduleTime("08:30");
     setScheduleRecurrence("DAILY");
     setScheduleResolution("VGA");
     setScheduleQuality("MEDIUM");
-    setUploadEndpoint("");
     setEditingScheduleId(null);
   };
 
@@ -483,16 +536,10 @@ function DeviceMediaPanel({
     setScheduleRecurrence(schedule.recurrence as CameraScheduleRecurrence);
     setScheduleResolution((schedule.resolution as "QVGA" | "VGA" | "HD") || "VGA");
     setScheduleQuality((schedule.quality as "LOW" | "MEDIUM" | "HIGH") || "MEDIUM");
-    setUploadEndpoint(schedule.uploadEndpoint ?? "");
     setScheduleError(null);
   };
 
   const submitSchedule = async () => {
-    if (uploadEndpoint.trim() && !isHttpUrl(uploadEndpoint.trim())) {
-      setScheduleError(t("iot.cameraSchedules.validation.uploadEndpoint"));
-      return;
-    }
-
     setScheduleError(null);
     const payload = {
       enabled: true,
@@ -500,7 +547,6 @@ function DeviceMediaPanel({
       recurrence: scheduleRecurrence,
       resolution: scheduleResolution,
       quality: scheduleQuality,
-      uploadEndpoint: uploadEndpoint.trim() || undefined,
     };
 
     const editingSchedule = editingScheduleId
@@ -629,7 +675,7 @@ function DeviceMediaPanel({
 
       {canCapture ? (
         <form
-          className="mt-5 grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[0.7fr_0.7fr_0.7fr_0.7fr_1fr_auto]"
+          className="mt-5 grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 md:grid-cols-[0.8fr_0.8fr_0.8fr_0.8fr_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             void submitSchedule();
@@ -680,15 +726,6 @@ function DeviceMediaPanel({
               <option value="HIGH">{formatCameraQualityLabel(t, "HIGH")}</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
-            {t("iot.cameraSchedules.uploadEndpoint")}
-            <input
-              value={uploadEndpoint}
-              onChange={(event) => setUploadEndpoint(event.target.value)}
-              placeholder={t("iot.cameraSchedules.uploadEndpointPlaceholder")}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-400"
-            />
-          </label>
           {scheduleError ? (
             <p className="md:col-span-full text-sm font-bold text-red-600">{scheduleError}</p>
           ) : null}
@@ -738,127 +775,38 @@ function DeviceMediaPanel({
         </p>
       ) : null}
 
-      <div className="mt-6 grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-6">
-        <div className="overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
-          {latestUploaded?.fileId ? (
-            <MediaImage
-              source={latestUploaded.fileId}
-              alt={t("iot.devices.media.latestImageAlt")}
-              className="h-[320px] w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-[320px] flex-col items-center justify-center gap-3 text-slate-500">
-              <ImageOff className="h-8 w-8" strokeWidth={2.5} />
-              <span className="text-sm font-bold">{t("iot.devices.media.noUploadedImage")}</span>
-            </div>
-          )}
-        </div>
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_1fr] lg:items-start">
+        <div className="space-y-4">
+          <div className="overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
+            {selectedMediaSource ? (
+              <MediaImage
+                source={selectedMediaSource}
+                alt={t("iot.devices.media.latestImageAlt")}
+                className="h-[340px] w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-[340px] flex-col items-center justify-center gap-3 text-slate-500">
+                <ImageOff className="h-8 w-8" strokeWidth={2.5} />
+                <span className="text-sm font-bold">{t("iot.devices.media.noUploadedImage")}</span>
+              </div>
+            )}
+          </div>
 
-        <div className="space-y-3">
-          <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
-            {t("iot.devices.media.mediaHistory")}
-          </h4>
-          {mediaEvents.length === 0 ? (
-            <p className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">
-              {t("iot.devices.media.noEvents")}
-            </p>
-          ) : null}
-          {mediaEvents.map((event) => (
-            <button
-              key={event.id}
-              type="button"
-              onClick={() => setSelectedMediaId(event.id)}
-              className={`w-full rounded-2xl border px-4 py-3 text-left transition hover:border-[#245A34]/40 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#245A34]/30 ${
-                selectedMedia?.id === event.id
-                  ? "border-[#245A34]/50 bg-white shadow-sm"
-                  : "border-slate-100 bg-slate-50"
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                  {event.fileId || event.analysis?.fileUrl ? (
-                    <MediaImage
-                      source={event.analysis?.fileUrl ?? event.fileId ?? ""}
-                      alt={t("iot.devices.media.latestImageAlt")}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-slate-400">
-                      <ImageOff className="h-5 w-5" strokeWidth={2.5} />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className={badgeClass(statusTone(event.status))}>
-                      {formatMediaStatusLabel(t, event.status)}
+          {selectedMedia ? (
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                    {t("iot.devices.media.mediaDetail")}
+                  </h4>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <span className={badgeClass(statusTone(selectedMedia.status))}>
+                      {formatMediaStatusLabel(t, selectedMedia.status)}
                     </span>
-                    <span className="shrink-0 text-xs font-bold text-slate-500">
-                      {formatDateTime(event.uploadedAt || event.capturedAt || event.requestedAt)}
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
+                      {formatCameraTriggerLabel(t, selectedMedia.triggerType)}
                     </span>
                   </div>
-                  <p className="mt-2 text-xs font-semibold text-slate-500">
-                    {event.fileId ? event.display.size : event.display.fallbackMessage}
-                  </p>
-                  {event.analysis ? (
-                    <div className={`mt-2 text-xs font-black ${event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
-                      {event.display.analysis?.summary}
-                      {event.analysis.alertEventId ? (
-                        <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
-                          {t("iot.devices.media.analysis.alertCreated")}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs font-black text-slate-400">{t("iot.devices.media.analysis.notAnalyzed")}</p>
-                  )}
-                </div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedMedia ? (
-        <ModalShell
-          title={t("iot.devices.media.mediaDetail")}
-          titleId="device-media-detail-title"
-          subtitle={
-            <p className="mt-1 text-sm font-semibold text-slate-500">
-              {formatDateTime(
-                selectedMedia.uploadedAt || selectedMedia.capturedAt || selectedMedia.requestedAt,
-              )}
-            </p>
-          }
-          icon={<ScanSearch className="h-5 w-5 text-[#245A34]" strokeWidth={2.5} />}
-          maxWidth="sm:max-w-5xl"
-          onClose={() => setSelectedMediaId(null)}
-        >
-          <div className="grid gap-5 p-5 lg:grid-cols-[1.4fr_1fr]">
-            <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
-              {selectedMediaSource ? (
-                <MediaImage
-                  source={selectedMediaSource}
-                  alt={t("iot.devices.media.latestImageAlt")}
-                  className="max-h-[70vh] w-full object-contain"
-                />
-              ) : (
-                <div className="flex h-[420px] flex-col items-center justify-center gap-3 text-slate-500">
-                  <ImageOff className="h-8 w-8" strokeWidth={2.5} />
-                  <span className="text-sm font-bold">{t("iot.devices.media.noUploadedImage")}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={badgeClass(statusTone(selectedMedia.status))}>
-                    {formatMediaStatusLabel(t, selectedMedia.status)}
-                  </span>
-                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-black text-slate-600">
-                    {formatCameraTriggerLabel(t, selectedMedia.triggerType)}
-                  </span>
                 </div>
                 <dl className="mt-4 space-y-2 text-sm">
                   <div className="flex justify-between gap-4">
@@ -871,14 +819,12 @@ function DeviceMediaPanel({
                   </div>
                   <div className="flex justify-between gap-4">
                     <dt className="font-bold text-slate-500">{t("iot.devices.media.size")}</dt>
-                    <dd className="text-right font-black text-slate-700">
-                      {selectedMedia.display.size}
-                    </dd>
+                    <dd className="text-right font-black text-slate-700">{selectedMedia.display.size}</dd>
                   </div>
                 </dl>
                 {selectedMedia.error ? (
                   <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600">
-                    {selectedMedia.error}
+                    {t("iot.devices.media.captureFailed")}
                   </p>
                 ) : null}
               </div>
@@ -890,7 +836,7 @@ function DeviceMediaPanel({
                 {selectedAnalysis ? (
                   <div className="mt-3 space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={badgeClass(selectedAnalysis.diseaseDetected ? "red" : "green")}>
+                      <span className={badgeClass(selectedAnalysis.error ? "red" : selectedAnalysis.diseaseDetected ? "red" : "green")}>
                         {selectedMedia.display.analysis?.status}
                       </span>
                       {selectedAnalysis.alertEventId ? (
@@ -912,22 +858,20 @@ function DeviceMediaPanel({
                       </div>
                       <div className="flex justify-between gap-4">
                         <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.confidence")}</dt>
-                        <dd className="text-right font-black text-slate-700">
-                          {selectedMedia.display.analysis?.confidence ?? "-"}
-                        </dd>
+                        <dd className="text-right font-black text-slate-700">{selectedMedia.display.analysis?.confidence ?? "-"}</dd>
                       </div>
                       <div className="flex justify-between gap-4">
                         <dt className="font-bold text-slate-500">{t("iot.devices.media.analysis.analyzedAt")}</dt>
                         <dd className="text-right font-black text-slate-700">{selectedMedia.display.analysis?.analyzedAt ?? "-"}</dd>
                       </div>
                     </dl>
-                    {selectedAnalysis.notes || selectedAnalysis.error ? (
+                    {selectedAnalysisError || selectedAnalysis.notes ? (
                       <p className={`rounded-xl px-3 py-2 text-sm font-bold ${
-                        selectedAnalysis.error
+                        selectedAnalysisError
                           ? "bg-red-50 text-red-600"
                           : "bg-slate-50 text-slate-600"
                       }`}>
-                        {selectedAnalysis.error ?? selectedAnalysis.notes}
+                        {selectedAnalysisError ?? selectedAnalysis.notes}
                       </p>
                     ) : null}
                   </div>
@@ -938,9 +882,97 @@ function DeviceMediaPanel({
                 )}
               </div>
             </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-3xl border border-slate-100 bg-slate-50 p-3">
+          <div className="mb-3 flex items-center justify-between gap-3 px-1">
+            <div>
+              <h4 className="text-sm font-black uppercase tracking-widest text-slate-400">
+                {t("iot.devices.media.mediaHistory")}
+              </h4>
+              {mediaEvents.length > 0 ? (
+                <p className="mt-1 text-xs font-bold text-slate-500">
+                  {t("iot.devices.media.recentHistory")} · {mediaEvents.length}
+                </p>
+              ) : null}
+            </div>
+            {hiddenMediaCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllMediaHistory((value) => !value)}
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-600 transition hover:border-[#245A34]/40 hover:text-[#245A34]"
+              >
+                {showAllMediaHistory
+                  ? t("iot.devices.media.showLessHistory")
+                  : `${t("iot.devices.media.showMoreHistory")} (${hiddenMediaCount})`}
+              </button>
+            ) : null}
           </div>
-        </ModalShell>
-      ) : null}
+          {mediaEvents.length === 0 ? (
+            <p className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-500">
+              {t("iot.devices.media.noEvents")}
+            </p>
+          ) : null}
+          <div className={`space-y-2 ${showAllMediaHistory ? "max-h-[520px] overflow-y-auto pr-1" : ""}`}>
+            {visibleMediaEvents.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                onClick={() => setSelectedMediaId(event.id)}
+                className={`w-full rounded-2xl border px-3 py-2.5 text-left transition hover:border-[#245A34]/40 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#245A34]/30 ${
+                  selectedMedia?.id === event.id
+                    ? "border-[#245A34]/50 bg-white shadow-sm"
+                    : "border-slate-100 bg-white"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                    {event.fileId || event.analysis?.fileUrl ? (
+                      <MediaImage
+                        source={event.analysis?.fileUrl ?? event.fileId ?? ""}
+                        alt={t("iot.devices.media.latestImageAlt")}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-400">
+                        <ImageOff className="h-5 w-5" strokeWidth={2.5} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className={badgeClass(statusTone(event.status))}>
+                        {formatMediaStatusLabel(t, event.status)}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-bold text-slate-500">
+                        {formatDateTime(event.uploadedAt || event.capturedAt || event.requestedAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">
+                      {event.fileId ? event.display.size : event.display.fallbackMessage}
+                    </p>
+                    {event.analysis ? (
+                      <div className={`mt-1 line-clamp-1 text-xs font-black ${event.analysis.error || event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
+                        {event.analysis.error
+                          ? t("iot.devices.media.analysis.failedFriendly")
+                          : event.display.analysis?.summary}
+                        {event.analysis.alertEventId ? (
+                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
+                            {t("iot.devices.media.analysis.alertCreated")}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs font-black text-slate-400">{t("iot.devices.media.analysis.notAnalyzed")}</p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -1118,6 +1150,15 @@ export function DeviceDetailPage() {
   const updateScheduleMutation = useUpdateDeviceScheduleMutation(deviceUid);
   const deleteScheduleMutation = useDeleteDeviceScheduleMutation(deviceUid);
   const detectDiseaseMutation = useDiseaseDetectMutation();
+  const profileQuery = useMyProfile();
+  const farmPlotsQuery = useFarmPlots(
+    profileQuery.data?.id ?? "",
+    Boolean(profileQuery.data?.id && device?.farmPlotId),
+  );
+  const farmZonesQuery = useFarmZones(
+    device?.farmPlotId ?? "",
+    Boolean(device?.farmPlotId && device?.zoneId),
+  );
 
   useEffect(() => {
     if (!deviceId) return undefined;
@@ -1254,6 +1295,22 @@ export function DeviceDetailPage() {
     });
   }, [device?.latestReadings, latestReadingsQuery.data]);
   const deviceAlerts = alertEventsQuery.data?.items ?? [];
+  const farmPlotLabel = device
+    ? formatFarmPlotLabel(
+        device,
+        farmPlotsQuery.data ?? [],
+        profileQuery.isLoading || farmPlotsQuery.isLoading,
+        t,
+      )
+    : t("iot.devices.detail.farmPlotUnassigned");
+  const farmZoneLabel = device
+    ? formatFarmZoneLabel(
+        device,
+        farmZonesQuery.data ?? [],
+        farmZonesQuery.isLoading,
+        t,
+      )
+    : t("iot.devices.detail.zoneUnassigned");
 
   const displayedExpandedSensor = useMemo(() => {
     if (!expandedSensor) return null;
@@ -1500,11 +1557,11 @@ export function DeviceDetailPage() {
               />
               <InfoTile
                 label={t("iot.common.farm")}
-                value={device.farmPlotId ? t("iot.devices.detail.farmPlotAssigned") : t("iot.devices.detail.farmPlotUnassigned")}
+                value={farmPlotLabel}
               />
               <InfoTile
                 label={t("iot.common.zone")}
-                value={device.zoneId ? t("iot.devices.detail.zoneAssigned") : t("iot.devices.detail.zoneUnassigned")}
+                value={farmZoneLabel}
               />
             </div>
 

@@ -1,29 +1,37 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import type { ComponentType } from "react";
 import {
   AlertTriangle,
+  ArrowRight,
+  Camera,
+  Cpu,
   Droplet,
+  ImageOff,
   RefreshCw,
   Sun,
   Thermometer,
   Wind,
 } from "lucide-react";
 import {
-  CHART_TYPE_LABEL_KEYS,
-  CHART_TYPES,
   IoTMetricCard,
   type MetricData,
   type SensorChartType,
   type SensorTrend,
 } from "../components/IoTMetricCard";
+import { CHART_TYPES, CHART_TYPE_LABEL_KEYS } from "../utils/chartHelpers";
 import { CompareChart } from "../components/CompareChart";
 import { SensorChartModal } from "../components/SensorChartModal";
 import { RecentAlerts } from "../components/RecentAlerts";
 import { useAlertEvents } from "../../alerts/queries";
+import { useDeviceMedia, useCaptureDeviceImage } from "../../device-detail/queries";
+import { useMyDevices } from "../../device-onboarding/queries";
+import { useFarmPlots, useFarmZonesByOwner } from "../../farm-management/queries";
 import { useZoneChart, useZoneOverview } from "../queries";
 import { ROUTES } from "../../../lib/routes";
 import type {
   AlertEventItemResponse,
+  DeviceMediaEventResponse,
+  DeviceResponse,
   LatestReadingItemResponse,
 } from "../../../types/iot";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -44,8 +52,13 @@ import {
 import { useTranslation } from "../../../i18n";
 import {
   formatChartRangeLabel,
+  formatDeviceStatusLabel,
+  formatDeviceTypeLabel,
+  formatMediaStatusLabel,
   formatSensorLabel,
 } from "../../iot/utils/iotTranslation";
+import { useMyProfile } from "../../settings/queries";
+import { MediaImage } from "../../community/components/MediaImage";
 
 const SENSOR_CONFIG = [
   {
@@ -111,6 +124,16 @@ const chartExportFilename = (
   range: DisplayChartRange,
 ) => `iot-${scope}-${sensorCode}-${range}-${csvDateStamp()}`;
 
+const deviceDisplayName = (device?: DeviceResponse | null) =>
+  device?.deviceName?.trim() || device?.deviceCode?.trim() || "";
+
+const isCameraDevice = (device: DeviceResponse) =>
+  device.deviceType?.toUpperCase().includes("CAM") ||
+  device.deviceCode?.toUpperCase().includes("CAM");
+
+const mediaImageSource = (media?: DeviceMediaEventResponse | null) =>
+  media?.analysis?.fileUrl || media?.fileId || "";
+
 const alertEventsKey = (alerts: AlertEventItemResponse[]) =>
   alerts
     .map((alert) =>
@@ -174,6 +197,223 @@ function ZoneSummaryCard({ label, value, detail, tone }: ZoneSummaryCardProps) {
   );
 }
 
+interface ZoneDeviceContextProps {
+  device?: DeviceResponse | null;
+  farmLabel: string;
+  zoneLabel: string;
+  isDeviceLoading: boolean;
+}
+
+function ZoneDeviceContext({
+  device,
+  farmLabel,
+  zoneLabel,
+  isDeviceLoading,
+}: ZoneDeviceContextProps) {
+  const { t } = useTranslation();
+  const displayName = deviceDisplayName(device);
+  const deviceId = device?.id ?? "";
+
+  return (
+    <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1fr]">
+      <div className="rounded-[2rem] border border-emerald-100 bg-emerald-50/70 p-6 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+          {t("iot.metrics.currentScope")}
+        </p>
+        <h3 className="mt-2 text-xl font-black text-slate-900">
+          {zoneLabel}
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-slate-600">
+          {t("iot.metrics.currentScopeDescription")(zoneLabel, farmLabel)}
+        </p>
+      </div>
+
+      <div className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#245A34]">
+              <Cpu className="h-5 w-5" strokeWidth={2.5} />
+            </div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+              {t("iot.metrics.zoneDeviceTitle")}
+            </p>
+            {isDeviceLoading ? (
+              <div className="mt-3 h-6 w-44 rounded-full bg-slate-100 animate-pulse" />
+            ) : device ? (
+              <>
+                <h3 className="mt-2 truncate text-lg font-black text-slate-900">
+                  {displayName || t("iot.devices.defaultName")}
+                </h3>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">
+                    {formatDeviceStatusLabel(t, device.status)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">
+                    {formatDeviceTypeLabel(t, device.deviceType)}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs font-semibold text-slate-500">
+                  {t("iot.metrics.deviceLastSeen")}:{" "}
+                  {device.lastSeenAt
+                    ? formatDateTime(device.lastSeenAt)
+                    : t("iot.metrics.noDeviceLastSeen")}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm font-semibold text-slate-500">
+                {t("iot.metrics.noZoneDeviceAssigned")}
+              </p>
+            )}
+          </div>
+
+          {deviceId ? (
+            <Link
+              to={ROUTES.DASHBOARD.DEVICE_DETAIL(deviceId)}
+              className="inline-flex shrink-0 items-center justify-center rounded-2xl bg-[#245A34] px-4 py-2.5 text-sm font-black text-white transition hover:bg-[#1B4328]"
+            >
+              {t("iot.metrics.viewDeviceDetail")}
+              <ArrowRight className="ml-2 h-4 w-4" strokeWidth={2.5} />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+interface ZoneCameraPanelProps {
+  device?: DeviceResponse | null;
+  mediaEvents: DeviceMediaEventResponse[];
+  isLoading: boolean;
+  isCapturing: boolean;
+  onCapture: () => void;
+}
+
+function ZoneCameraPanel({
+  device,
+  mediaEvents,
+  isLoading,
+  isCapturing,
+  onCapture,
+}: ZoneCameraPanelProps) {
+  const { t } = useTranslation();
+  const latestMedia =
+    mediaEvents.find((event) => event.status === "UPLOADED" && mediaImageSource(event)) ??
+    mediaEvents.find((event) => mediaImageSource(event)) ??
+    null;
+  const latestSource = mediaImageSource(latestMedia);
+
+  return (
+    <section className="rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+            {t("iot.metrics.zoneCameraTitle")}
+          </p>
+          <h3 className="mt-1 text-xl font-black text-slate-900">
+            {t("iot.metrics.zoneCameraHeading")}
+          </h3>
+          <p className="mt-1 text-sm font-semibold text-slate-500">
+            {t("iot.metrics.zoneCameraDescription")}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCapture}
+          disabled={!device || isCapturing}
+          className="inline-flex items-center justify-center rounded-2xl bg-[#245A34] px-4 py-3 text-sm font-black text-white transition hover:bg-[#1B4328] disabled:cursor-not-allowed disabled:bg-slate-300"
+        >
+          <Camera className="mr-2 h-4 w-4" strokeWidth={2.5} />
+          {isCapturing
+            ? t("iot.metrics.capturingZoneImage")
+            : t("iot.metrics.captureZoneImage")}
+        </button>
+      </div>
+
+      {!device ? (
+        <div className="mt-5 rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+          <ImageOff className="mx-auto h-8 w-8 text-slate-400" strokeWidth={2.5} />
+          <p className="mt-3 text-sm font-bold text-slate-600">
+            {t("iot.metrics.zoneCameraNoDevice")}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_1fr]">
+          <div className="overflow-hidden rounded-3xl border border-slate-100 bg-slate-50">
+            {isLoading ? (
+              <div className="h-72 animate-pulse bg-slate-100" />
+            ) : latestSource ? (
+              <MediaImage
+                source={latestSource}
+                alt={t("iot.metrics.latestZoneImage")}
+                className="h-72 w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-72 flex-col items-center justify-center gap-3 text-slate-500">
+                <ImageOff className="h-8 w-8" strokeWidth={2.5} />
+                <span className="text-sm font-bold">{t("iot.metrics.noZoneImages")}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h4 className="text-sm font-black uppercase tracking-[0.14em] text-slate-500">
+                {t("iot.metrics.zoneImageHistory")}
+              </h4>
+              <span className="text-xs font-black text-slate-400">
+                {t("iot.metrics.latestCount")(Math.min(mediaEvents.length, 4))}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {mediaEvents.slice(0, 4).map((event) => {
+                const source = mediaImageSource(event);
+                const eventDisplay = event as DeviceMediaEventResponse & {
+                  display?: { capturedAt?: string };
+                };
+                return (
+                  <div
+                    key={event.id}
+                    className="flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm"
+                  >
+                    <div className="h-14 w-16 overflow-hidden rounded-xl bg-slate-100">
+                      {source ? (
+                        <MediaImage
+                          source={source}
+                          alt={t("iot.metrics.zoneImageHistory")}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-400">
+                          <ImageOff className="h-5 w-5" strokeWidth={2.5} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-black text-slate-800">
+                        {formatMediaStatusLabel(t, event.status)}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {eventDisplay.display?.capturedAt ||
+                          formatDateTime(event.capturedAt || event.uploadedAt || event.requestedAt)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+              {!isLoading && mediaEvents.length === 0 ? (
+                <p className="rounded-2xl bg-white p-4 text-center text-sm font-semibold text-slate-500">
+                  {t("iot.metrics.noZoneImages")}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface ZoneSensorCardProps {
   zoneId: string;
   apiRange: ReturnType<typeof toApiChartRange>;
@@ -217,14 +457,14 @@ function ZoneSensorCard({
   eventMarkers,
   exportFilename,
 }: ZoneSensorCardProps) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const chartQuery = useZoneChart(zoneId, sensor.code, apiRange);
   const chart = chartQuery.data;
   const alertsKey = useMemo(() => alertEventsKey(alerts), [alerts]);
   const stableAlerts = useMemo(() => alerts, [alertsKey]);
   const trend = useMemo(
     () => deriveAnalytics(chartToTrend(chart, displayRange), stableAlerts),
-    [chart, displayRange, stableAlerts],
+    [chart, displayRange, stableAlerts, locale],
   );
   const backendThresholds = useMemo(
     () => thresholdsFromAlertEvents(stableAlerts),
@@ -313,7 +553,38 @@ export function ZoneDetailMetricsPage() {
   } | null>(null);
   const apiChartRange = toApiChartRange(range);
   const resolvedZoneId = zoneId ?? "";
-  const zoneOverviewQuery = useZoneOverview(resolvedZoneId, !!zoneId);
+  const profileQuery = useMyProfile();
+  const farmPlotsQuery = useFarmPlots(
+    profileQuery.data?.id ?? "",
+    Boolean(profileQuery.data?.id),
+  );
+  const farmZonesQuery = useFarmZonesByOwner(
+    profileQuery.data?.id ?? "",
+    Boolean(profileQuery.data?.id),
+  );
+  const zoneDevicesQuery = useMyDevices(
+    { zoneId: resolvedZoneId, page: 0, size: 5 },
+    !!zoneId,
+  );
+  const zoneDevices = useMemo(
+    () => zoneDevicesQuery.data?.items ?? [],
+    [zoneDevicesQuery.data?.items],
+  );
+  const zoneDevice = useMemo(
+    () => zoneDevices.find(isCameraDevice) ?? zoneDevices[0] ?? null,
+    [zoneDevices],
+  );
+  const zoneDeviceId = zoneDevice?.id ?? "";
+  const zoneMediaQuery = useDeviceMedia(
+    zoneDeviceId,
+    Boolean(zoneDeviceId),
+    10000,
+  );
+  const captureZoneImageMutation = useCaptureDeviceImage(zoneDeviceId);
+  const zoneDeviceCount =
+    zoneDevicesQuery.data?.totalItems ?? zoneDevicesQuery.data?.items.length ?? 0;
+  const canLoadCollectorMetrics = !!zoneId && zoneDevicesQuery.isSuccess && zoneDeviceCount > 0;
+  const zoneOverviewQuery = useZoneOverview(resolvedZoneId, canLoadCollectorMetrics);
   const alertEventsQuery = useAlertEvents(
     {
       zoneId: resolvedZoneId,
@@ -321,11 +592,29 @@ export function ZoneDetailMetricsPage() {
       sortBy: "openedAt",
       sortDir: "desc",
     },
-    !!zoneId,
+    canLoadCollectorMetrics,
   );
   const zoneOverview = zoneOverviewQuery.data;
   const readings = zoneOverview?.latestReadings ?? [];
   const zoneAlerts = alertEventsQuery.data?.items ?? [];
+  const currentZone = farmZonesQuery.data?.find((zone) => zone.id === resolvedZoneId) ?? null;
+  const currentFarmPlotId = currentZone?.farmPlotId ?? zoneDevice?.farmPlotId ?? null;
+  const currentFarm =
+    farmPlotsQuery.data?.find((plot) => plot.id === currentFarmPlotId) ?? null;
+  const zoneLabel = currentZone
+    ? currentZone.zoneCode
+      ? `${currentZone.zoneName} (${currentZone.zoneCode})`
+      : currentZone.zoneName
+    : farmZonesQuery.isLoading
+      ? t("iot.metrics.loadingZoneContext")
+      : t("iot.metrics.unknownZone");
+  const farmLabel = currentFarm
+    ? currentFarm.code
+      ? `${currentFarm.name} (${currentFarm.code})`
+      : currentFarm.name
+    : farmPlotsQuery.isLoading
+      ? t("iot.metrics.loadingFarmContext")
+      : t("iot.metrics.unknownFarm");
   const rememberChartSnapshot = useCallback((snapshot: SensorSnapshot) => {
     setChartSnapshots((current) => {
       const previous = current[snapshot.sensorCode];
@@ -378,12 +667,27 @@ export function ZoneDetailMetricsPage() {
             {t("iot.metrics.title")}
           </h2>
           <p className="text-[#6B7280] text-[15px] font-medium">
-            {t("iot.metrics.description")(zoneId)}
+            {t("iot.metrics.contextDescription")(zoneLabel, farmLabel)}
           </p>
         </div>
       </div>
 
-      {zoneOverviewQuery.isLoading ? (
+      <ZoneDeviceContext
+        device={zoneDevice}
+        farmLabel={farmLabel}
+        zoneLabel={zoneLabel}
+        isDeviceLoading={zoneDevicesQuery.isLoading}
+      />
+
+      <ZoneCameraPanel
+        device={zoneDevice}
+        mediaEvents={zoneMediaQuery.data ?? []}
+        isLoading={zoneMediaQuery.isLoading}
+        isCapturing={captureZoneImageMutation.isPending}
+        onCapture={() => captureZoneImageMutation.mutate()}
+      />
+
+      {zoneDevicesQuery.isLoading || zoneOverviewQuery.isLoading ? (
         <div
           aria-label={t("iot.metrics.loadingOverview")}
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -397,7 +701,20 @@ export function ZoneDetailMetricsPage() {
         </div>
       ) : null}
 
-      {zoneOverviewQuery.isError ? (
+      {zoneDevicesQuery.isSuccess && zoneDeviceCount === 0 ? (
+        <div className="rounded-[2rem] border border-amber-100 bg-amber-50 p-8 shadow-sm">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-lg font-black text-amber-800">
+              {t("iot.metrics.noZoneDevices")}
+            </h3>
+            <p className="text-sm font-semibold text-amber-700">
+              {t("iot.metrics.noZoneDevicesDescription")}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {zoneDevicesQuery.isError || zoneOverviewQuery.isError ? (
         <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -410,7 +727,12 @@ export function ZoneDetailMetricsPage() {
             </div>
             <button
               type="button"
-              onClick={() => void zoneOverviewQuery.refetch()}
+              onClick={() => {
+                void zoneDevicesQuery.refetch();
+                if (canLoadCollectorMetrics) {
+                  void zoneOverviewQuery.refetch();
+                }
+              }}
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
             >
               <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />

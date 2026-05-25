@@ -30,10 +30,11 @@ import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { Select } from "../../../components/ui/Select";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
-import { formatSeverityLabel } from "../../iot/utils/iotTranslation";
+import { formatSensorLabel, formatSeverityLabel } from "../../iot/utils/iotTranslation";
 import {
   alertSeverityClasses,
 } from "../../alerts/utils/alertLabels";
+import type { SensorTypeOption } from "../../alerts/hooks/useInferredSensorTypeOptions";
 
 type EnabledFilter = "all" | "true" | "false";
 
@@ -169,6 +170,53 @@ const readableRuleThreshold = (
   return t("iot.alertRules.threshold.unset");
 };
 
+const formatSensorOptionLabel = (t: TFunction, option: SensorTypeOption) => {
+  const sensorName = formatSensorLabel(t, option.code, option.name);
+  return option.unit
+    ? t("iot.alertRules.sensor.optionWithUnit")(sensorName, option.unit)
+    : sensorName;
+};
+
+function RuleSensorSummary({ rule, t }: { rule: AlertRuleResponse; t: TFunction }) {
+  const { sensorOptions, isLoading } = useInferredSensorTypeOptions(
+    rule.deviceId ?? "",
+    rule.zoneId ?? "",
+  );
+  const sensor = sensorOptions.find((option) => option.id === rule.sensorTypeId);
+
+  if (isLoading) {
+    return (
+      <p className="text-sm font-black text-slate-800">
+        {t("iot.alertRules.table.loadingSensor")}
+      </p>
+    );
+  }
+
+  if (!sensor) {
+    return (
+      <>
+        <p className="text-sm font-black text-slate-800">
+          {t("iot.alertRules.table.configuredSensorUnknown")}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-slate-400">
+          {t("iot.alertRules.table.configuredSensorHint")}
+        </p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <p className="text-sm font-black text-slate-800">
+        {formatSensorOptionLabel(t, sensor)}
+      </p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">
+        {t("iot.alertRules.table.sensorDataType")}
+      </p>
+    </>
+  );
+}
+
 interface RuleFormDialogProps {
   form: RuleFormState;
   editingRule: AlertRuleResponse | null;
@@ -222,10 +270,14 @@ function RuleFormDialog({
   return (
     <ModalShell
       onClose={onClose}
-      title={editingRule ? "Edit alert rule" : "Create alert rule"}
+      title={
+        editingRule
+          ? t("iot.alertRules.form.editTitle")
+          : t("iot.alertRules.form.createTitle")
+      }
       subtitle={
         <p className="mt-1 text-sm font-semibold text-slate-500">
-          Pick farm, zone, and device where possible. Sensor type requires a real backend UUID.
+          {t("iot.alertRules.form.description")}
         </p>
       }
       maxWidth="sm:max-w-5xl"
@@ -383,9 +435,7 @@ function RuleFormDialog({
                     },
                     ...sensorOptions.map((option) => ({
                       value: option.id,
-                      label: `${option.name} (${option.code}${
-                        option.unit ? `, ${option.unit}` : ""
-                      })`,
+                      label: formatSensorOptionLabel(t, option),
                     })),
                   ]}
                   className="mt-2"
@@ -967,9 +1017,7 @@ export function AlertRulesPage() {
                   {rules.map((rule) => (
                     <tr key={rule.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-4 align-top">
-                        <p className="text-sm font-black text-slate-800">
-                          {t("iot.alertRules.table.configuredSensor")}
-                        </p>
+                        <RuleSensorSummary rule={rule} t={t} />
                         <p className="mt-1 text-xs font-semibold text-slate-500">
                           {resolveDeviceLabel(rule.deviceId)} -{" "}
                           {resolveZoneLabel(rule.zoneId)} -{" "}

@@ -3,6 +3,10 @@ import type {
   SensorChartPointResponse,
   SensorChartResponse,
 } from "../../../types/iot";
+import { useSettingsStore } from "../../settings/store/useSettingsStore";
+
+const currentIntlLocale = () =>
+  useSettingsStore.getState().locale === "vi" ? "vi-VN" : "en-US";
 
 export type DisplayChartRange = "H1" | "D1" | "D7" | "M1";
 
@@ -60,20 +64,20 @@ const formatChartTick = (
   if (Number.isNaN(date.getTime())) return String(value);
 
   if (range === "H1") {
-    return new Intl.DateTimeFormat("en", {
+    return new Intl.DateTimeFormat(currentIntlLocale(), {
       hour: "2-digit",
       minute: "2-digit",
     }).format(date);
   }
 
   if (range === "D1") {
-    return new Intl.DateTimeFormat("en", {
+    return new Intl.DateTimeFormat(currentIntlLocale(), {
       hour: "2-digit",
       minute: "2-digit",
     }).format(date);
   }
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(currentIntlLocale(), {
     month: "short",
     day: "2-digit",
   }).format(date);

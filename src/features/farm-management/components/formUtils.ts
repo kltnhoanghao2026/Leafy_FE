@@ -4,7 +4,6 @@ import type {
   FarmPlotResponse,
   FarmPlotStatus,
   FarmZoneResponse,
-  FarmZoneStatus,
   UpdateFarmPlotRequest,
   UpdateFarmZoneRequest,
 } from "../types";
@@ -31,7 +30,6 @@ export type ZoneFormState = {
   cropType: string;
   plantingDate: string;
   elevationM: string;
-  status: FarmZoneStatus;
 };
 
 export const PLOT_STATUS_OPTIONS: FarmPlotStatus[] = [
@@ -40,13 +38,7 @@ export const PLOT_STATUS_OPTIONS: FarmPlotStatus[] = [
   "ARCHIVED",
 ];
 
-export const ZONE_STATUS_OPTIONS: FarmZoneStatus[] = [
-  "ACTIVE",
-  "INACTIVE",
-  "ARCHIVED",
-];
-
-export const STATUS_LABELS: Record<FarmPlotStatus | FarmZoneStatus, string> = {
+export const STATUS_LABELS: Record<FarmPlotStatus, string> = {
   ACTIVE: "Đang hoạt động",
   INACTIVE: "Tạm ngưng",
   ARCHIVED: "Đã lưu trữ",
@@ -74,7 +66,6 @@ export const EMPTY_ZONE_FORM: ZoneFormState = {
   cropType: "",
   plantingDate: "",
   elevationM: "",
-  status: "ACTIVE",
 };
 
 export const optionalString = (value: string) => {
@@ -125,7 +116,6 @@ export const toZoneForm = (zone?: FarmZoneResponse | null): ZoneFormState => {
     cropType: zone.cropType ?? "",
     plantingDate: zone.plantingDate ?? "",
     elevationM: zone.elevationM != null ? String(zone.elevationM) : "",
-    status: zone.status,
   };
 };
 
@@ -184,5 +174,4 @@ export const buildUpdateZonePayload = (
   cropType: optionalString(form.cropType),
   plantingDate: optionalString(form.plantingDate),
   elevationM: optionalNumber(form.elevationM),
-  status: form.status,
 });

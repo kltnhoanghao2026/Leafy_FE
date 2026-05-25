@@ -17,6 +17,9 @@ import {
   formatDeviceStatusLabel,
   formatDeviceTypeLabel,
 } from "../../iot/utils/iotTranslation";
+import { useFarmPlots, useFarmZonesByOwner } from "../../farm-management/queries";
+import type { FarmPlotResponse, FarmZoneResponse } from "../../farm-management/types";
+import { useMyProfile } from "../../settings/queries";
 import { EditDeviceModal } from "../../device-detail/components/EditDeviceModal";
 import { ReleaseDeviceConfirmDialog } from "../../device-detail/components/ReleaseDeviceConfirmDialog";
 import {
@@ -69,14 +72,50 @@ function readableDeviceName(
   return device?.deviceName?.trim() || device?.deviceCode?.trim() || t("iot.devices.defaultName");
 }
 
+function formatFarmPlotName(plot: FarmPlotResponse) {
+  return plot.code ? `${plot.name} (${plot.code})` : plot.name;
+}
+
+function formatFarmZoneName(zone: FarmZoneResponse) {
+  return zone.zoneCode ? `${zone.zoneName} (${zone.zoneCode})` : zone.zoneName;
+}
+
+function resolveFarmPlotLabel(
+  device: DeviceResponse,
+  farmPlotMap: Map<string, FarmPlotResponse>,
+  isLoading: boolean,
+  t: TFunction,
+) {
+  if (!device.farmPlotId) return t("iot.devices.index.farmUnassigned");
+  const plot = farmPlotMap.get(device.farmPlotId);
+  if (plot) return formatFarmPlotName(plot);
+  return isLoading ? t("iot.devices.index.locationLoading") : t("iot.devices.index.farmUnknown");
+}
+
+function resolveFarmZoneLabel(
+  device: DeviceResponse,
+  farmZoneMap: Map<string, FarmZoneResponse>,
+  isLoading: boolean,
+  t: TFunction,
+) {
+  if (!device.zoneId) return t("iot.devices.index.zoneUnassigned");
+  const zone = farmZoneMap.get(device.zoneId);
+  if (zone) return formatFarmZoneName(zone);
+  return isLoading ? t("iot.devices.index.locationLoading") : t("iot.devices.index.zoneUnknown");
+}
+
 function DeviceCard({
   device,
+  farmLabel,
+  zoneLabel,
   t,
   onEdit,
   onRelease,
   isActionPending,
 }: {
   device: DeviceResponse;
+  farmLabel: string;
+  zoneLabel: string;
   t: TFunction;
   onEdit: (device: DeviceResponse) => void;
   onRelease: (device: DeviceResponse) => void;
@@ -116,7 +155,7 @@ function DeviceCard({
                 {t("iot.common.farm")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.farmPlotId ? t("iot.devices.index.farmAssigned") : t("iot.devices.index.farmUnassigned")}
+                {farmLabel}
               </p>
             </div>
             <div>
@@ -124,7 +163,7 @@ function DeviceCard({
                 {t("iot.common.zone")}
               </p>
               <p className="font-semibold text-slate-700">
-                {device.zoneId ? t("iot.devices.index.zoneAssigned") : t("iot.devices.index.zoneUnassigned")}
+                {zoneLabel}
               </p>
             </div>
             <div>
@@ -227,6 +266,21 @@ export function DeviceIndexRedirect() {
   const releaseDeviceMutation = useReleaseDeviceMutation();
   const devices = devicesQuery.data?.items ?? [];
   const totalItems = devicesQuery.data?.totalItems ?? 0;
+  const profileQuery = useMyProfile();
+  const ownerProfileId = profileQuery.data?.id ?? "";
+  const hasLocationAssigned = devices.some((device) => device.farmPlotId || device.zoneId);
+  const farmPlotsQuery = useFarmPlots(ownerProfileId, Boolean(ownerProfileId && hasLocationAssigned));
+  const farmZonesQuery = useFarmZonesByOwner(ownerProfileId, Boolean(ownerProfileId && hasLocationAssigned));
+  const farmPlotMap = useMemo(
+    () => new Map((farmPlotsQuery.data ?? []).map((plot) => [plot.id, plot])),
+    [farmPlotsQuery.data],
+  );
+  const farmZoneMap = useMemo(
+    () => new Map((farmZonesQuery.data ?? []).map((zone) => [zone.id, zone])),
+    [farmZonesQuery.data],
+  );
+  const isLocationLoading =
+    profileQuery.isLoading || farmPlotsQuery.isLoading || farmZonesQuery.isLoading;
   const allOption = useMemo(() => ({ value: "", label: t("iot.devices.index.all") }), [t]);
   const statusOptions = useMemo(
     () => [
@@ -389,6 +443,8 @@ export function DeviceIndexRedirect() {
             <DeviceCard
               key={device.id}
               device={device}
+              farmLabel={resolveFarmPlotLabel(device, farmPlotMap, isLocationLoading, t)}
+              zoneLabel={resolveFarmZoneLabel(device, farmZoneMap, isLocationLoading, t)}
               t={t}
               onEdit={setEditingDevice}
               onRelease={setReleasingDevice}

@@ -1,3 +1,6 @@
+import { useSettingsStore } from "../../settings/store/useSettingsStore";
+import type { Locale } from "../../../i18n";
+
 const parseDateTimeValue = (value?: string | number | null): Date | null => {
   if (!value) return null;
 
@@ -11,13 +14,17 @@ const parseDateTimeValue = (value?: string | number | null): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const localeToIntl = (locale: Locale) => (locale === "vi" ? "vi-VN" : "en-US");
+
+const currentIntlLocale = () => localeToIntl(useSettingsStore.getState().locale);
+
 export const formatDateTime = (value?: string | number | null): string => {
-  if (!value) return "Never";
+  if (!value) return useSettingsStore.getState().locale === "vi" ? "Chưa bao giờ" : "Never";
 
   const date = parseDateTimeValue(value);
   if (!date) return String(value);
 
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(currentIntlLocale(), {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
@@ -27,7 +34,7 @@ export const formatDateTime = (value?: string | number | null): string => {
 
 export const formatNumber = (value?: number | null): string => {
   if (value === null || value === undefined) return "-";
-  return new Intl.NumberFormat("en").format(value);
+  return new Intl.NumberFormat(currentIntlLocale()).format(value);
 };
 
 export const formatSensorValue = (
@@ -36,7 +43,7 @@ export const formatSensorValue = (
 ): string => {
   if (value === null || value === undefined) return "-";
   const normalizedUnit = unit === "C" ? "deg C" : unit || "";
-  return `${new Intl.NumberFormat("en", {
+  return `${new Intl.NumberFormat(currentIntlLocale(), {
     maximumFractionDigits: 1,
   }).format(value)}${normalizedUnit ? ` ${normalizedUnit}` : ""}`;
 };
