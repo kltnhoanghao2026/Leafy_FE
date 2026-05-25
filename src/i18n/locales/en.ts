@@ -390,6 +390,19 @@ export const en: TranslationDict = {
         },
       },
       messageFallback: "Alert details are not available.",
+      realtime: {
+        newAlertTitle: "New alert",
+        newAlertSummary: (count: number) => `${count} new alerts need attention.`,
+        viewAlert: "View alert",
+        viewAlerts: "View alerts",
+      },
+      focus: {
+        notFound:
+          "The selected alert was not found on the current page. It may have been resolved, moved to another page, or hidden by the current filters.",
+        clear: "Clear highlight",
+        showAll: "Show all alerts",
+        highlighted: "Selected alert is highlighted",
+      },
       aria: {
         farmPlot: "Filter by farm",
         zone: "Filter by zone",
@@ -716,7 +729,7 @@ export const en: TranslationDict = {
       H1: "1h",
       D1: "1d",
       D7: "7d",
-      M1: "1m",
+      M1: "30d",
       area: "Area",
       line: "Line",
       bar: "Bar",

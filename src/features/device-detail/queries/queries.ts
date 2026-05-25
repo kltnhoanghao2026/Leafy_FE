@@ -2,6 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "../../../i18n";
 import { collectorApi } from "../../../lib/api/collectorApi";
 import type { ChartRange } from "../../../types/iot";
+import {
+  getIotChartRefetchInterval,
+  IOT_POLLING_INTERVALS,
+} from "../../iot/utils/iotPolling";
 import { withMediaDisplay } from "../../iot/utils/iotDisplay";
 import { deviceKeys } from "./keys";
 
@@ -19,6 +23,9 @@ export const useDeviceLatestReadings = (deviceId: string, enabled = true) =>
     queryFn: () => collectorApi.getDeviceLatestReadings(deviceId),
     select: (response) => response.data,
     enabled: enabled && !!deviceId,
+    refetchInterval: IOT_POLLING_INTERVALS.latest,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
 export const useDeviceChart = (
@@ -32,6 +39,9 @@ export const useDeviceChart = (
     queryFn: () => collectorApi.getDeviceChart(deviceId, sensorCode, range),
     select: (response) => response.data,
     enabled: enabled && !!deviceId && !!sensorCode && !!range,
+    refetchInterval: getIotChartRefetchInterval(range),
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
 export const useDeviceConfig = (deviceId: string, enabled = true) =>

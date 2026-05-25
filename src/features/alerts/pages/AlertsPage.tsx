@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -83,9 +83,10 @@ const timeRangeToIsoWindow = (range: TimeRange) => {
 export function AlertsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const focusedAlertId = searchParams.get("alertId");
   const focusedStatus = parseAlertStatusParam(searchParams.get("status"));
+  const lastScrolledAlertIdRef = useRef<string | null>(null);
   const [selectedFarmPlotId, setSelectedFarmPlotId] = useState("");
   const [selectedZoneId, setSelectedZoneId] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
@@ -154,6 +155,19 @@ export function AlertsPage() {
   const resolveAlert = useResolveAlert();
   const pagedAlerts = alertEventsQuery.data;
   const alerts = pagedAlerts?.items ?? [];
+  const focusedAlertOnPage = useMemo(
+    () =>
+      focusedAlertId
+        ? alerts.find((alert) => alert.id === focusedAlertId)
+        : undefined,
+    [alerts, focusedAlertId],
+  );
+  const focusedAlertMissing =
+    Boolean(focusedAlertId) &&
+    Boolean(pagedAlerts) &&
+    !alertEventsQuery.isFetching &&
+    !alertEventsQuery.isError &&
+    !focusedAlertOnPage;
   const selectedAlerts = useMemo(
     () => alerts.filter((alert) => selectedAlertIds.has(alert.id)),
     [alerts, selectedAlertIds],
@@ -192,29 +206,38 @@ export function AlertsPage() {
   ]);
 
   useEffect(() => {
-    if (!focusedAlertId) {
+    if (!focusedAlertId || !focusedAlertOnPage) {
       return;
     }
 
-    setSelectedFarmPlotId("");
-    setSelectedZoneId("");
-    setSelectedDeviceId("");
-    setSelectedTimeRange("all");
-    setSeverity("");
-    setStatus(focusedStatus || "OPEN");
-    setPage(0);
-  }, [focusedAlertId, focusedStatus]);
-
-  useEffect(() => {
-    if (!focusedAlertId || alertEventsQuery.isFetching) {
+    if (lastScrolledAlertIdRef.current === focusedAlertId) {
       return;
     }
 
     const element = document.getElementById(`alert-event-${focusedAlertId}`);
     if (typeof element?.scrollIntoView === "function") {
       element.scrollIntoView({ behavior: "smooth", block: "center" });
+      element.focus({ preventScroll: true });
+      lastScrolledAlertIdRef.current = focusedAlertId;
     }
-  }, [alertEventsQuery.isFetching, focusedAlertId, alerts]);
+  }, [focusedAlertId, focusedAlertOnPage]);
+
+  const clearFocusedAlert = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("alertId");
+    setSearchParams(next, { replace: true });
+    lastScrolledAlertIdRef.current = null;
+  };
+
+  const showAllAlertsForFocus = () => {
+    setSelectedFarmPlotId("");
+    setSelectedZoneId("");
+    setSelectedDeviceId("");
+    setSelectedTimeRange("all");
+    setSeverity("");
+    setStatus("");
+    setPage(0);
+  };
 
   const timeRangeOptions: Array<{ value: TimeRange; label: string }> = [
     { value: "24h", label: t("iot.alerts.timeRanges.last24h") },
@@ -577,6 +600,49 @@ export function AlertsPage() {
         </div>
       ) : null}
 
+      {focusedAlertOnPage ? (
+        <div
+          role="status"
+          className="rounded-[2rem] border border-emerald-100 bg-emerald-50 p-4 text-sm font-bold text-emerald-800 shadow-sm"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span>{t("iot.alerts.focus.highlighted")}</span>
+            <button
+              type="button"
+              onClick={clearFocusedAlert}
+              className="w-fit rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-50"
+            >
+              {t("iot.alerts.focus.clear")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {focusedAlertMissing ? (
+        <div
+          role="status"
+          className="rounded-[2rem] border border-amber-100 bg-amber-50 p-5 text-sm font-bold text-amber-800 shadow-sm"
+        >
+          <p>{t("iot.alerts.focus.notFound")}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={showAllAlertsForFocus}
+              className="rounded-full bg-amber-600 px-4 py-2 text-xs font-black text-white hover:bg-amber-700"
+            >
+              {t("iot.alerts.focus.showAll")}
+            </button>
+            <button
+              type="button"
+              onClick={clearFocusedAlert}
+              className="rounded-full border border-amber-200 bg-white px-4 py-2 text-xs font-black text-amber-700 hover:bg-amber-50"
+            >
+              {t("iot.alerts.focus.clear")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {pagedAlerts && !alertEventsQuery.isError ? (
         <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-5 border-b border-slate-100">
@@ -748,6 +814,9 @@ export function AlertsPage() {
                       <tr
                         key={alert.id}
                         id={`alert-event-${alert.id}`}
+                        tabIndex={focusedAlertId === alert.id ? -1 : undefined}
+                        data-focused={focusedAlertId === alert.id ? "true" : undefined}
+                        data-testid={focusedAlertId === alert.id ? "focused-alert-row" : undefined}
                         className={`scroll-mt-24 transition-colors ${
                           focusedAlertId === alert.id
                             ? "bg-emerald-50/70 ring-2 ring-inset ring-[#245A34]/25"

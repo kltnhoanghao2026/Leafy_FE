@@ -386,6 +386,19 @@ export const vi = {
         },
       },
       messageFallback: "Chưa có chi tiết cảnh báo.",
+      realtime: {
+        newAlertTitle: "Cảnh báo mới",
+        newAlertSummary: (count: number) => `Có ${count} cảnh báo mới cần xử lý.`,
+        viewAlert: "Xem cảnh báo",
+        viewAlerts: "Xem tất cả cảnh báo",
+      },
+      focus: {
+        notFound:
+          "Không tìm thấy cảnh báo được chọn trong trang hiện tại. Cảnh báo có thể đã được xử lý, nằm ở trang khác hoặc bị ẩn bởi bộ lọc hiện tại.",
+        clear: "Bỏ đánh dấu",
+        showAll: "Xem tất cả cảnh báo",
+        highlighted: "Đang làm nổi bật cảnh báo được chọn",
+      },
       aria: {
         farmPlot: "Lọc theo vườn",
         zone: "Lọc theo khu vực",
@@ -712,7 +725,7 @@ export const vi = {
       H1: "1 giờ",
       D1: "1 ngày",
       D7: "7 ngày",
-      M1: "1 tháng",
+      M1: "30 ngày",
       area: "Vùng",
       line: "Đường",
       bar: "Cột",
