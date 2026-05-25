@@ -51,6 +51,20 @@ export const useUpdatePlantEventMutation = () => {
       eventId: string;
       payload: PlantEventUpdateRequest;
     }) => plantEventApi.updatePlantEvent(eventId, payload),
+    onMutate: async ({ eventId }) => {
+      await queryClient.cancelQueries({
+        queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+      });
+      await queryClient.cancelQueries({
+        queryKey: plantManagementKeys.plantEvent(eventId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: plantManagementKeys.plantEvent(eventId),
+      });
+    },
     onSuccess: async (event) => {
       await Promise.all([
         queryClient.invalidateQueries({
@@ -68,7 +82,7 @@ export const useUpdatePlantEventMutation = () => {
           : Promise.resolve(),
         event.planApplyId
           ? queryClient.invalidateQueries({
-              queryKey: plantManagementKeys.plantEventsByPlan(event.planApplyId),
+              queryKey: plantManagementKeys.plantEventsByPlanApply(event.planApplyId),
             })
           : Promise.resolve(),
         queryClient.invalidateQueries({
@@ -152,10 +166,30 @@ export const useToggleTaskMutation = () => {
   return useMutation({
     mutationFn: ({ eventId, taskIndex }: { eventId: string; taskIndex: number }) =>
       plantEventApi.toggleTask(eventId, taskIndex),
+    onMutate: async ({ eventId }) => {
+      await queryClient.cancelQueries({
+        queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+      });
+      await queryClient.cancelQueries({
+        queryKey: plantManagementKeys.plantEvent(eventId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: [...plantManagementKeys.all(), "plant-events", "calendar"],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: plantManagementKeys.plantEvent(eventId),
+      });
+    },
     onSuccess: async (event) => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: plantManagementKeys.plantEvent(event.id),
+        }),
+        // Refresh ALL plant event detail queries so the parent event (and
+        // grandparent, etc.) in PlantEventProgressModal re-fetches and updates
+        // its liveChildMap / progress bars
+        queryClient.invalidateQueries({
+          queryKey: [...plantManagementKeys.all(), "plant-events", "detail"],
         }),
         event.plantId
           ? queryClient.invalidateQueries({
@@ -164,7 +198,7 @@ export const useToggleTaskMutation = () => {
           : Promise.resolve(),
         event.planApplyId
           ? queryClient.invalidateQueries({
-              queryKey: plantManagementKeys.plantEventsByPlan(event.planApplyId),
+              queryKey: plantManagementKeys.plantEventsByPlanApply(event.planApplyId),
             })
           : Promise.resolve(),
         queryClient.invalidateQueries({

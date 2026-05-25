@@ -43,6 +43,7 @@ interface PlantEventProgressModalProps {
   onDelete?: (event: PlantEventResponse) => void;
   /** Called when the user toggles a task on any child event. */
   onToggleTask?: (event: PlantEventResponse, taskIndex: number) => void;
+  zIndex?: string;
 }
 
 // ── Small helpers ─────────────────────────────────────────────────────────────
@@ -513,6 +514,7 @@ export function PlantEventProgressModal({
   onEdit,
   onDelete,
   onToggleTask,
+  zIndex = "z-50",
 }: PlantEventProgressModalProps) {
   const { t } = useTranslation();
   
@@ -555,7 +557,7 @@ export function PlantEventProgressModal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-70 flex items-end justify-center sm:items-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4 py-0 sm:py-6"
+      className={`fixed inset-0 ${zIndex} flex items-end justify-center sm:items-center bg-slate-900/50 backdrop-blur-sm px-0 sm:px-4 py-0 sm:py-6`}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

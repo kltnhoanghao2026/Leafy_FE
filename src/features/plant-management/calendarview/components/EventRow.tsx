@@ -26,6 +26,7 @@ import { ScopeProgressBar } from './ScopeProgressBar';
 import { EventBadgeRow } from './EventBadgeRow';
 import type { EventAccentStyle } from '../schemas/eventAccent';
 import { useTranslation } from '../../../../i18n';
+import { usePlantEvent } from '../..';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const EVENT_TYPE_ICONS: Record<PlantEventType, React.ComponentType<{ className?: string; size?: number }>> = {
@@ -75,6 +76,10 @@ export function EventRow({
   const [hovered, setHovered] = useState(false);
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Droplets;
 
+  // Always fetch live data so task/child progress reflects server state
+  const { data: liveEvent } = usePlantEvent(event.id, true);
+  const displayEvent = liveEvent ?? event;
+
   const startLabel = fmtShortDate(event.calculatedStartDate);
   const endLabel = fmtShortDate(event.calculatedEndDate);
   const durationEndLabel =
@@ -99,18 +104,18 @@ export function EventRow({
 
   // ── Inline progress: tasks ────────────────────────────────────────────────
   const taskProgress = (() => {
-    if (!event.tasks || event.tasks.length === 0) return null;
-    const done = event.tasks.filter(t => t.completed).length;
-    return <EventProgressBar done={done} total={event.tasks.length} dotColor={accent.dotColor} />;
+    if (!displayEvent.tasks || displayEvent.tasks.length === 0) return null;
+    const done = displayEvent.tasks.filter(t => t.completed).length;
+    return <EventProgressBar done={done} total={displayEvent.tasks.length} dotColor={accent.dotColor} />;
   })();
 
   // ── Inline progress: children ──────────────────────────────────────────────
   const childProgress = (() => {
-    const directChildren = event.children ?? [];
+    const directChildren = displayEvent.children ?? [];
     if (directChildren.length === 0) return null;
 
     const done = directChildren.filter(c => c.completed).length;
-    const isZone = event.targetType === 'FARM';
+    const isZone = displayEvent.targetType === 'FARM';
     return (
       <ScopeProgressBar done={done} total={directChildren.length} isZone={isZone} dotColor={accent.dotColor} />
     );
@@ -232,7 +237,7 @@ export function EventRow({
           </div>
 
           <EventExpandedDetails
-            event={event}
+            event={displayEvent}
             accent={accent}
             Icon={Icon}
             onEdit={onEdit}
@@ -241,7 +246,6 @@ export function EventRow({
             onToggleTask={onToggleTask}
             startLabel={startLabel}
             endLabel={endLabel}
-            durationEndLabel={durationEndLabel}
           />
         </div>
       )}
