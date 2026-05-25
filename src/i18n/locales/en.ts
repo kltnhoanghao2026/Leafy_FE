@@ -315,6 +315,31 @@ export const en: TranslationDict = {
         resolve: "Mark resolved",
         resolving: "Resolving...",
       },
+      bulk: {
+        selected: (count: number) =>
+          `${count} alert${count === 1 ? "" : "s"} selected`,
+        canAcknowledge: (count: number) =>
+          `${count} can be acknowledged`,
+        canResolve: (count: number) => `${count} can be resolved`,
+        acknowledge: "Acknowledge selected",
+        acknowledgePending: "Acknowledging...",
+        resolve: "Mark resolved",
+        resolvePending: "Resolving...",
+        clear: "Clear selection",
+        ackSuccess: (count: number) =>
+          `Acknowledged ${count} alert${count === 1 ? "" : "s"}.`,
+        resolveSuccess: (count: number) =>
+          `Resolved ${count} alert${count === 1 ? "" : "s"}.`,
+        partialAck: (success: number, total: number, failed: number) =>
+          `Acknowledged ${success}/${total} alerts. ${failed} failed.`,
+        partialResolve: (success: number, total: number, failed: number) =>
+          `Resolved ${success}/${total} alerts. ${failed} failed.`,
+        noEligibleAck: "No selected alerts can be acknowledged.",
+        noEligibleResolve: "No selected alerts can be resolved.",
+        selectAllPage: "Select all alerts on this page",
+        selectAlert: (type: string, time: string) =>
+          `Select alert ${type} opened ${time}`,
+      },
       states: {
         loading: "Loading alert events",
         empty: "No alerts",
@@ -946,8 +971,17 @@ export const en: TranslationDict = {
         missingLocation: "Select both farm and zone before connecting.",
         qrEmpty: "QR content is empty. Paste the JSON from the QR code into the test field.",
         qrInvalidJson: "Invalid QR: content must be valid JSON.",
+        qrNotLeafyDevice: "This QR code is not a Leafy IoT device.",
+        qrUnsupportedVersion: "This device QR version is not supported.",
         qrMissingFields: (fields: string) => `QR is missing required information: ${fields}.`,
         qrMissingRequired: "Invalid QR: deviceUid, deviceCode, or deviceType is missing.",
+        setupInfoTitle: "Device setup information",
+        setupInfoFirmware: "Firmware",
+        setupInfoWifi: "Setup Wi-Fi",
+        setupInfoPortal: "Setup portal",
+        setupInfoHint:
+          "If the setup portal does not open automatically, connect to the device Wi-Fi and open the portal URL.",
+        setupInfoOpenPortal: "Open setup portal",
         errorAuth:
           "Your session has expired or user information is missing. Sign in again and try connecting the device.",
         errorDuplicate: "This device already exists. Check deviceUid or deviceCode.",

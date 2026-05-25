@@ -75,6 +75,9 @@ const emptyDraft: DeviceOnboardingDraft = {
   deviceCode: "",
   deviceType: "",
   model: "",
+  firmwareVersion: "",
+  setupApSsid: "",
+  setupPortalUrl: "",
   deviceName: "",
   farmPlotId: "",
   zoneId: "",
@@ -87,6 +90,9 @@ const trimDraft = (draft: DeviceOnboardingDraft): DeviceOnboardingDraft => ({
   deviceCode: draft.deviceCode.trim(),
   deviceType: draft.deviceType.trim(),
   model: draft.model.trim(),
+  firmwareVersion: draft.firmwareVersion.trim(),
+  setupApSsid: draft.setupApSsid.trim(),
+  setupPortalUrl: draft.setupPortalUrl.trim(),
   deviceName: draft.deviceName.trim(),
   farmPlotId: draft.farmPlotId.trim(),
   zoneId: draft.zoneId.trim(),
@@ -317,6 +323,73 @@ function OfflineGuide({ visible }: OfflineGuideProps) {
   );
 }
 
+interface SetupInfoCardProps {
+  firmwareVersion?: string;
+  setupApSsid?: string;
+  setupPortalUrl?: string;
+}
+
+function SetupInfoCard({
+  firmwareVersion,
+  setupApSsid,
+  setupPortalUrl,
+}: SetupInfoCardProps) {
+  const { t } = useTranslation();
+  const hasSetupInfo = Boolean(firmwareVersion || setupApSsid || setupPortalUrl);
+
+  if (!hasSetupInfo) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50 p-5">
+      <div className="flex items-start gap-3">
+        <Router className="mt-0.5 h-5 w-5 text-emerald-700" />
+        <div className="w-full space-y-3">
+          <div>
+            <h4 className="text-sm font-black text-emerald-900">
+              {t("iot.devices.onboarding.setupInfoTitle")}
+            </h4>
+            <p className="mt-1 text-sm font-semibold text-emerald-800">
+              {t("iot.devices.onboarding.setupInfoHint")}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            {firmwareVersion ? (
+              <StatCard
+                label={t("iot.devices.onboarding.setupInfoFirmware")}
+                value={firmwareVersion}
+              />
+            ) : null}
+            {setupApSsid ? (
+              <StatCard
+                label={t("iot.devices.onboarding.setupInfoWifi")}
+                value={setupApSsid}
+              />
+            ) : null}
+            {setupPortalUrl ? (
+              <StatCard
+                label={t("iot.devices.onboarding.setupInfoPortal")}
+                value={setupPortalUrl}
+              />
+            ) : null}
+          </div>
+          {setupPortalUrl ? (
+            <a
+              href={setupPortalUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-800"
+            >
+              {t("iot.devices.onboarding.setupInfoOpenPortal")}
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface SuccessSummaryProps {
   result: DeviceOnboardingResult;
   onReset: () => void;
@@ -425,6 +498,9 @@ export function DeviceOnboardingPage() {
       deviceCode: qrData.deviceCode,
       deviceType: qrData.deviceType,
       model: qrData.model || "",
+      firmwareVersion: qrData.firmwareVersion || "",
+      setupApSsid: qrData.setupApSsid || "",
+      setupPortalUrl: qrData.setupPortalUrl || "",
       deviceName:
         current.deviceName.trim() || buildSuggestedDeviceName(t, current.zoneName || current.zoneId),
     }));
@@ -770,6 +846,12 @@ export function DeviceOnboardingPage() {
         <StatCard label={t("iot.devices.onboarding.deviceUid")} value={draftPreview.deviceUid} />
         <StatCard label={t("iot.devices.onboarding.deviceType")} value={draftPreview.deviceType} />
       </div>
+
+      <SetupInfoCard
+        firmwareVersion={draftPreview.firmwareVersion}
+        setupApSsid={draftPreview.setupApSsid}
+        setupPortalUrl={draftPreview.setupPortalUrl}
+      />
 
       <FarmLocationSelector
         farmPlotId={draft.farmPlotId}

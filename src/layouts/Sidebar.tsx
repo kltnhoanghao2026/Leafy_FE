@@ -28,6 +28,7 @@ import { useNotificationWebSocket } from "../features/notifications/hooks/useNot
 import { useTranslation } from "../i18n";
 import { chatApi } from "../features/chat/api/chatApi";
 import { useQuery } from "@tanstack/react-query";
+import { useOpenAlertCount } from "../features/alerts/queries";
 
 type SidebarNavItem = {
   name: string;
@@ -45,6 +46,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   useNotificationWebSocket();
   const { data: stateData } = useNotificationState();
   const unreadCount = stateData?.data?.unreadCount ?? 0;
+  const { data: openAlertCount = 0 } = useOpenAlertCount();
 
   // Total unread chat count — uses same queryKey as chat page so WebSocket updates flow through
   const { data: conversations = [] } = useQuery({
@@ -57,6 +59,10 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   const utilityBadgeMap: Record<string, number> = {
     [ROUTES.DASHBOARD.NOTIFICATIONS]: unreadCount,
     [ROUTES.DASHBOARD.CHAT]: chatUnreadCount,
+  };
+
+  const coreBadgeMap: Record<string, number> = {
+    [ROUTES.DASHBOARD.ALERTS]: openAlertCount,
   };
 
   const coreNavItems: SidebarNavItem[] = [
@@ -187,7 +193,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
       {/* Navigation */}
       <nav className={`flex-1 py-3 overflow-y-auto space-y-0.5 ${collapsed ? 'px-1.5' : 'px-2.5'}`}>
         <div className="space-y-0.5">
-          {coreNavItems.map((item) => renderNavItem(item))}
+          {coreNavItems.map((item) => renderNavItem(item, coreBadgeMap[item.path]))}
         </div>
         {renderSection('agriculture', t('nav.sectionAgriculture'), agricultureNavItems)}
         {renderSection('utility', t('nav.sectionOther'), utilityNavItems, utilityBadgeMap)}

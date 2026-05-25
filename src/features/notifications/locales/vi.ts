@@ -8,6 +8,9 @@ export const notificationsVi = {
   markAllRead: 'Đánh dấu đã đọc',
   markAllReadAriaLabel: 'Đánh dấu tất cả đã đọc',
   bellAriaLabel: 'Thông báo',
+  popoverTabsAriaLabel: 'Chọn loại thông báo',
+  popoverTabNotifications: 'Thông báo',
+  popoverTabAlerts: 'Cảnh báo',
 
   // ── Popover body states ───────────────────────────────────────────────────
   loadError: 'Không thể tải thông báo.',
@@ -15,6 +18,10 @@ export const notificationsVi = {
   empty: 'Chưa có thông báo nào.',
   allShown: 'Đã hiển thị tất cả thông báo',
   seeAll: 'Xem tất cả thông báo',
+  popoverAlertsError: 'Không thể tải cảnh báo.',
+  popoverAlertsEmpty: 'Không có cảnh báo cần xử lý.',
+  popoverAlertsViewAll: 'Xem tất cả cảnh báo',
+  popoverAlertsFallbackMessage: 'Cảnh báo mới cần xử lý',
 
   // ── Notifications page ────────────────────────────────────────────────────
   pageTitle: 'Thông báo',

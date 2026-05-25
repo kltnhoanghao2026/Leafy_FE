@@ -26,6 +26,15 @@ const alertItem: AlertEventItemResponse = {
   pushSent: false,
 };
 
+const alertSummaryText = "Vượt ngưỡng cao";
+
+const makeAlert = (
+  overrides: Partial<AlertEventItemResponse> = {},
+): AlertEventItemResponse => ({
+  ...alertItem,
+  ...overrides,
+});
+
 const pagedResponse = (
   items: AlertEventItemResponse[] = [alertItem],
   page = 0,
@@ -100,6 +109,7 @@ const mockPickerApis = () => {
     http.get("*/api/farms/plots/:plotId/zones", () =>
       HttpResponse.json([zone]),
     ),
+    http.get("*/api/farms/zones", () => HttpResponse.json([zone])),
     http.get("*/api/iot/devices/me", () =>
       HttpResponse.json({
         items: [device],
@@ -110,6 +120,19 @@ const mockPickerApis = () => {
         hasNext: false,
         hasPrevious: false,
       }),
+    ),
+    http.get("*/api/iot/devices/:deviceId/latest-readings", () =>
+      HttpResponse.json([
+        {
+          sensorTypeId: alertItem.sensorTypeId,
+          sensorCode: "AIR_TEMP",
+          sensorName: "Air temperature",
+          unit: "°C",
+          value: alertItem.triggerValue,
+          recordedAt: alertItem.openedAt,
+          qualityStatus: "GOOD",
+        },
+      ]),
     ),
   );
 };
@@ -132,12 +155,40 @@ describe("AlertsPage", () => {
     renderWithClient(<AlertsPage />);
 
     expect(
-      await screen.findByText("AIR_TEMP exceeded max threshold"),
+      await screen.findByText(alertSummaryText),
     ).toBeInTheDocument();
     expect(screen.getByText("Vượt ngưỡng cao")).toBeInTheDocument();
     expect(screen.getByText(/giá trị đo 44/)).toBeInTheDocument();
     expect(screen.getAllByText("North sensor").length).toBeGreaterThan(0);
     expect(screen.getByText("1 cảnh báo")).toBeInTheDocument();
+  });
+
+  it("highlights the alert row targeted by the alertId query param", async () => {
+    const seenRequests: Array<{ status: string | null; page: string | null }> = [];
+
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", ({ request }) => {
+        const url = new URL(request.url);
+        seenRequests.push({
+          status: url.searchParams.get("status"),
+          page: url.searchParams.get("page"),
+        });
+        return HttpResponse.json(pagedResponse());
+      }),
+    );
+
+    renderWithClient(<AlertsPage />, {
+      route: `/dashboard/alerts?alertId=${alertItem.id}`,
+    });
+
+    const alertTitle = await screen.findByText(alertSummaryText);
+    const row = alertTitle.closest("tr");
+    expect(row).toHaveAttribute("id", `alert-event-${alertItem.id}`);
+    expect(row?.className).toContain("ring-[#245A34]/25");
+    await waitFor(() => {
+      expect(seenRequests).toContainEqual({ status: "OPEN", page: "0" });
+    });
   });
 
   it("sends severity and status filters in the alert events request", async () => {
@@ -157,7 +208,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     await chooseSelectOption("Lọc theo mức độ", "Quan trọng");
     await chooseSelectOption("Lọc theo trạng thái", "Cần xử lý");
 
@@ -195,7 +246,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     await chooseSelectOption("Lọc theo vườn", "North Farm");
     await chooseSelectOption("Lọc theo khu vực", "Coffee Zone A");
     await chooseSelectOption("Lọc theo thiết bị", "North sensor");
@@ -261,7 +312,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     await userEvent.click(
       screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     );
@@ -305,7 +356,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     await userEvent.click(screen.getByRole("button", { name: /Đánh dấu đã xử lý Vượt ngưỡng cao/i }));
 
     await waitFor(() => {
@@ -333,7 +384,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     expect(
       screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     ).toBeDisabled();
@@ -356,7 +407,7 @@ describe("AlertsPage", () => {
 
     renderWithClient(<AlertsPage />);
 
-    await screen.findByText("AIR_TEMP exceeded max threshold");
+    await screen.findByText(alertSummaryText);
     await userEvent.click(
       screen.getByRole("button", { name: /Xác nhận Vượt ngưỡng cao/i }),
     );
@@ -364,6 +415,229 @@ describe("AlertsPage", () => {
     expect(
       await screen.findByText("Không cập nhật được cảnh báo"),
     ).toBeInTheDocument();
+  });
+
+  it("shows the bulk toolbar after selecting an alert row", async () => {
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(
+          pagedResponse([
+            makeAlert({ id: "alert-open-1" }),
+            makeAlert({ id: "alert-open-2" }),
+          ]),
+        );
+      }),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(screen.getAllByLabelText(/Chọn cảnh báo/i)[0]);
+
+    expect(screen.getByText("Đã chọn 1 cảnh báo")).toBeInTheDocument();
+    expect(screen.getByText(/1 có thể đánh dấu đã xem/)).toBeInTheDocument();
+  });
+
+  it("selects all alerts on the current page from the table header", async () => {
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(
+          pagedResponse([
+            makeAlert({ id: "alert-open-1" }),
+            makeAlert({ id: "alert-open-2" }),
+          ]),
+        );
+      }),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(
+      screen.getByLabelText("Chọn tất cả cảnh báo trên trang hiện tại"),
+    );
+
+    expect(screen.getByText("Đã chọn 2 cảnh báo")).toBeInTheDocument();
+    expect(screen.getByText(/2 có thể đánh dấu đã xem/)).toBeInTheDocument();
+  });
+
+  it("clears selected alerts when filters change", async () => {
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(
+          pagedResponse([
+            makeAlert({ id: "alert-open-1" }),
+            makeAlert({ id: "alert-open-2" }),
+          ]),
+        );
+      }),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(screen.getAllByLabelText(/Chọn cảnh báo/i)[0]);
+    expect(screen.getByText("Đã chọn 1 cảnh báo")).toBeInTheDocument();
+
+    await chooseSelectOption("Lọc theo trạng thái", "Cần xử lý");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Đã chọn 1 cảnh báo")).not.toBeInTheDocument();
+    });
+  });
+
+  it("bulk acknowledges only selected open alerts", async () => {
+    const acknowledgedIds: string[] = [];
+    const alerts = [
+      makeAlert({ id: "alert-open", status: "OPEN" }),
+      makeAlert({
+        id: "alert-acknowledged",
+        status: "ACKNOWLEDGED",
+        acknowledgedAt: "2026-04-16T03:10:00Z",
+      }),
+      makeAlert({
+        id: "alert-resolved",
+        status: "RESOLVED",
+        acknowledgedAt: "2026-04-16T03:10:00Z",
+        resolvedAt: "2026-04-16T03:12:00Z",
+      }),
+    ];
+
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(pagedResponse(alerts));
+      }),
+      http.post(
+        "*/api/iot/alert-events/:alertEventId/acknowledge",
+        ({ params }) => {
+          acknowledgedIds.push(String(params.alertEventId));
+          return HttpResponse.json({
+            ...alertItem,
+            id: String(params.alertEventId),
+            status: "ACKNOWLEDGED",
+          });
+        },
+      ),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(
+      screen.getByLabelText("Chọn tất cả cảnh báo trên trang hiện tại"),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Đánh dấu đã xem" }),
+    );
+
+    await waitFor(() => {
+      expect(acknowledgedIds).toEqual(["alert-open"]);
+    });
+    expect(
+      await screen.findByText("Đã đánh dấu đã xem 1 cảnh báo."),
+    ).toBeInTheDocument();
+  });
+
+  it("bulk resolves selected open and acknowledged alerts only", async () => {
+    const resolvedIds: string[] = [];
+    const alerts = [
+      makeAlert({ id: "alert-open", status: "OPEN" }),
+      makeAlert({
+        id: "alert-acknowledged",
+        status: "ACKNOWLEDGED",
+        acknowledgedAt: "2026-04-16T03:10:00Z",
+      }),
+      makeAlert({
+        id: "alert-resolved",
+        status: "RESOLVED",
+        acknowledgedAt: "2026-04-16T03:10:00Z",
+        resolvedAt: "2026-04-16T03:12:00Z",
+      }),
+    ];
+
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(pagedResponse(alerts));
+      }),
+      http.post("*/api/iot/alert-events/:alertEventId/resolve", ({ params }) => {
+        resolvedIds.push(String(params.alertEventId));
+        return HttpResponse.json({
+          ...alertItem,
+          id: String(params.alertEventId),
+          status: "RESOLVED",
+        });
+      }),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(
+      screen.getByLabelText("Chọn tất cả cảnh báo trên trang hiện tại"),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Đánh dấu đã xử lý" }),
+    );
+
+    await waitFor(() => {
+      expect(resolvedIds).toEqual(["alert-open", "alert-acknowledged"]);
+    });
+    expect(
+      await screen.findByText("Đã đánh dấu đã xử lý 2 cảnh báo."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps failed alert ids selected after a partial bulk failure", async () => {
+    const alerts = [
+      makeAlert({ id: "alert-success", status: "OPEN" }),
+      makeAlert({ id: "alert-failed", status: "OPEN" }),
+    ];
+
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(pagedResponse(alerts));
+      }),
+      http.post(
+        "*/api/iot/alert-events/:alertEventId/acknowledge",
+        ({ params }) => {
+          if (params.alertEventId === "alert-failed") {
+            return HttpResponse.json(
+              { code: 500, message: "cannot acknowledge" },
+              { status: 500 },
+            );
+          }
+
+          return HttpResponse.json({
+            ...alertItem,
+            id: String(params.alertEventId),
+            status: "ACKNOWLEDGED",
+          });
+        },
+      ),
+    );
+
+    renderWithClient(<AlertsPage />);
+
+    await screen.findAllByText(alertSummaryText);
+    await userEvent.click(
+      screen.getByLabelText("Chọn tất cả cảnh báo trên trang hiện tại"),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Đánh dấu đã xem" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Đã đánh dấu đã xem 1/2 cảnh báo. 1 cảnh báo thất bại.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Đã chọn 1 cảnh báo")).toBeInTheDocument();
   });
 
   it("shows pagination metadata and requests the next page", async () => {

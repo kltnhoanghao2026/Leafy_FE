@@ -3,11 +3,16 @@ import type { TFunction } from "../../../i18n/context";
 import type { DeviceQrPayload } from "../types";
 
 const deviceQrSchema = z.object({
+  type: z.literal("LEAFY_IOT_DEVICE").optional(),
+  version: z.literal(1).optional(),
   deviceUid: z.string().trim().min(1, "deviceUid is required"),
   deviceCode: z.string().trim().min(1, "deviceCode is required"),
   deviceType: z.string().trim().min(1, "deviceType is required"),
   model: z.string().trim().optional(),
-});
+  firmwareVersion: z.string().trim().optional(),
+  setupApSsid: z.string().trim().optional(),
+  setupPortalUrl: z.string().trim().optional(),
+}).strip();
 
 export interface ParsedQrPayload {
   data: DeviceQrPayload;
@@ -39,6 +44,26 @@ export const parseDeviceQrPayload = (
 
   const result = deviceQrSchema.safeParse(parsed);
   if (!result.success) {
+    const unsupportedType = result.error.issues.some(
+      (issue) => issue.path.join(".") === "type",
+    );
+    if (unsupportedType) {
+      return {
+        success: false,
+        error: t("iot.devices.onboarding.qrNotLeafyDevice"),
+      };
+    }
+
+    const unsupportedVersion = result.error.issues.some(
+      (issue) => issue.path.join(".") === "version",
+    );
+    if (unsupportedVersion) {
+      return {
+        success: false,
+        error: t("iot.devices.onboarding.qrUnsupportedVersion"),
+      };
+    }
+
     const missingFields = result.error.issues
       .map((issue) => issue.path.join("."))
       .filter(Boolean);
@@ -61,6 +86,9 @@ export const parseDeviceQrPayload = (
         deviceCode: result.data.deviceCode,
         deviceType: result.data.deviceType,
         model: result.data.model?.trim() || "",
+        firmwareVersion: result.data.firmwareVersion?.trim() || "",
+        setupApSsid: result.data.setupApSsid?.trim() || "",
+        setupPortalUrl: result.data.setupPortalUrl?.trim() || "",
       },
     },
   };

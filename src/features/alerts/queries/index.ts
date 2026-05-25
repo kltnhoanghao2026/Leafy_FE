@@ -1,3 +1,3 @@
 export { alertKeys } from "./keys";
-export { useAlertEvents } from "./queries";
+export { useAlertEvents, useOpenAlertCount } from "./queries";
 export { useAcknowledgeAlert, useResolveAlert } from "./mutations";
