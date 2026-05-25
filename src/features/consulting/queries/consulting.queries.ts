@@ -69,6 +69,13 @@ export const useConsultingFarmZones = (farmPlotId: string, enabled = true) =>
     enabled: enabled && !!farmPlotId,
   });
 
+export const useConsultingAllZones = (farmerProfileId: string, enabled = true) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'all-zones', farmerProfileId],
+    queryFn: () => consultingApi.getConsultingAllZones(farmerProfileId),
+    enabled: enabled && !!farmerProfileId,
+  });
+
 export const useConsultingPlants = (farmerProfileId: string, enabled = true) =>
   useQuery({
     queryKey: consultingKeys.plants(farmerProfileId),
@@ -168,6 +175,26 @@ export const useConsultingCalendar = (
   useQuery({
     queryKey: [...consultingKeys.all(), 'consulting-calendar', farmerProfileId, startDate, endDate],
     queryFn: () => consultingApi.getConsultingCalendar(farmerProfileId, startDate, endDate),
+    enabled: enabled && Boolean(farmerProfileId && startDate && endDate),
+    staleTime: 30_000,
+  });
+
+export const useConsultingCalendarFiltered = (
+  farmerProfileId: string,
+  startDate: string,
+  endDate: string,
+  filters: {
+    farmPlotId?: string;
+    farmZoneId?: string;
+    plantId?: string;
+    targetType?: string;
+    eventType?: string;
+  },
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: [...consultingKeys.all(), 'consulting-calendar', farmerProfileId, startDate, endDate, filters],
+    queryFn: () => consultingApi.getConsultingCalendarFiltered(farmerProfileId, startDate, endDate, filters),
     enabled: enabled && Boolean(farmerProfileId && startDate && endDate),
     staleTime: 30_000,
   });
