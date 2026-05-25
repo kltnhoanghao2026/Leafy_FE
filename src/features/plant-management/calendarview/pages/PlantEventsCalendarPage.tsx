@@ -187,6 +187,7 @@ export function PlantEventsCalendarPage() {
           onToggleTask={(event, idx) =>
             void toggleTask.mutateAsync({ eventId: event.id, taskIndex: idx })
           }
+          zIndex="z-[60]"
         />
       )}
       {pendingCompleteApply && (
