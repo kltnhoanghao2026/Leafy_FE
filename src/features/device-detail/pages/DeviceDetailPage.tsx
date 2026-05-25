@@ -313,6 +313,7 @@ function InfoTile({ label, value }: InfoTileProps) {
 
 interface DeviceSensorCardProps {
   deviceId: string;
+  zoneId?: string;
   apiRange: ReturnType<typeof toApiChartRange>;
   displayRange: DisplayChartRange;
   reading: LatestReadingItemResponse;
@@ -335,10 +336,12 @@ interface DeviceSensorCardProps {
   onAnalyticsToggle: (enabled: boolean) => void;
   eventMarkers: EventMarkerData[];
   exportFilename: string;
+  enabled?: boolean;
 }
 
 function DeviceSensorCard({
   deviceId,
+  zoneId,
   apiRange,
   displayRange,
   reading,
@@ -351,10 +354,11 @@ function DeviceSensorCard({
   onAnalyticsToggle,
   eventMarkers,
   exportFilename,
+  enabled = true,
 }: DeviceSensorCardProps) {
   const { t, locale } = useTranslation();
   const knownSensor = SENSOR_CONFIG.find((sensor) => sensor.code === reading.sensorCode);
-  const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange);
+  const chartQuery = useDeviceChart(deviceId, reading.sensorCode, apiRange, zoneId, enabled);
   const trend = useMemo(
     () => deriveAnalytics(chartToTrend(chartQuery.data, displayRange), alerts),
     [alerts, chartQuery.data, displayRange, locale],
@@ -426,6 +430,7 @@ function DeviceSensorCard({
 
 interface DeviceMediaPanelProps {
   mediaEvents: DisplayDeviceMediaEvent[];
+  currentZoneScoped?: boolean;
   canCapture: boolean;
   isCapturing: boolean;
   isPolling: boolean;
@@ -461,6 +466,7 @@ interface DeviceMediaPanelProps {
 
 function DeviceMediaPanel({
   mediaEvents,
+  currentZoneScoped = false,
   canCapture,
   isCapturing,
   isPolling,
@@ -911,7 +917,9 @@ function DeviceMediaPanel({
           </div>
           {mediaEvents.length === 0 ? (
             <p className="rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm font-bold text-slate-500">
-              {t("iot.devices.media.noEvents")}
+              {currentZoneScoped
+                ? t("iot.devices.media.noCurrentZoneMedia")
+                : t("iot.devices.media.noEvents")}
             </p>
           ) : null}
           <div className={`space-y-2 ${showAllMediaHistory ? "max-h-[520px] overflow-y-auto pr-1" : ""}`}>
@@ -1125,20 +1133,32 @@ export function DeviceDetailPage() {
   const completedCaptureRef = useRef<string | null>(null);
 
   const deviceDetailQuery = useDeviceDetail(resolvedDeviceId, !!deviceId);
-  const latestReadingsQuery = useDeviceLatestReadings(resolvedDeviceId, !!deviceId);
-  const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
-  const mediaQuery = useDeviceMedia(resolvedDeviceId, !!deviceId, 10_000);
   const device = deviceDetailQuery.data;
+  const currentZoneId = device?.zoneId ?? undefined;
+  const hasCurrentZone = Boolean(currentZoneId);
+  const latestReadingsQuery = useDeviceLatestReadings(
+    resolvedDeviceId,
+    currentZoneId,
+    Boolean(deviceId && hasCurrentZone),
+  );
+  const configQuery = useDeviceConfig(resolvedDeviceId, !!deviceId);
+  const mediaQuery = useDeviceMedia(
+    resolvedDeviceId,
+    currentZoneId,
+    Boolean(deviceId && hasCurrentZone),
+    10_000,
+  );
   const deviceUid = device?.deviceUid;
   const cameraSchedulesQuery = useDeviceSchedulesQuery(deviceUid, !!deviceUid, 10_000);
   const alertEventsQuery = useAlertEvents(
     {
       deviceId: resolvedDeviceId,
+      zoneId: currentZoneId,
       size: 100,
       sortBy: "openedAt",
       sortDir: "desc",
     },
-    !!deviceId,
+    Boolean(deviceId && hasCurrentZone),
   );
   const updateConfigMutation = useUpdateDeviceConfig(resolvedDeviceId);
   const updateDeviceMutation = useUpdateDeviceMutation();
@@ -1281,10 +1301,7 @@ export function DeviceDetailPage() {
   }, [captureRequestId, deviceDetailQuery, mediaEvents]);
 
   const visibleReadings = useMemo(() => {
-    const latestReadings =
-      latestReadingsQuery.data && latestReadingsQuery.data.length > 0
-        ? latestReadingsQuery.data
-        : device?.latestReadings ?? [];
+    const latestReadings = latestReadingsQuery.data ?? [];
     const priority = new Map<string, number>(
       SENSOR_CONFIG.map((sensor, index) => [sensor.code, index]),
     );
@@ -1293,8 +1310,20 @@ export function DeviceDetailPage() {
       const secondRank = priority.get(second.sensorCode) ?? 99;
       return firstRank - secondRank || first.sensorCode.localeCompare(second.sensorCode);
     });
-  }, [device?.latestReadings, latestReadingsQuery.data]);
+  }, [latestReadingsQuery.data]);
   const deviceAlerts = alertEventsQuery.data?.items ?? [];
+  const isCurrentZoneDataLoading = latestReadingsQuery.isLoading || mediaQuery.isLoading;
+  const showCurrentZoneDataNotice = Boolean(
+    device &&
+      (!hasCurrentZone ||
+        (hasCurrentZone &&
+          !isCurrentZoneDataLoading &&
+          visibleReadings.length === 0 &&
+          mediaEvents.length === 0)),
+  );
+  const currentZoneDataNotice = hasCurrentZone
+    ? t("iot.devices.detail.currentZoneDataNotice")
+    : t("iot.devices.detail.unassignedZoneDataNotice");
   const farmPlotLabel = device
     ? formatFarmPlotLabel(
         device,
@@ -1591,6 +1620,17 @@ export function DeviceDetailPage() {
             ) : null}
           </section>
 
+          {showCurrentZoneDataNotice ? (
+            <div className="rounded-[1.75rem] border border-emerald-100 bg-emerald-50 p-5">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 text-emerald-700" strokeWidth={2.5} />
+                <p className="text-sm font-bold text-emerald-800">
+                  {currentZoneDataNotice}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
           <section>
             <div className="mb-6">
               <div>
@@ -1735,10 +1775,14 @@ export function DeviceDetailPage() {
             {!latestReadingsQuery.isLoading && visibleReadings.length === 0 ? (
               <div className="rounded-[2rem] border border-slate-100 bg-white p-8 text-center shadow-sm">
                 <h3 className="text-lg font-black text-slate-800">
-                  {t("iot.devices.detail.noReadings")}
+                  {hasCurrentZone
+                    ? t("iot.devices.detail.noCurrentZoneReadings")
+                    : t("iot.devices.detail.noReadings")}
                 </h3>
                 <p className="mt-1 text-sm font-semibold text-slate-500">
-                  {t("iot.devices.detail.noReadingsDescription")}
+                  {hasCurrentZone
+                    ? t("iot.devices.detail.currentZoneDataNotice")
+                    : t("iot.devices.detail.unassignedZoneDataNotice")}
                 </p>
               </div>
             ) : null}
@@ -1749,6 +1793,7 @@ export function DeviceDetailPage() {
                   <DeviceSensorCard
                     key={reading.sensorCode}
                     deviceId={deviceId}
+                    zoneId={currentZoneId}
                     apiRange={apiChartRange}
                     displayRange={range}
                     reading={reading}
@@ -1767,6 +1812,7 @@ export function DeviceDetailPage() {
                       reading.sensorCode,
                       range,
                     )}
+                    enabled={hasCurrentZone}
                   />
                 ))}
               </div>
@@ -1775,6 +1821,7 @@ export function DeviceDetailPage() {
 
           <DeviceMediaPanel
             mediaEvents={mediaEvents}
+            currentZoneScoped={hasCurrentZone}
             canCapture={canManageConfig}
             isCapturing={captureImageMutation.isPending}
             isPolling={isMediaPolling}

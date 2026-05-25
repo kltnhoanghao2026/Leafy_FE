@@ -12,7 +12,9 @@ import type {
   DeviceDetailResponse,
   DeviceMediaAnalysisResponse,
   DeviceMediaEventResponse,
+  LatestReadingItemResponse,
   PagedResponse,
+  SensorChartResponse,
 } from "../../../types/iot";
 import DeviceDetailPage from "./DeviceDetailPage";
 
@@ -94,6 +96,26 @@ const media: DeviceMediaEventResponse = {
   analysis,
 };
 
+const reading: LatestReadingItemResponse = {
+  sensorTypeId: "sensor-1",
+  sensorCode: "AIR_TEMP",
+  sensorName: "Air temperature",
+  unit: "°C",
+  value: 31,
+  readingTime: "2026-05-19T08:30:00Z",
+  qualityStatus: "GOOD",
+};
+
+const chart: SensorChartResponse = {
+  deviceId,
+  zoneId: "zone-1",
+  sensorCode: "AIR_TEMP",
+  sensorName: "Air temperature",
+  unit: "°C",
+  rangeType: "H24",
+  points: [],
+};
+
 const schedule: DeviceCameraScheduleResponse = {
   id: "schedule-1",
   deviceId,
@@ -119,18 +141,43 @@ function renderPage() {
   );
 }
 
-function setupHandlers() {
+interface HandlerOptions {
+  detail?: DeviceDetailResponse;
+  latestReadings?: LatestReadingItemResponse[];
+  mediaEvents?: DeviceMediaEventResponse[];
+}
+
+function setupHandlers(options: HandlerOptions = {}) {
   let createSchedulePayload: unknown = null;
   let detectPayload: unknown = null;
+  const requestedFileIds: string[] = [];
+  const latestReadingZoneIds: Array<string | null> = [];
+  const chartZoneIds: Array<string | null> = [];
+  const mediaZoneIds: Array<string | null> = [];
+  const alertZoneIds: Array<string | null> = [];
+  const detailResponse = options.detail ?? device;
+  const latestReadings = options.latestReadings ?? [];
+  const mediaEvents = options.mediaEvents ?? [media];
 
   server.use(
-    http.get(`*/api/iot/devices/${deviceId}/detail`, () => HttpResponse.json(device)),
-    http.get(`*/api/iot/devices/${deviceId}/latest-readings`, () => HttpResponse.json([])),
+    http.get(`*/api/iot/devices/${deviceId}/detail`, () => HttpResponse.json(detailResponse)),
+    http.get(`*/api/iot/devices/${deviceId}/latest-readings`, ({ request }) => {
+      latestReadingZoneIds.push(new URL(request.url).searchParams.get("zoneId"));
+      return HttpResponse.json(latestReadings);
+    }),
+    http.get(`*/api/iot/devices/${deviceId}/charts`, ({ request }) => {
+      chartZoneIds.push(new URL(request.url).searchParams.get("zoneId"));
+      return HttpResponse.json(chart);
+    }),
     http.get(`*/api/iot/devices/${deviceId}/config`, () => HttpResponse.json(config)),
-    http.get(`*/api/iot/devices/${deviceId}/media`, () => HttpResponse.json([media])),
+    http.get(`*/api/iot/devices/${deviceId}/media`, ({ request }) => {
+      mediaZoneIds.push(new URL(request.url).searchParams.get("zoneId"));
+      return HttpResponse.json(mediaEvents);
+    }),
     http.get(`*/api/iot/devices/${deviceUid}/camera/capture-schedule`, () => HttpResponse.json([schedule])),
-    http.get("*/api/iot/alert-events", () =>
-      HttpResponse.json({
+    http.get("*/api/iot/alert-events", ({ request }) => {
+      alertZoneIds.push(new URL(request.url).searchParams.get("zoneId"));
+      return HttpResponse.json({
         items: [],
         page: 0,
         size: 100,
@@ -138,15 +185,16 @@ function setupHandlers() {
         totalPages: 0,
         hasNext: false,
         hasPrevious: false,
-      } satisfies PagedResponse<AlertEventItemResponse>),
-    ),
-    http.get("*/api/files/presigned-url/:fileId", ({ params }) =>
-      HttpResponse.json({
+      } satisfies PagedResponse<AlertEventItemResponse>);
+    }),
+    http.get("*/api/files/presigned-url/:fileId", ({ params }) => {
+      requestedFileIds.push(String(params.fileId));
+      return HttpResponse.json({
         code: 1000,
         message: "ok",
         data: `https://files.example.test/${String(params.fileId)}.jpg`,
-      }),
-    ),
+      });
+    }),
     http.post(`*/api/iot/devices/${deviceUid}/camera/capture-schedule`, async ({ request }) => {
       createSchedulePayload = await request.json();
       return HttpResponse.json(schedule);
@@ -165,10 +213,80 @@ function setupHandlers() {
   return {
     getCreateSchedulePayload: () => createSchedulePayload,
     getDetectPayload: () => detectPayload,
+    getRequestedFileIds: () => requestedFileIds,
+    getLatestReadingZoneIds: () => latestReadingZoneIds,
+    getChartZoneIds: () => chartZoneIds,
+    getMediaZoneIds: () => mediaZoneIds,
+    getAlertZoneIds: () => alertZoneIds,
   };
 }
 
 describe("DeviceDetailPage camera media panel", () => {
+  it("requests current-zone scoped latest readings, charts, media, and alert events", async () => {
+    const handlers = setupHandlers({ latestReadings: [reading] });
+    renderPage();
+
+    expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(handlers.getLatestReadingZoneIds()).toContain("zone-1");
+      expect(handlers.getMediaZoneIds()).toContain("zone-1");
+      expect(handlers.getAlertZoneIds()).toContain("zone-1");
+      expect(handlers.getChartZoneIds()).toContain("zone-1");
+    });
+  });
+
+  it("does not fallback to embedded device-history latest readings for current-zone sections", async () => {
+    setupHandlers({
+      detail: {
+        ...device,
+        latestReadings: [reading],
+      },
+      latestReadings: [],
+      mediaEvents: [],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Chưa có dữ liệu cảm biến trong khu vực hiện tại."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Air temperature")).not.toBeInTheDocument();
+  });
+
+  it("does not render embedded device-history latest media or alert summary in current-zone sections", async () => {
+    const handlers = setupHandlers({
+      detail: {
+        ...device,
+        alertSummary: {
+          openAlerts: 99,
+          highSeverityAlerts: 99,
+          criticalAlerts: 99,
+          latestAlertAt: "2026-05-19T08:45:00Z",
+        },
+        latestMedia: {
+          mediaEventId: "media-zone-a",
+          fileId: "old-zone-file",
+          mediaType: "IMAGE",
+          triggerType: "SCHEDULED",
+          capturedAt: "2026-05-19T08:40:00Z",
+          deviceId,
+          zoneId: "zone-a",
+        },
+      },
+      latestReadings: [],
+      mediaEvents: [],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Chưa có ảnh hoặc chẩn đoán nào trong khu vực hiện tại."),
+    ).toBeInTheDocument();
+    expect(handlers.getRequestedFileIds()).not.toContain("old-zone-file");
+    expect(screen.queryByText("99")).not.toBeInTheDocument();
+  });
+
   it("renders schedule list, thumbnail, analysis status, disease, severity, and alert badge", async () => {
     setupHandlers();
     renderPage();
@@ -208,7 +326,7 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     await screen.findByText("Leafy Camera");
-    await user.click(screen.getByRole("button", { name: /Phân tích ảnh mới nhất/i }));
+    await user.click(await screen.findByRole("button", { name: /Phân tích ảnh mới nhất/i }));
 
     await waitFor(() =>
       expect(handlers.getDetectPayload()).toMatchObject({
@@ -226,7 +344,7 @@ describe("DeviceDetailPage camera media panel", () => {
     renderPage();
 
     await screen.findByText("Leafy Camera");
-    await user.click(screen.getByRole("button", { name: /coffee-rust - Quan trọng/i }));
+    await user.click(await screen.findByRole("button", { name: /coffee-rust - Quan trọng/i }));
 
     expect(screen.getByText("Phân tích bệnh")).toBeInTheDocument();
     expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(1);

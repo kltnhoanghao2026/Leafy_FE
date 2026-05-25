@@ -657,7 +657,7 @@ export const vi = {
       captureZoneImage: "Chụp ảnh hiện tại",
       capturingZoneImage: "Đang gửi yêu cầu",
       latestZoneImage: "Ảnh mới nhất của khu vực",
-      noZoneImages: "Chưa có ảnh từ camera khu vực.",
+      noZoneImages: "Chưa có ảnh hoặc chẩn đoán nào trong khu vực này.",
       zoneImageHistory: "Ảnh gần đây",
       zoneCameraNoDevice: "Khu vực này chưa có thiết bị camera để chụp ảnh.",
       latestCount: (count: number) => `${count} ảnh`,
@@ -847,6 +847,11 @@ export const vi = {
         loadingReadings: "Đang tải readings của thiết bị",
         noReadings: "Chưa có readings mới nhất",
         noReadingsDescription: "Backend không trả về readings cảm biến cho thiết bị này.",
+        currentZoneDataNotice:
+          "Thiết bị đang được gắn vào khu vực này. Dữ liệu mới sẽ xuất hiện sau khi thiết bị gửi mẫu hoặc chụp ảnh mới trong khu vực hiện tại.",
+        unassignedZoneDataNotice:
+          "Thiết bị chưa được gắn khu vực. Dữ liệu theo khu vực sẽ xuất hiện sau khi thiết bị được gắn vào một khu vực.",
+        noCurrentZoneReadings: "Chưa có dữ liệu cảm biến trong khu vực hiện tại.",
         live: "Live",
         unknown: "Không rõ",
       },
@@ -893,6 +898,7 @@ export const vi = {
         showMoreHistory: "Xem thêm",
         showLessHistory: "Thu gọn",
         noEvents: "Chưa có lần chụp nào.",
+        noCurrentZoneMedia: "Chưa có ảnh hoặc chẩn đoán nào trong khu vực hiện tại.",
         waitingForUpload: "Đang chờ upload",
         mediaDetail: "Chi tiết ảnh",
         capturedAt: "Thời điểm chụp",

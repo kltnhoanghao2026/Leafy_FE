@@ -577,7 +577,8 @@ export function ZoneDetailMetricsPage() {
   const zoneDeviceId = zoneDevice?.id ?? "";
   const zoneMediaQuery = useDeviceMedia(
     zoneDeviceId,
-    Boolean(zoneDeviceId),
+    resolvedZoneId,
+    Boolean(zoneDeviceId && resolvedZoneId),
     10000,
   );
   const captureZoneImageMutation = useCaptureDeviceImage(zoneDeviceId);

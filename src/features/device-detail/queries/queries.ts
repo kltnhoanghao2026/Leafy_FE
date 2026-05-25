@@ -17,10 +17,14 @@ export const useDeviceDetail = (deviceId: string, enabled = true) =>
     enabled: enabled && !!deviceId,
   });
 
-export const useDeviceLatestReadings = (deviceId: string, enabled = true) =>
+export const useDeviceLatestReadings = (
+  deviceId: string,
+  zoneId?: string,
+  enabled = true,
+) =>
   useQuery({
-    queryKey: deviceKeys.latestReadings(deviceId),
-    queryFn: () => collectorApi.getDeviceLatestReadings(deviceId),
+    queryKey: deviceKeys.latestReadings(deviceId, zoneId),
+    queryFn: () => collectorApi.getDeviceLatestReadings(deviceId, zoneId),
     select: (response) => response.data,
     enabled: enabled && !!deviceId,
     refetchInterval: IOT_POLLING_INTERVALS.latest,
@@ -32,11 +36,12 @@ export const useDeviceChart = (
   deviceId: string,
   sensorCode: string,
   range: ChartRange,
+  zoneId?: string,
   enabled = true,
 ) =>
   useQuery({
-    queryKey: deviceKeys.chart(deviceId, sensorCode, range),
-    queryFn: () => collectorApi.getDeviceChart(deviceId, sensorCode, range),
+    queryKey: deviceKeys.chart(deviceId, sensorCode, range, zoneId),
+    queryFn: () => collectorApi.getDeviceChart(deviceId, sensorCode, range, zoneId),
     select: (response) => response.data,
     enabled: enabled && !!deviceId && !!sensorCode && !!range,
     refetchInterval: getIotChartRefetchInterval(range),
@@ -54,14 +59,15 @@ export const useDeviceConfig = (deviceId: string, enabled = true) =>
 
 export const useDeviceMedia = (
   deviceId: string,
+  zoneId?: string,
   enabled = true,
   refetchInterval?: number | false,
 ) => {
   const { t } = useTranslation();
 
   return useQuery({
-    queryKey: deviceKeys.media(deviceId),
-    queryFn: () => collectorApi.getDeviceMedia(deviceId),
+    queryKey: deviceKeys.media(deviceId, zoneId),
+    queryFn: () => collectorApi.getDeviceMedia(deviceId, zoneId),
     select: (response) => response.data.map((event) => withMediaDisplay(t, event)),
     enabled: enabled && !!deviceId,
     refetchInterval,
