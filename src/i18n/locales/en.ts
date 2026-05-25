@@ -661,7 +661,7 @@ export const en: TranslationDict = {
       captureZoneImage: "Capture current image",
       capturingZoneImage: "Sending request",
       latestZoneImage: "Latest zone image",
-      noZoneImages: "No camera images for this zone yet.",
+      noZoneImages: "No images or diagnoses have been captured in this zone yet.",
       zoneImageHistory: "Recent images",
       zoneCameraNoDevice: "This zone does not have a camera device for image capture yet.",
       latestCount: (count: number) => `${count} images`,
@@ -851,6 +851,11 @@ export const en: TranslationDict = {
         loadingReadings: "Loading device readings",
         noReadings: "No latest sensor readings",
         noReadingsDescription: "The backend returned no sensor readings for this device.",
+        currentZoneDataNotice:
+          "This device is assigned to this zone. New data will appear after the device sends telemetry or captures images in the current zone.",
+        unassignedZoneDataNotice:
+          "This device is not assigned to a zone yet. Zone-scoped data will appear after it is assigned to a zone.",
+        noCurrentZoneReadings: "No sensor data has been recorded in the current zone yet.",
         live: "Live",
         unknown: "Unknown",
       },
@@ -897,6 +902,7 @@ export const en: TranslationDict = {
         showMoreHistory: "Show more",
         showLessHistory: "Collapse",
         noEvents: "No capture events yet.",
+        noCurrentZoneMedia: "No images or diagnoses have been captured in the current zone yet.",
         waitingForUpload: "Waiting for upload",
         mediaDetail: "Media detail",
         capturedAt: "Captured",

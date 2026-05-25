@@ -107,15 +107,23 @@ export const collectorApi = {
       { headers: currentUserHeaders() },
     ),
 
-  getDeviceLatestReadings: (deviceId: string) =>
+  getDeviceLatestReadings: (deviceId: string, zoneId?: string) =>
     apiClient.get<LatestReadingItemResponse[]>(
       API_ENDPOINTS.IOT.DEVICE_LATEST_READINGS(deviceId),
-      { headers: currentUserHeaders() },
+      {
+        params: cleanParams({ zoneId }),
+        headers: currentUserHeaders(),
+      },
     ),
 
-  getDeviceChart: (deviceId: string, sensorCode: string, range: ChartRange) =>
+  getDeviceChart: (
+    deviceId: string,
+    sensorCode: string,
+    range: ChartRange,
+    zoneId?: string,
+  ) =>
     apiClient.get<SensorChartResponse>(API_ENDPOINTS.IOT.DEVICE_CHARTS(deviceId), {
-      params: { sensorCode, range },
+      params: cleanParams({ sensorCode, range, zoneId }),
       headers: currentUserHeaders(),
     }),
 
@@ -159,9 +167,10 @@ export const collectorApi = {
       payload,
     ),
 
-  getDeviceMedia: (deviceId: string) =>
+  getDeviceMedia: (deviceId: string, zoneId?: string) =>
     apiClient.get<DeviceMediaEventResponse[]>(
       API_ENDPOINTS.IOT.DEVICE_MEDIA(deviceId),
+      { params: cleanParams({ zoneId }) },
     ),
 
   getCameraSchedules: () =>

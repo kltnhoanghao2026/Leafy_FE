@@ -13,7 +13,7 @@ export const useInferredSensorTypeOptions = (
   deviceId: string,
   zoneId: string,
 ) => {
-  const deviceReadingsQuery = useDeviceLatestReadings(deviceId, !!deviceId);
+  const deviceReadingsQuery = useDeviceLatestReadings(deviceId, undefined, !!deviceId);
   const zoneOverviewQuery = useZoneOverview(zoneId, !deviceId && !!zoneId);
 
   const sensorOptions = useMemo<SensorTypeOption[]>(() => {
@@ -46,4 +46,3 @@ export const useInferredSensorTypeOptions = (
     isError: deviceId ? deviceReadingsQuery.isError : zoneOverviewQuery.isError,
   };
 };
-

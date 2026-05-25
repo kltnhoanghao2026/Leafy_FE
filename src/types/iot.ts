@@ -228,6 +228,11 @@ export interface DeviceDetailResponse {
   farmPlotId: string | null;
   zoneId: string | null;
   lastSeenAt: string | null;
+  /**
+   * Legacy device-scoped embedded summaries from the detail endpoint.
+   * Do not use these fields for current-zone DeviceDetailPage data sections;
+   * use zone-scoped latest/chart/media/alert queries instead.
+   */
   alertSummary: AlertSummaryResponse | null;
   config: DeviceConfigSnapshotResponse | null;
   latestMedia: DeviceMediaSummaryResponse | null;

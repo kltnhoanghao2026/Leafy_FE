@@ -42,7 +42,7 @@ export const useReleaseDeviceMutation = () => {
         queryClient.invalidateQueries({ queryKey: metricsKeys.all() }),
         queryClient.invalidateQueries({ queryKey: deviceKeys.detail(variables.deviceId) }),
         queryClient.invalidateQueries({ queryKey: deviceKeys.config(variables.deviceId) }),
-        queryClient.invalidateQueries({ queryKey: deviceKeys.media(variables.deviceId) }),
+        queryClient.invalidateQueries({ queryKey: deviceKeys.all() }),
         queryClient.invalidateQueries({ queryKey: cameraScheduleKeys.all }),
         releasedDevice.deviceUid
           ? queryClient.invalidateQueries({
@@ -100,7 +100,7 @@ export const useCaptureDeviceImage = (deviceId: string) => {
       }),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: deviceKeys.media(deviceId) }),
+        queryClient.invalidateQueries({ queryKey: deviceKeys.all() }),
         queryClient.invalidateQueries({ queryKey: deviceKeys.detail(deviceId) }),
       ]);
     },
