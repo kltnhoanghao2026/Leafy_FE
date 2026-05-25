@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import toast from "react-hot-toast";
-import { useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
 import { buildWebDeviceIdentifier } from "../../../lib/clientDevice";
 import { useAuthStore } from "../../../store/authStore";
 import { useMyProfile } from "../../settings/queries";
@@ -13,7 +14,13 @@ import {
   subscribeToForegroundMessages,
 } from "../services/firebaseMessaging";
 import { pushApi } from "../api/push.api";
+import { alertKeys } from "../../alerts/queries";
+import { notificationKeys } from "../queries";
 import { usePushNotificationsStore } from "../store/usePushNotificationsStore";
+import {
+  markAlertRecentlyNotified,
+  parseIotAlertFcmPayload,
+} from "../utils/fcmNotifications";
 
 function getPushErrorMessage(error: unknown) {
   const message =
@@ -32,6 +39,8 @@ function getPushErrorMessage(error: unknown) {
 
 export function PushNotificationsBootstrap() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const currentUser = useAuthStore((state) => state.user);
   const { data: profile } = useMyProfile(!!accessToken);
@@ -181,6 +190,47 @@ export function PushNotificationsBootstrap() {
         return;
       }
 
+      const iotAlert = parseIotAlertFcmPayload(payload);
+
+      if (iotAlert) {
+        markAlertRecentlyNotified(iotAlert.alertEventId);
+        queryClient.invalidateQueries({ queryKey: alertKeys.all() });
+        queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
+
+        toast(
+          (toastItem) => (
+            <button
+              type="button"
+              className="block max-w-sm text-left"
+              onClick={() => {
+                toast.dismiss(toastItem.id);
+                navigate(iotAlert.url);
+              }}
+            >
+              <span className="block text-sm font-black text-slate-900">
+                {iotAlert.title}
+              </span>
+              {iotAlert.body ? (
+                <span className="mt-1 block text-sm font-semibold text-slate-600">
+                  {iotAlert.severity ? `${iotAlert.severity} · ` : ""}
+                  {iotAlert.body}
+                </span>
+              ) : null}
+              <span className="mt-2 block text-xs font-black text-emerald-700">
+                Xem cảnh báo
+              </span>
+            </button>
+          ),
+          {
+            id: `fcm-iot-alert-${iotAlert.alertEventId}`,
+            duration: 8_000,
+          },
+        );
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all() });
+
       const title = payload.notification?.title || "Thong bao moi";
       const body = payload.notification?.body;
 
@@ -197,7 +247,7 @@ export function PushNotificationsBootstrap() {
     return () => {
       unsubscribe();
     };
-  }, [accessToken, permission, supportState]);
+  }, [accessToken, navigate, permission, queryClient, supportState]);
 
   useEffect(() => {
     if (!accessToken || supportState !== "supported") {

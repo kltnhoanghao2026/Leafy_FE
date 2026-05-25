@@ -17,7 +17,7 @@ export const DISPLAY_CHART_RANGE_OPTIONS: Array<{
   { value: "H1", label: "1h" },
   { value: "D1", label: "1d" },
   { value: "D7", label: "7d" },
-  { value: "M1", label: "1m" },
+  { value: "M1", label: "30d" },
 ];
 
 export const toApiChartRange = (range: DisplayChartRange): ChartRange => {

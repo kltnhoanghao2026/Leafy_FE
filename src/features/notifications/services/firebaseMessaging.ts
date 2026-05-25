@@ -37,7 +37,7 @@ function getRequiredWorkerConfig() {
     apiKey: firebaseConfig.apiKey,
     authDomain: firebaseConfig.authDomain,
     projectId: firebaseConfig.projectId,
-    storageBucket: firebaseConfig.storageBucket,
+    storageBucket: firebaseConfig.storageBucket ?? '',
     messagingSenderId: firebaseConfig.messagingSenderId,
     appId: firebaseConfig.appId,
     measurementId: firebaseConfig.measurementId ?? ''
@@ -64,7 +64,7 @@ function getFirebaseApp() {
       apiKey: firebaseConfig.apiKey!,
       authDomain: firebaseConfig.authDomain!,
       projectId: firebaseConfig.projectId!,
-      storageBucket: firebaseConfig.storageBucket!,
+      storageBucket: firebaseConfig.storageBucket,
       messagingSenderId: firebaseConfig.messagingSenderId!,
       appId: firebaseConfig.appId!,
       measurementId: firebaseConfig.measurementId
@@ -87,7 +87,6 @@ export function isFirebaseMessagingConfigured() {
     firebaseConfig.apiKey &&
       firebaseConfig.authDomain &&
       firebaseConfig.projectId &&
-      firebaseConfig.storageBucket &&
       firebaseConfig.messagingSenderId &&
       firebaseConfig.appId &&
       vapidKey

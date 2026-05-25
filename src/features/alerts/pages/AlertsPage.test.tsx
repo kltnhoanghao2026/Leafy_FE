@@ -165,6 +165,8 @@ describe("AlertsPage", () => {
 
   it("highlights the alert row targeted by the alertId query param", async () => {
     const seenRequests: Array<{ status: string | null; page: string | null }> = [];
+    let acknowledgeCalled = false;
+    let resolveCalled = false;
 
     mockPickerApis();
     server.use(
@@ -176,6 +178,14 @@ describe("AlertsPage", () => {
         });
         return HttpResponse.json(pagedResponse());
       }),
+      http.post("*/api/iot/alert-events/:alertEventId/acknowledge", () => {
+        acknowledgeCalled = true;
+        return HttpResponse.json({});
+      }),
+      http.post("*/api/iot/alert-events/:alertEventId/resolve", () => {
+        resolveCalled = true;
+        return HttpResponse.json({});
+      }),
     );
 
     renderWithClient(<AlertsPage />, {
@@ -185,10 +195,54 @@ describe("AlertsPage", () => {
     const alertTitle = await screen.findByText(alertSummaryText);
     const row = alertTitle.closest("tr");
     expect(row).toHaveAttribute("id", `alert-event-${alertItem.id}`);
+    expect(row).toHaveAttribute("data-focused", "true");
     expect(row?.className).toContain("ring-[#245A34]/25");
+    expect(screen.getByText("Đang làm nổi bật cảnh báo được chọn")).toBeInTheDocument();
     await waitFor(() => {
-      expect(seenRequests).toContainEqual({ status: "OPEN", page: "0" });
+      expect(seenRequests).toContainEqual({ status: null, page: "0" });
     });
+    expect(acknowledgeCalled).toBe(false);
+    expect(resolveCalled).toBe(false);
+  });
+
+  it("shows a not-found banner when the focused alert is not on the current page", async () => {
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(pagedResponse([makeAlert({ id: "other-alert" })]));
+      }),
+    );
+
+    renderWithClient(<AlertsPage />, {
+      route: "/dashboard/alerts?alertId=missing-alert",
+    });
+
+    expect(
+      await screen.findByText(/Không tìm thấy cảnh báo được chọn trong trang hiện tại/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bỏ đánh dấu" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Xem tất cả cảnh báo" })).toBeInTheDocument();
+  });
+
+  it("removes the alertId query param when clearing focus", async () => {
+    mockPickerApis();
+    server.use(
+      http.get("*/api/iot/alert-events", () => {
+        return HttpResponse.json(pagedResponse());
+      }),
+    );
+
+    renderWithClient(<AlertsPage />, {
+      route: `/dashboard/alerts?alertId=${alertItem.id}`,
+    });
+
+    expect(await screen.findByTestId("focused-alert-row")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Bỏ đánh dấu" }));
+
+    await waitFor(() => {
+      expect(new URL(window.location.href).searchParams.get("alertId")).toBeNull();
+    });
+    expect(screen.queryByTestId("focused-alert-row")).not.toBeInTheDocument();
   });
 
   it("sends severity and status filters in the alert events request", async () => {

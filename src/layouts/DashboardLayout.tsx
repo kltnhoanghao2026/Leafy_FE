@@ -3,12 +3,14 @@ import { Outlet } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { useOpenAlertToastWatcher } from "../features/alerts/hooks/useOpenAlertToastWatcher";
 import { PushNotificationsBootstrap } from "../features/notifications/components/PushNotificationsBootstrap";
 import { SidebarCollapsedContext } from "./SidebarContext";
 
 export function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  useOpenAlertToastWatcher();
 
   return (
     <SidebarCollapsedContext.Provider value={collapsed}>
