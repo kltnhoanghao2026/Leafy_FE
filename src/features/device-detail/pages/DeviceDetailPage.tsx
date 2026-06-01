@@ -12,7 +12,6 @@ import {
   ImageOff,
   LogOut,
   Play,
-  RefreshCw,
   Save,
   ScanSearch,
   Send,
@@ -79,6 +78,7 @@ import {
 } from "../queries";
 import { EditDeviceModal } from "../components/EditDeviceModal";
 import { ReleaseDeviceConfirmDialog } from "../components/ReleaseDeviceConfirmDialog";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import {
   useDeviceSchedulesQuery,
   useCreateDeviceCameraScheduleMutation,
@@ -1455,29 +1455,14 @@ export function DeviceDetailPage() {
       ) : null}
 
       {hasPageError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                {t("iot.devices.detail.error")}
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                {t("iot.devices.detail.errorDescription")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                void deviceDetailQuery.refetch();
-                void configQuery.refetch();
-              }}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              {t("iot.devices.detail.retry")}
-            </button>
-          </div>
-        </div>
+        <PageErrorState
+          title={t("iot.devices.detail.error")}
+          description={t("iot.devices.detail.errorDescription")}
+          onRetry={() => {
+            void deviceDetailQuery.refetch();
+            void configQuery.refetch();
+          }}
+        />
       ) : null}
 
       {!isPageLoading && !hasPageError && !device ? (

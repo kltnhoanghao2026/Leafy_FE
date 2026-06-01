@@ -258,7 +258,7 @@ export const API_ENDPOINTS = {
   },
 
   FEED: {
-    MARK_VIEWED: "/feed/viewed",
+    MARK_POST_VIEWED: (postId: string) => `/feed/posts/${postId}/viewed`,
   },
 
   FARMS: {

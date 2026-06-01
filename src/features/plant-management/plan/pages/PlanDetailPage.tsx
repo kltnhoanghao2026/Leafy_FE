@@ -19,7 +19,6 @@ import {
   Lock,
   MapPin,
   Play,
-  RefreshCw,
   ShieldAlert,
   Sprout,
   Trash2,
@@ -47,6 +46,7 @@ import {
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
 import { EmbeddedEventList } from "../components/EmbeddedEventList";
 import { SourceDocumentModal } from "../components/SourceDocumentModal";
+import { PageErrorState } from "../../../../components/ui/PageErrorState";
 
 const STATUS_STYLE: Record<TreatmentStatus, string> = {
   PENDING:   "bg-amber-50 text-amber-700 border-amber-200",
@@ -137,19 +137,10 @@ export function PlanDetailPage() {
 
   if (planQuery.isError || !plan) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-        <p className="text-sm font-bold text-red-700">
-          Không tải được chi tiết kế hoạch điều trị.
-        </p>
-        <button
-          type="button"
-          onClick={() => void planQuery.refetch()}
-          className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Tải lại
-        </button>
-      </div>
+      <PageErrorState
+        title="Không tải được chi tiết kế hoạch điều trị."
+        onRetry={() => void planQuery.refetch()}
+      />
     );
   }
 

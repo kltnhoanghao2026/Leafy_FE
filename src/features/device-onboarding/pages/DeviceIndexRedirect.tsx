@@ -6,6 +6,7 @@ import { Select } from "../../../components/ui/Select";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
 import { ROUTES } from "../../../lib/routes";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import type {
   DeviceResponse,
   DeviceStatus,
@@ -401,19 +402,11 @@ export function DeviceIndexRedirect() {
           {t("iot.devices.index.loading")}
         </div>
       ) : devicesQuery.isError ? (
-        <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-rose-800 shadow-sm">
-          <p className="font-black">{t("iot.devices.index.errorTitle")}</p>
-          <p className="mt-1 text-sm font-semibold">
-            {getErrorMessage(devicesQuery.error, t("iot.devices.index.errorDescription"))}
-          </p>
-          <button
-            type="button"
-            onClick={() => devicesQuery.refetch()}
-            className="mt-4 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-black text-white transition hover:bg-rose-700"
-          >
-            {t("iot.common.retry")}
-          </button>
-        </div>
+        <PageErrorState
+          title={t("iot.devices.index.errorTitle")}
+          description={getErrorMessage(devicesQuery.error, t("iot.devices.index.errorDescription"))}
+          onRetry={() => void devicesQuery.refetch()}
+        />
       ) : devices.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-700">

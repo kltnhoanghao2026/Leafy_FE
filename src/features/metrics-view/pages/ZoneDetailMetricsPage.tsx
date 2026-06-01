@@ -7,7 +7,6 @@ import {
   Cpu,
   Droplet,
   ImageOff,
-  RefreshCw,
   Sun,
   Thermometer,
   Wind,
@@ -50,6 +49,7 @@ import {
   type EventMarkerData,
 } from "../utils/chartAnalytics";
 import { useTranslation } from "../../../i18n";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import {
   formatChartRangeLabel,
   formatDeviceStatusLabel,
@@ -715,31 +715,16 @@ export function ZoneDetailMetricsPage() {
       ) : null}
 
       {zoneDevicesQuery.isError || zoneOverviewQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                {t("iot.metrics.error")}
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                {t("iot.metrics.errorDescription")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                void zoneDevicesQuery.refetch();
-                if (canLoadCollectorMetrics) {
-                  void zoneOverviewQuery.refetch();
-                }
-              }}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              {t("iot.metrics.retry")}
-            </button>
-          </div>
-        </div>
+        <PageErrorState
+          title={t("iot.metrics.error")}
+          description={t("iot.metrics.errorDescription")}
+          onRetry={() => {
+            void zoneDevicesQuery.refetch();
+            if (canLoadCollectorMetrics) {
+              void zoneOverviewQuery.refetch();
+            }
+          }}
+        />
       ) : null}
 
       {zoneOverview ? (

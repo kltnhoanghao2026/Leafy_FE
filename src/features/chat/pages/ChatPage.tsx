@@ -10,6 +10,7 @@ import { ConversationInfoPanel } from '../components/ConversationInfoPanel';
 import { useAuthStore } from '../../../store/authStore';
 import { useChatWebSocket } from '../hooks/useChatWebSocket';
 import { useSidebarCollapsed } from '../../../layouts/SidebarContext';
+import { PageErrorState } from '../../../components/ui/PageErrorState';
 
 export function ChatPage() {
   const location = useLocation();
@@ -22,7 +23,12 @@ export function ChatPage() {
   const queryClient = useQueryClient();
   const sidebarCollapsed = useSidebarCollapsed();
 
-  const { data: conversations = [] } = useQuery({
+  const {
+    data: conversations = [],
+    isError: isConversationsError,
+    error: conversationsError,
+    refetch: refetchConversations,
+  } = useQuery({
     queryKey: ['conversations'],
     queryFn: () => chatApi.getConversations(),
   });
@@ -75,6 +81,28 @@ export function ChatPage() {
     setActiveId(conversationId);
     queryClient.invalidateQueries({ queryKey: ['conversations'] });
   };
+
+  if (isConversationsError) {
+    return (
+      <div
+        className={`fixed inset-0 top-16 flex overflow-auto bg-white z-10 transition-all duration-300 ${
+          sidebarCollapsed ? 'lg:left-14' : 'lg:left-56'
+        }`}
+      >
+        <div className="w-full max-w-3xl mx-auto p-6">
+          <PageErrorState
+            title="Không thể tải danh sách hội thoại"
+            description={
+              conversationsError instanceof Error
+                ? conversationsError.message
+                : undefined
+            }
+            onRetry={() => void refetchConversations()}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

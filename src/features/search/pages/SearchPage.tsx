@@ -15,7 +15,6 @@ import {
   MapPin,
   MessageCircle,
   Play,
-  RefreshCw,
   Search,
   SlidersHorizontal,
   User,
@@ -28,7 +27,9 @@ import { ROUTES } from '../../../lib/routes'
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue'
 import { formatDateTime } from '../../metrics-view/utils/format'
 import { Avatar } from '../../../components/ui/Avatar'
+import { ModalShell } from '../../../components/ui/ModalShell'
 import { Select } from '../../../components/ui/Select'
+import { PageErrorState } from '../../../components/ui/PageErrorState'
 import { useUnifiedSearch, useSearchPosts, useSearchProfiles, useSearchPlans } from '../queries'
 import type {
   SearchMode,
@@ -291,152 +292,153 @@ export function SearchPage() {
 
       {/* ── Filter Modal ──────────────────────────────────────────────── */}
       {filterOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4">
-          {/* backdrop */}
-          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setFilterOpen(false)} />
-          {/* panel */}
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-200">
-            {/* header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h3 className="text-[15px] font-bold text-gray-900 flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-[#245A34]" strokeWidth={2.5} />
-                Bộ lọc tìm kiếm
-              </h3>
-              <button type="button" onClick={() => setFilterOpen(false)}
-                className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
-                <X className="w-4 h-4" strokeWidth={2.5} />
-              </button>
-            </div>
-
-            {/* body */}
-            <div className="px-6 py-5 space-y-5">
-              {/* Common: Sort by date */}
-              <div>
-                <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Sắp xếp theo ngày tạo</label>
-                <Select
-                  size="sm"
-                  value={urlSortDir ?? ''}
-                  onChange={v => setFilter('sortDir', v as string)}
-                  options={[
-                    { value: '', label: 'Mặc định' },
-                    { value: 'DESC', label: 'Mới nhất' },
-                    { value: 'ASC', label: 'Cũ nhất' },
-                  ]}
-                />
-              </div>
-
-              {/* Posts filters */}
-              {urlTab === 'posts' && (
-                <div>
-                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Loại bài viết</label>
-                  <Select
-                    size="sm"
-                    value={urlPostType ?? ''}
-                    onChange={v => setFilter('postType', v as string)}
-                    options={[
-                      { value: '', label: 'Tất cả loại' },
-                      { value: 'GENERAL', label: 'Bài viết chung' },
-                      { value: 'QUESTION', label: 'Hỏi đáp' },
-                      { value: 'PLAN_SHARE', label: 'Chia sẻ kế hoạch' },
-                    ]}
-                  />
-                </div>
-              )}
-
-              {/* Profiles filters */}
-              {urlTab === 'profiles' && (
-                <>
-                  <div>
-                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Vai trò</label>
-                    <Select
-                      size="sm"
-                      value={urlRole ?? ''}
-                      onChange={v => setFilter('role', v as string)}
-                      options={[
-                        { value: '', label: 'Tất cả vai trò' },
-                        { value: 'FARMER', label: 'Nông dân' },
-                        { value: 'EXPERT', label: 'Chuyên gia' },
-                      ]}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Xác minh</label>
-                    <Select
-                      size="sm"
-                      value={urlIsVerifiedStr ?? ''}
-                      onChange={v => setFilter('isVerified', v as string)}
-                      options={[
-                        { value: '', label: 'Tất cả' },
-                        { value: 'true', label: 'Đã xác minh' },
-                        { value: 'false', label: 'Chưa xác minh' },
-                      ]}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* Plans filters */}
-              {urlTab === 'plans' && (
-                <>
-                  <div>
-                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ bệnh</label>
-                    <Select
-                      size="sm"
-                      value={urlSeverity ?? ''}
-                      onChange={v => setFilter('severityLevel', v as string)}
-                      options={[
-                        { value: '', label: 'Tất cả' },
-                        { value: 'LOW', label: 'Nhẹ' },
-                        { value: 'MEDIUM', label: 'Trung bình' },
-                        { value: 'HIGH', label: 'Nặng' },
-                        { value: 'CRITICAL', label: 'Rất nặng' },
-                      ]}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ ưu tiên</label>
-                    <Select
-                      size="sm"
-                      value={urlUrgency ?? ''}
-                      onChange={v => setFilter('urgency', v as string)}
-                      options={[
-                        { value: '', label: 'Tất cả' },
-                        { value: 'NORMAL', label: 'Bình thường' },
-                        { value: 'HIGH', label: 'Cao' },
-                        { value: 'IMMEDIATE', label: 'Khẩn cấp' },
-                      ]}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Quyền riêng tư</label>
-                    <Select
-                      size="sm"
-                      value={urlIsPublicStr ?? ''}
-                      onChange={v => setFilter('isPublic', v as string)}
-                      options={[
-                        { value: '', label: 'Tất cả' },
-                        { value: 'true', label: 'Công khai' },
-                        { value: 'false', label: 'Riêng tư' },
-                      ]}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/60">
-              <button type="button" onClick={clearAllFilters}
-                className="text-[13px] font-bold text-slate-500 hover:text-red-600 transition-colors">
+        <ModalShell
+          onClose={() => setFilterOpen(false)}
+          titleId="search-filter-title"
+          title="Bộ lọc tìm kiếm"
+          subtitle={
+            <p className="mt-1 text-[13px] font-semibold text-slate-500">
+              Tinh chỉnh kết quả theo nhu cầu của bạn.
+            </p>
+          }
+          icon={<SlidersHorizontal className="h-5 w-5 text-[#245A34]" strokeWidth={2.5} />}
+          maxWidth="sm:max-w-md"
+          position="centered"
+          footer={
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="text-[13px] font-bold text-slate-500 hover:text-red-600 transition-colors"
+              >
                 Xóa bộ lọc
               </button>
-              <button type="button" onClick={() => setFilterOpen(false)}
-                className="px-5 py-2 rounded-xl bg-[#245A34] text-white text-[13px] font-bold hover:bg-[#1a4226] transition-colors">
+              <button
+                type="button"
+                onClick={() => setFilterOpen(false)}
+                className="px-5 py-2 rounded-xl bg-[#245A34] text-white text-[13px] font-bold hover:bg-[#1a4226] transition-colors"
+              >
                 Áp dụng
               </button>
             </div>
+          }
+        >
+          <div className="px-6 py-5 space-y-5">
+            {/* Common: Sort by date */}
+            <div>
+              <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Sắp xếp theo ngày tạo</label>
+              <Select
+                size="sm"
+                value={urlSortDir ?? ''}
+                onChange={v => setFilter('sortDir', v as string)}
+                options={[
+                  { value: '', label: 'Mặc định' },
+                  { value: 'DESC', label: 'Mới nhất' },
+                  { value: 'ASC', label: 'Cũ nhất' },
+                ]}
+              />
+            </div>
+
+            {/* Posts filters */}
+            {urlTab === 'posts' && (
+              <div>
+                <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Loại bài viết</label>
+                <Select
+                  size="sm"
+                  value={urlPostType ?? ''}
+                  onChange={v => setFilter('postType', v as string)}
+                  options={[
+                    { value: '', label: 'Tất cả loại' },
+                    { value: 'GENERAL', label: 'Bài viết chung' },
+                    { value: 'QUESTION', label: 'Hỏi đáp' },
+                    { value: 'PLAN_SHARE', label: 'Chia sẻ kế hoạch' },
+                  ]}
+                />
+              </div>
+            )}
+
+            {/* Profiles filters */}
+            {urlTab === 'profiles' && (
+              <>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Vai trò</label>
+                  <Select
+                    size="sm"
+                    value={urlRole ?? ''}
+                    onChange={v => setFilter('role', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả vai trò' },
+                      { value: 'FARMER', label: 'Nông dân' },
+                      { value: 'EXPERT', label: 'Chuyên gia' },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Xác minh</label>
+                  <Select
+                    size="sm"
+                    value={urlIsVerifiedStr ?? ''}
+                    onChange={v => setFilter('isVerified', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả' },
+                      { value: 'true', label: 'Đã xác minh' },
+                      { value: 'false', label: 'Chưa xác minh' },
+                    ]}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Plans filters */}
+            {urlTab === 'plans' && (
+              <>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ bệnh</label>
+                  <Select
+                    size="sm"
+                    value={urlSeverity ?? ''}
+                    onChange={v => setFilter('severityLevel', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả' },
+                      { value: 'LOW', label: 'Nhẹ' },
+                      { value: 'MEDIUM', label: 'Trung bình' },
+                      { value: 'HIGH', label: 'Nặng' },
+                      { value: 'CRITICAL', label: 'Rất nặng' },
+                      { value: 'CRITICAL', label: 'Rất nặng' },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Mức độ ưu tiên</label>
+                  <Select
+                    size="sm"
+                    value={urlUrgency ?? ''}
+                    onChange={v => setFilter('urgency', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả' },
+                      { value: 'NORMAL', label: 'Bình thường' },
+                      { value: 'HIGH', label: 'Cao' },
+                      { value: 'IMMEDIATE', label: 'Khẩn cấp' },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-2">Quyền riêng tư</label>
+                  <Select
+                    size="sm"
+                    value={urlIsPublicStr ?? ''}
+                    onChange={v => setFilter('isPublic', v as string)}
+                    options={[
+                      { value: '', label: 'Tất cả' },
+                      { value: 'true', label: 'Công khai' },
+                      { value: 'false', label: 'Riêng tư' },
+                    ]}
+                  />
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* ── Empty prompt ──────────────────────────────────────────────── */}
@@ -460,16 +462,11 @@ export function SearchPage() {
 
       {/* ── Error ─────────────────────────────────────────────────────── */}
       {canSearch && isError && !isLoading && (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 shadow-sm flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[14px] font-bold text-red-700">Không thể tải kết quả</p>
-            <p className="text-[12px] text-red-500 mt-0.5">Dịch vụ tìm kiếm trả về lỗi. Vui lòng thử lại.</p>
-          </div>
-          <button onClick={() => void activeQuery.refetch()}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white text-[13px] font-bold hover:bg-red-700 shrink-0">
-            <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.5} /> Thử lại
-          </button>
-        </div>
+        <PageErrorState
+          title="Không thể tải kết quả"
+          description="Dịch vụ tìm kiếm trả về lỗi. Vui lòng thử lại."
+          onRetry={() => void activeQuery.refetch()}
+        />
       )}
 
       {/* ── ALL tab ───────────────────────────────────────────────────── */}
@@ -804,6 +801,7 @@ function PlanList({ plans, keyword }: { plans: SearchPlanItem[]; keyword: string
     LOW: 'bg-green-50 text-green-700',
     MEDIUM: 'bg-amber-50 text-amber-700',
     HIGH: 'bg-red-50 text-red-700',
+    CRITICAL: 'bg-red-100 text-red-800',
   }
   const urgencyColors: Record<string, string> = {
     NORMAL: 'bg-slate-100 text-slate-600',

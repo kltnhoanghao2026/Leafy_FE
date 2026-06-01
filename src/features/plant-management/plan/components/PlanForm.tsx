@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, CalendarClock, Eye } from 'lucide-react';
+import type { AxiosError } from 'axios';
 import { PlanPreviewCalendar } from '../../../consulting/components/PlanPreviewCalendar';
 import { ROUTES } from '../../../../lib/routes';
 import { useFarmPlots } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
-import type { PlanCreateRequest, PlantEventCreateRequest, PlanUpdateRequest, PlanResponse } from '../../shared/types';
+import type { PlanCreateRequest, EmbeddedPlanEventRequest, PlanUpdateRequest, PlanResponse } from '../../shared/types';
 import { PlanInfoSection, emptyForm, type PlanFormStateCreate, type PlanFormStateEdit } from './PlanInfoSection';
 import type { PlanInfoErrors } from './PlanInfoSection';
 import { emptyEvent } from '../../../consulting/utils/planFormHelpers';
-import { EventScheduleSection } from '../../../consulting/components/EventScheduleSection';
+import { EventScheduleSection, type EventFieldErrors } from '../../../consulting/components/EventScheduleSection';
+import type { PlantEventCreateRequest } from '../../shared/types';
+import type { ApiEnvelope } from '../../../../shared/types/api';
 
 interface PlanFormProps {
   /** When provided, the form operates in edit mode */
@@ -180,7 +183,7 @@ export function PlanForm({
         }
       }
 
-      const cleanedEvents: PlantEventCreateRequest[] = events.map((evt) => ({
+      const cleanedEvents: EmbeddedPlanEventRequest[] = events.map((evt) => ({
         eventType: evt.eventType,
         note: evt.note,
         description: evt.description?.trim() || undefined,
@@ -190,7 +193,6 @@ export function PlanForm({
         phiDays: evt.phiDays,
         ppeRequired: evt.ppeRequired?.trim() || undefined,
         mrlNote: evt.mrlNote?.trim() || undefined,
-        isPlanned: true,
         tasks: evt.tasks && evt.tasks.length > 0
           ? evt.tasks.map((t, i) => ({
               title: t.title,
@@ -206,14 +208,13 @@ export function PlanForm({
         diseaseName: form.diseaseName.trim(),
         planName: (form as PlanFormStateCreate).planName?.trim() || undefined,
         farmPlotId: (form as PlanFormStateCreate).farmPlotId || undefined,
-        speciesId: (form as PlanFormStateCreate).speciesId || undefined,
         source: 'documents',
         severityLevel: (form as PlanFormStateCreate).severityLevel || undefined,
         requiredInputs: (form as PlanFormStateCreate).requiredInputs?.trim()
-          ? [(form as PlanFormStateCreate).requiredInputs.trim()]
+          ? (form as PlanFormStateCreate).requiredInputs.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
         safetyWarnings: (form as PlanFormStateCreate).safetyWarnings?.trim()
-          ? [(form as PlanFormStateCreate).safetyWarnings.trim()]
+          ? (form as PlanFormStateCreate).safetyWarnings.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
         successIndicators: (form as PlanFormStateCreate).successIndicators?.trim() || undefined,
         estimatedCost: (form as PlanFormStateCreate).estimatedCost?.trim() || undefined,
@@ -234,7 +235,7 @@ export function PlanForm({
       const editForm = form as PlanFormStateEdit;
 
       // Clean events similar to create mode
-      const cleanedEvents: PlantEventCreateRequest[] = events.map((evt) => ({
+      const cleanedEvents: EmbeddedPlanEventRequest[] = events.map((evt) => ({
         eventType: evt.eventType,
         note: evt.note,
         description: evt.description?.trim() || undefined,
@@ -244,7 +245,6 @@ export function PlanForm({
         phiDays: evt.phiDays,
         ppeRequired: evt.ppeRequired?.trim() || undefined,
         mrlNote: evt.mrlNote?.trim() || undefined,
-        isPlanned: true,
         tasks: evt.tasks && evt.tasks.length > 0
           ? evt.tasks.map((t, i) => ({
               title: t.title,

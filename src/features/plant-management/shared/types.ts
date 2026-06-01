@@ -290,8 +290,6 @@ export interface PlanCreateRequest {
   plantId?: string;
   farmPlotId?: string;
   farmZoneId?: string;
-  /** Species the plan is for. */
-  speciesId?: string;
   diseaseName: string;
   confidenceScore?: number;
   severityLevel?: string;
@@ -299,7 +297,7 @@ export interface PlanCreateRequest {
   safetyWarnings?: string[];
   successIndicators?: string;
   estimatedCost?: string;
-  schedule?: PlantEventCreateRequest[];
+  schedule?: EmbeddedPlanEventRequest[];
   /** Whether this plan should be visible to all users. Defaults to false (private). */
   isPublic?: boolean;
   /** Source type of the plan. Defaults to RAG_GEN for AI-generated plans. */
@@ -320,7 +318,7 @@ export interface PlanUpdateRequest {
   successIndicators?: string;
   estimatedCost?: string;
   /** Replace the entire event schedule with these events. */
-  schedule?: PlantEventCreateRequest[];
+  schedule?: EmbeddedPlanEventRequest[];
 }
 
 /** One item in a bulk-apply-custom request — each plan gets its own schedule config */
@@ -330,6 +328,7 @@ export interface PlanApplyItemRequest {
   plantId?: string;
   farmPlotId?: string;
   farmZoneId?: string;
+  targetName?: string;
   trackingGranularity?: TrackingGranularity;
   excludedPlantIds?: string[];
   excludedFarmZoneIds?: string[];
@@ -474,6 +473,22 @@ export interface EmbeddedPlanEventResponse {
   tasks: EventTaskResponse[] | null;
 }
 
+/** Request DTO for a single template event embedded in a plan schedule. Matches backend EmbeddedPlanEventRequest. */
+export interface EmbeddedPlanEventRequest {
+  eventType: PlantEventType;
+  /** Intended scope of this template event when the plan is applied. */
+  targetType?: TargetType;
+  note: string;
+  description?: string;
+  daysFromStart?: number;
+  durationDays?: number;
+  phiDays?: number;
+  ppeRequired?: string;
+  mrlNote?: string;
+  estimatedCost?: string;
+  tasks?: EventTaskRequest[];
+}
+
 export type PlanSourceType = 'CONSULTED' | 'RAG_GEN' | 'USER_CREATED';
 
 export interface SourceDocument {
@@ -521,8 +536,6 @@ export interface PlanResponse {
   applies?: PlanApplyResponse[] | null;
   /** Whether this plan is publicly visible to all authenticated users. */
   isPublic: boolean;
-  /** Whether this plan was created by an expert on behalf of a farmer. */
-  isConsulted: boolean;
   sourceType?: PlanSourceType;
   sourceDocuments?: SourceDocument[];
   webSearchResults?: WebSearchResult[];

@@ -6,18 +6,21 @@ import toast from 'react-hot-toast'
 import { Link } from 'react-router-dom'
 import { Avatar } from '../../../components/ui/Avatar'
 import { ROUTES } from '../../../lib/routes'
+import { PageErrorState } from '../../../components/ui/PageErrorState'
+import { Select } from '../../../components/ui/Select'
 
 export function ExpertsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [specialtyFilter, setSpecialtyFilter] = useState("all")
   const [localFollowState, setLocalFollowState] = useState<Record<string, boolean>>({})
   const [localConsultState, setLocalConsultState] = useState<Record<string, boolean>>({})
+  const normalizedSearchTerm = searchTerm.trim()
   
-  const { data, isLoading } = useQuery({
-    queryKey: ['search-experts-es', searchTerm, specialtyFilter],
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['search-experts-es', normalizedSearchTerm, specialtyFilter],
     queryFn: () => profilesApi.searchExpertsES({ 
       size: 50, 
-      searchTerm,
+      searchTerm: normalizedSearchTerm,
       specialty: specialtyFilter 
     }),
   })
@@ -92,16 +95,21 @@ export function ExpertsPage() {
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           {/* Specialty Filter */}
-          <select
-            value={specialtyFilter}
-            onChange={(e) => setSpecialtyFilter(e.target.value)}
-            className="w-full sm:w-48 bg-white border-0 py-3.5 px-4 text-[14px] text-gray-700 font-medium rounded-2xl shadow-sm ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-inset focus:ring-[#10B981] outline-none transition-all cursor-pointer"
-          >
-            <option value="all">Tất cả lĩnh vực</option>
-            {uniqueSpecialties.map((spec, idx) => (
-              <option key={idx} value={spec}>{spec}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-48">
+            <Select
+              ariaLabel="Chọn lĩnh vực"
+              value={specialtyFilter}
+              onChange={(val) => setSpecialtyFilter(String(val))}
+              options={[
+                { value: "all", label: "Tất cả lĩnh vực" },
+                ...uniqueSpecialties.map((spec) => ({
+                  value: spec,
+                  label: spec,
+                })),
+              ]}
+              placeholder="Tất cả lĩnh vực"
+            />
+          </div>
 
           {/* Search Input */}
           <div className="relative w-full sm:w-72">
@@ -111,7 +119,7 @@ export function ExpertsPage() {
             <input
               type="text"
               className="w-full bg-white border-0 py-3.5 pl-11 pr-4 text-[15px] text-gray-900 font-medium rounded-2xl shadow-sm ring-1 ring-inset ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-[#10B981] outline-none transition-all"
-              placeholder="Tìm kiếm chuyên gia..."
+              placeholder="Tìm theo tên / lĩnh vực / mô tả..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -119,7 +127,7 @@ export function ExpertsPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-[2rem] p-6 lg:p-8 shadow-sm border border-slate-100/50">
+      <div className="bg-white rounded-4xl p-6 lg:p-8 shadow-sm border border-slate-100/50">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <div className="w-10 h-10 border-4 border-[#10B981] border-t-transparent rounded-full animate-spin" />

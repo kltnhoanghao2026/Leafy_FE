@@ -26,17 +26,16 @@ export const registerRequestSchema = z
     email: z.string().email("Email không hợp lệ"),
     password: z
       .string()
-      .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-        "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt"
-      ),
+      .min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
     confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
-    fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+    fullName: z.string().min(1, "Họ và tên không được để trống"),
     phoneNumber: z
       .string()
       .optional()
-      .refine((val) => !val || /^[0-9]{10}$/.test(val), "Số điện thoại không hợp lệ"),
+      .refine(
+        (val) => !val || /^(\+84|0)[0-9]{9}$/.test(val),
+        "Số điện thoại phải là số điện thoại Việt Nam hợp lệ (09/08/07/05/03 + 9 chữ số)",
+      ),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Mật khẩu xác nhận không khớp",

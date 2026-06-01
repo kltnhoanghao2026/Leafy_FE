@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { CreatePostArea } from '../components/CreatePostArea'
 import { SuggestedExpertsWidget } from '../../profiles/components/SuggestedExpertsWidget'
 import { PostCard } from '../components/PostCard'
@@ -7,13 +7,14 @@ import { useCommunityFeed } from '../queries'
 import { communityApi } from '../../../lib/api/communityApi'
 import type { CommunityPageParams } from '../../../lib/api/communityApi'
 import { formatNumber } from '../../metrics-view/utils/format'
-
-const VIEW_BATCH_SIZE = 5
+import { PageErrorState } from '../../../components/ui/PageErrorState'
 
 export function CommunityView() {
   const [page, setPage] = useState(0)
   const size = 10
-  const pendingViewedRef = useRef<Set<string>>(new Set())
+
+  // Track which posts have been reported as viewed (to prevent duplicate calls)
+  const reportedViewedRef = useRef<Set<string>>(new Set())
 
   const feedParams = useMemo<CommunityPageParams>(
     () => ({ page, size }),
@@ -23,35 +24,20 @@ export function CommunityView() {
   const feed = feedQuery.data
   const posts = feed?.items ?? []
 
-  // Callback when a post becomes visible
+  // Callback when a post becomes visible - sends per-post view tracking
   const handlePostViewed = useCallback((postId: string) => {
-    pendingViewedRef.current.add(postId)
+    if (reportedViewedRef.current.has(postId)) return
+    reportedViewedRef.current.add(postId)
+    communityApi.markPostViewed(postId).catch((err) => {
+      console.error('Failed to mark post as viewed:', err)
+      // Allow retry on failure by removing from reported set
+      reportedViewedRef.current.delete(postId)
+    })
   }, [])
 
-  // Send batched viewed posts to backend when threshold is reached
+  // Clear reported views when page changes (new posts loaded)
   useEffect(() => {
-    if (pendingViewedRef.current.size >= VIEW_BATCH_SIZE) {
-      const postIds = Array.from(pendingViewedRef.current)
-      pendingViewedRef.current.clear()
-      communityApi.markPostsViewed(postIds).catch((err) => {
-        console.error('Failed to mark posts as viewed:', err)
-        // Re-add failed posts to pending
-        postIds.forEach((id) => pendingViewedRef.current.add(id))
-      })
-    }
-  }, [posts])
-
-  // Flush remaining viewed posts on page change or unmount
-  useEffect(() => {
-    return () => {
-      if (pendingViewedRef.current.size > 0) {
-        const postIds = Array.from(pendingViewedRef.current)
-        pendingViewedRef.current.clear()
-        communityApi.markPostsViewed(postIds).catch((err) => {
-          console.error('Failed to mark posts as viewed on cleanup:', err)
-        })
-      }
-    }
+    reportedViewedRef.current.clear()
   }, [page])
 
   return (
@@ -77,26 +63,11 @@ export function CommunityView() {
           ) : null}
 
           {feedQuery.isError ? (
-            <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-lg font-black text-red-700">
-                    Community feed could not be loaded
-                  </h3>
-                  <p className="mt-1 text-sm font-semibold text-red-600">
-                    The community service returned an error for this feed page.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void feedQuery.refetch()}
-                  className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-                  Retry
-                </button>
-              </div>
-            </div>
+            <PageErrorState
+              title="Community feed could not be loaded"
+              description="The community service returned an error for this feed page."
+              onRetry={() => void feedQuery.refetch()}
+            />
           ) : null}
 
           {feed && !feedQuery.isError ? (

@@ -26,6 +26,7 @@ import { toPageResponse } from '../../plant-management/shared/api/apiUtils';
 import type { ConsultationRequestResponse } from '../../profiles/api/profilesApi';
 import { profilesApi } from '../../profiles/api/profilesApi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { PageErrorState } from '../../../components/ui/PageErrorState';
 
 /* ─── Farmers tab ─────────────────────────────────────────────────────── */
 
@@ -117,12 +118,11 @@ function FarmersTab() {
 
   if (isError) {
     return (
-      <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-red-700">
-        <p className="text-base font-black">Không tải được danh sách nông dân.</p>
-        <p className="mt-1 text-sm font-medium text-red-600">
-          Vui lòng thử tải lại trang hoặc kiểm tra kết nối dịch vụ hồ sơ.
-        </p>
-      </div>
+      <PageErrorState
+        title="Không tải được danh sách nông dân."
+        description="Vui lòng thử tải lại trang hoặc kiểm tra kết nối dịch vụ hồ sơ."
+        onRetry={() => window.location.reload()}
+      />
     );
   }
 
@@ -303,16 +303,10 @@ function RequestsTab() {
       {isLoading && <RequestsLoadingSkeleton />}
 
       {isError && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-center">
-          <p className="text-sm font-bold text-red-700">Không tải được yêu cầu.</p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white"
-          >
-            Thử lại
-          </button>
-        </div>
+        <PageErrorState
+          title="Không tải được yêu cầu."
+          onRetry={() => window.location.reload()}
+        />
       )}
 
       {!isLoading && !isError && filtered.length === 0 && (

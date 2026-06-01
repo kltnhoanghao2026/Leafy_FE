@@ -4,6 +4,7 @@ import { ROUTES } from '../../../../lib/routes';
 import { useTreatmentPlanDetail } from '../queries/plan.queries';
 import { useUpdatePlanMutation } from '../queries/plan.queries';
 import { PlanForm } from '../components/PlanForm';
+import { PageErrorState } from '../../../../components/ui/PageErrorState';
 
 export function EditPlanPage() {
   const { planId = '' } = useParams();
@@ -27,18 +28,10 @@ export function EditPlanPage() {
 
   if (planQuery.isError || !plan) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-4 text-center">
-          <p className="text-sm font-bold text-red-700">Không tìm thấy kế hoạch.</p>
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.DASHBOARD.PLANS)}
-            className="mt-3 inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
-          >
-            Quay lại danh sách
-          </button>
-        </div>
-      </div>
+      <PageErrorState
+        title="Không tìm thấy kế hoạch."
+        onRetry={() => void planQuery.refetch()}
+      />
     );
   }
 

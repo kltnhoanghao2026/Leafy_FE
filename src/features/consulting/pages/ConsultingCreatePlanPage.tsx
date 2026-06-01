@@ -4,7 +4,7 @@ import { ArrowLeft, ClipboardList, CalendarClock, Eye } from 'lucide-react';
 import { PlanPreviewCalendar } from '../components/PlanPreviewCalendar';
 import { ROUTES } from '../../../lib/routes';
 import { useCreateConsultingPlan, useConsultingFarmPlots } from '../queries/consulting.queries';
-import type { PlanCreateRequest, PlantEventCreateRequest } from '../../plant-management/shared/types';
+import type { PlanCreateRequest, EmbeddedPlanEventRequest } from '../../plant-management/shared/types';
 import { PlanInfoSection } from '../components/PlanInfoSection';
 import { emptyForm } from '../utils/planFormHelpers';
 import type { PlanFormState, PlanInfoErrors } from '../components/PlanInfoSection';
@@ -125,7 +125,7 @@ export function ConsultingCreatePlanPage() {
       }
     }
 
-    const cleanedEvents: PlantEventCreateRequest[] = events.map((evt) => ({
+    const cleanedEvents: EmbeddedPlanEventRequest[] = events.map((evt) => ({
       eventType: evt.eventType,
       note: evt.note,
       description: evt.description?.trim() || undefined,
@@ -135,18 +135,20 @@ export function ConsultingCreatePlanPage() {
       phiDays: evt.phiDays,
       ppeRequired: evt.ppeRequired?.trim() || undefined,
       mrlNote: evt.mrlNote?.trim() || undefined,
-      isPlanned: true,
     }));
 
     const payload: PlanCreateRequest = {
       diseaseName: form.diseaseName.trim(),
       planName: form.planName?.trim() || undefined,
       farmPlotId: form.farmPlotId || undefined,
-      speciesId: form.speciesId || undefined,
       source: 'documents',
       severityLevel: form.severityLevel || undefined,
-      requiredInputs: form.requiredInputs?.trim() ? [form.requiredInputs.trim()] : undefined,
-      safetyWarnings: form.safetyWarnings?.trim() ? [form.safetyWarnings.trim()] : undefined,
+      requiredInputs: form.requiredInputs?.trim()
+        ? form.requiredInputs.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined,
+      safetyWarnings: form.safetyWarnings?.trim()
+        ? form.safetyWarnings.split(',').map((s) => s.trim()).filter(Boolean)
+        : undefined,
       successIndicators: form.successIndicators?.trim() || undefined,
       estimatedCost: form.estimatedCost?.trim() || undefined,
       isPublic: form.isPublic,

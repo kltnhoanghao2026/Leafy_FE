@@ -10,13 +10,13 @@ import {
   DollarSign,
   FlaskConical,
   Play,
-  RefreshCw,
   ShieldAlert,
   Sprout,
   User,
   UserCheck,
 } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import {
   useApplyPlanMutation,
   useTreatmentPlanDetail,
@@ -51,16 +51,10 @@ export function CommunityPlanViewPage() {
 
   if (planQuery.isError || !plan) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-        <p className="text-sm font-bold text-red-700">Không tải được kế hoạch điều trị.</p>
-        <button
-          type="button"
-          onClick={() => void planQuery.refetch()}
-          className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" /> Tải lại
-        </button>
-      </div>
+      <PageErrorState
+        title="Không tải được kế hoạch điều trị."
+        onRetry={() => void planQuery.refetch()}
+      />
     );
   }
 

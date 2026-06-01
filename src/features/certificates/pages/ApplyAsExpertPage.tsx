@@ -234,6 +234,14 @@ function CertificatesStep({
     );
   };
 
+  const allValid = certificates.every(
+    (c) =>
+      c.title.trim() &&
+      c.issuedBy.trim() &&
+      c.issueDate &&
+      c.proofUrl.trim(),
+  );
+
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
       <div className="text-center space-y-2">
@@ -280,7 +288,7 @@ function CertificatesStep({
         </button>
         <button
           onClick={onNext}
-          disabled={certificates.length === 0 || certificates.some((c) => !c.title.trim() || !c.issuedBy.trim())}
+          disabled={!allValid}
           className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#245A34] hover:bg-[#1a4226] disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-sm transition-colors shadow-sm"
         >
           Xem lại hồ sơ
