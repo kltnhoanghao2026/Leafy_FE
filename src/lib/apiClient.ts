@@ -7,6 +7,21 @@ import { API_ENDPOINTS } from "./routes";
 import { getApiBaseUrl } from "./apiBaseUrl";
 
 // ---------------------------------------------------------------------------
+// ApiError — typed error that preserves backend code + field-level errors
+// ---------------------------------------------------------------------------
+
+export class ApiError extends Error {
+  constructor(
+    public readonly code: number,
+    message: string,
+    public readonly errors?: Record<string, string>,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Axios instance
 // ---------------------------------------------------------------------------
 
@@ -184,7 +199,9 @@ apiClient.interceptors.response.use(
     const message =
       envelope?.message || error.message || "An unexpected error occurred";
 
-    return Promise.reject(new Error(message));
+    return Promise.reject(
+      new ApiError(envelope?.code ?? 0, message, envelope?.errors),
+    );
   },
 );
 

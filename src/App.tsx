@@ -11,7 +11,9 @@ import { GuestOnlyRoute } from "./components/GuestOnlyRoute";
 import { AdminRoute } from "./components/AdminRoute";
 import { AuthSessionBootstrap } from "./features/auth/components/AuthSessionBootstrap";
 import { Toaster, toast } from "react-hot-toast";
-import { queryClient, setMutationSuccessHandler } from "./lib/query-client";
+import { resolveErrorMessage } from "./lib/errorMapper";
+import { useTranslation } from "./i18n/useTranslation";
+import { queryClient, setMutationSuccessHandler, setMutationErrorHandler } from "./lib/query-client";
 import { ROUTES } from "./lib/routes";
 import { I18nProvider } from "./i18n";
 import { WebSocketProvider } from "./providers/WebSocketProvider";
@@ -262,15 +264,32 @@ const PageLoader = () => (
   </div>
 );
 
-function App() {
+/**
+ * AppEffects — registers global mutation handlers.
+ * Must live inside I18nProvider so useTranslation() works.
+ */
+function AppEffects() {
+  const { t } = useTranslation();
+
   useEffect(() => {
     setMutationSuccessHandler((message) => toast.success(message));
-    return () => setMutationSuccessHandler(null);
-  }, []);
+    setMutationErrorHandler((error) =>
+      toast.error(resolveErrorMessage(error, t)),
+    );
+    return () => {
+      setMutationSuccessHandler(null);
+      setMutationErrorHandler(null);
+    };
+  }, [t]);
 
+  return null;
+}
+
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
+        <AppEffects />
         <WebSocketProvider>
           <BrowserRouter>
           {/* Runs before route guards: attempts silent refresh on page load */}

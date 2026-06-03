@@ -36,10 +36,15 @@ const cleanParams = <T extends object>(params: T): Partial<T> => {
 
 export const searchApi = {
   searchPosts: async (params: SearchPostsParams) => {
+    const safeParams: SearchPostsParams = {
+      ...params,
+      sortBy: params.sortBy === ("createdAt" as any) ? "uploadedAt" : params.sortBy,
+    };
+
     const response = await apiClient.get<
       ApiEnvelope<SearchSpringPage<SearchPostItem>> | SearchSpringPage<SearchPostItem>
     >(API_ENDPOINTS.SEARCH.POSTS, {
-      params: cleanParams(params),
+      params: cleanParams(safeParams),
     });
     return unwrapApiData(response.data);
   },

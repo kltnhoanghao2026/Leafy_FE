@@ -90,7 +90,8 @@ export interface SearchPostsParams {
   authorId?: string;
   page?: number;
   size?: number;
-  sortBy?: string;
+  /** Posts index uses `uploadedAt` for time sorting. */
+  sortBy?: "uploadedAt" | "id" | "title" | "authorName";
   sortDir?: SearchSortDirection;
 }
 

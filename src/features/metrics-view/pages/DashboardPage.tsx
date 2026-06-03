@@ -40,6 +40,7 @@ import { useDashboardOverview } from "../queries";
 import { formatDateTime, formatNumber } from "../utils/format";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 
 const STATUS_STYLES: Record<FarmPlotStatus, string> = {
   ACTIVE: "border-emerald-100 bg-emerald-50 text-emerald-700",
@@ -278,22 +279,11 @@ export function DashboardPage() {
 
   if (profileQuery.isError || !profileQuery.data) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-        <h3 className="text-lg font-black text-red-700">
-          {t("iot.dashboard.profileError")}
-        </h3>
-        <p className="mt-1 text-sm font-semibold text-red-600">
-          {t("iot.dashboard.profileErrorDescription")}
-        </p>
-        <button
-          type="button"
-          onClick={() => void profileQuery.refetch()}
-          className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          {t("iot.dashboard.reload")}
-        </button>
-      </div>
+      <PageErrorState
+        title={t("iot.dashboard.profileError")}
+        description={t("iot.dashboard.profileErrorDescription")}
+        onRetry={() => void profileQuery.refetch()}
+      />
     );
   }
 
@@ -322,26 +312,11 @@ export function DashboardPage() {
       </header>
 
       {plotsQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                {t("iot.dashboard.plotsError")}
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                {t("iot.dashboard.plotsErrorDescription")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void plotsQuery.refetch()}
-              className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              {t("iot.dashboard.reload")}
-            </button>
-          </div>
-        </div>
+        <PageErrorState
+          title={t("iot.dashboard.plotsError")}
+          description={t("iot.dashboard.plotsErrorDescription")}
+          onRetry={() => void plotsQuery.refetch()}
+        />
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

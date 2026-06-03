@@ -12,7 +12,6 @@ import {
   List,
   MapPin,
   Pencil,
-  RefreshCw,
   ShieldAlert,
   Trash2,
   XCircle,
@@ -38,6 +37,7 @@ import {
   TREATMENT_STATUS_LABELS,
 } from "../../shared/components/displayUtils";
 import { useMyProfile } from "../../../settings/queries";
+import { PageErrorState } from "../../../../components/ui/PageErrorState";
 
 type ViewMode = "list" | "calendar";
 
@@ -87,19 +87,10 @@ export function PlanApplyDetailPage() {
 
   if (applyQuery.isError || !apply) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-        <p className="text-sm font-bold text-red-700">
-          Không tải được chi tiết lần áp dụng.
-        </p>
-        <button
-          type="button"
-          onClick={() => void applyQuery.refetch()}
-          className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Tải lại
-        </button>
-      </div>
+      <PageErrorState
+        title="Không tải được chi tiết lần áp dụng."
+        onRetry={() => void applyQuery.refetch()}
+      />
     );
   }
 

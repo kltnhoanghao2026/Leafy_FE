@@ -5,11 +5,11 @@ import {
   ChevronRight,
   Edit3,
   Plus,
-  RefreshCw,
   Trash2,
   X,
 } from "lucide-react";
 import { ModalShell } from "../../../components/ui/ModalShell";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import {
   useAlertRules,
   useCreateAlertRule,
@@ -915,26 +915,11 @@ export function AlertRulesPage() {
       ) : null}
 
       {rulesQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                {t("iot.alertRules.states.error")}
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                {t("iot.alertRules.states.errorDescription")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void rulesQuery.refetch()}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              {t("iot.common.retry")}
-            </button>
-          </div>
-        </div>
+        <PageErrorState
+          title={t("iot.alertRules.states.error")}
+          description={t("iot.alertRules.states.errorDescription")}
+          onRetry={() => void rulesQuery.refetch()}
+        />
       ) : null}
 
       {deleteRule.isError ? (

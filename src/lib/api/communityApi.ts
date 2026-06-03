@@ -98,10 +98,9 @@ export const communityApi = {
     return unwrapApiData(response.data);
   },
 
-  markPostsViewed: async (postIds: string[]) => {
+  markPostViewed: async (postId: string) => {
     const response = await apiClient.post<ApiEnvelope<void> | void>(
-      API_ENDPOINTS.FEED.MARK_VIEWED,
-      postIds,
+      API_ENDPOINTS.FEED.MARK_POST_VIEWED(postId),
     );
     return response.data ? unwrapApiData(response.data) : undefined;
   },

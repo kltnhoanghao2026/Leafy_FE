@@ -13,7 +13,6 @@ import {
   FlaskConical,
   Globe,
   LoaderCircle,
-  RefreshCw,
   Save,
   ShieldAlert,
   Webhook,
@@ -30,6 +29,7 @@ import type {
 } from "../../shared/types";
 import { formatDate } from "../shared/utils/planUtils";
 import { DatePicker } from "../../../../components/ui/DatePicker";
+import { PageErrorState } from "../../../../components/ui/PageErrorState";
 import { getTodayDateOnly } from "../../shared/utils/dateOnly";
 import { PlanPreviewCalendar } from "../../../consulting/components/PlanPreviewCalendar";
 
@@ -225,19 +225,10 @@ export function RagPlanDetailPage() {
             Quay lại danh sách
           </Link>
         </header>
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold text-red-700">Không tải được chi tiết kế hoạch AI.</p>
-            <button
-              type="button"
-              onClick={() => void planQuery.refetch()}
-              className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tải lại
-            </button>
-          </div>
-        </div>
+        <PageErrorState
+          title="Không tải được chi tiết kế hoạch AI."
+          onRetry={() => void planQuery.refetch()}
+        />
       </div>
     );
   }

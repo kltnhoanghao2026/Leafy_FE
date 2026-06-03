@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, Minus, RefreshCw, Search, Sprout, Trash2, X } from "lucide-react";
+import { Check, Loader2, Minus, Search, Sprout, Trash2, X } from "lucide-react";
 import { ConfirmDeleteDialog } from '../../../farm-management/components/ConfirmDeleteDialog';
 import { useFarmPlots, useFarmZones } from '../../../farm-management/queries';
 import { useMyProfile } from '../../../settings/queries';
@@ -25,6 +25,7 @@ import type {
 } from '../../shared/types';
 import { PLANT_STATUS_LABELS } from '../../shared/components/displayUtils';
 import { Select } from '../../../../components/ui/Select';
+import { PageErrorState } from '../../../../components/ui/PageErrorState';
 
 export function PlantListPage() {
   const profileQuery = useMyProfile();
@@ -404,26 +405,7 @@ export function PlantListPage() {
       )}
 
       {isPlantsError ? (
-        <div className="rounded-4xl border border-red-100 bg-red-50 p-6 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-lg font-black text-red-700">
-                Không tải được danh sách cây trồng
-              </h3>
-              <p className="mt-1 text-sm font-semibold text-red-600">
-                Kiểm tra plant-management-service hoặc quyền truy cập hiện tại.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => void refetchPlants()}
-              className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-              Tải lại
-            </button>
-          </div>
-        </div>
+        <PageErrorState onRetry={() => void refetchPlants()} />
       ) : null}
 
       {isPlantsLoading ? (

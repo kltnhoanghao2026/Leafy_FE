@@ -1,68 +1,49 @@
 /**
- * Maps backend error messages to Vietnamese UI strings.
- * All hooks consume the mapped result — no error logic in hooks.
+ * Maps an error from the auth flow to a Vietnamese UI string.
+ *
+ * Delegates to the central errorMapper (code-based lookup) and falls back
+ * to the raw server message when it is already in Vietnamese.
  */
 
-const ERROR_MAP: Record<string, string> = {
-  // Login
-  'Invalid credentials': 'Email hoặc mật khẩu không chính xác',
-  'Invalid email or password': 'Email hoặc mật khẩu không chính xác',
-  'Account is locked': 'Tài khoản đã bị khóa. Vui lòng liên hệ hỗ trợ.',
-  'Account is disabled': 'Tài khoản đã bị vô hiệu hóa.',
-  'Account not verified': 'Tài khoản chưa được xác thực. Vui lòng kiểm tra email.',
+import type { TFunction } from "../../../i18n/context";
+import { resolveErrorMessage } from "../../../lib/errorMapper";
 
-  // Register
-  'Email already exists': 'Email đã được sử dụng',
-  'Email already registered': 'Email đã được đăng ký',
-  'Phone number already exists': 'Số điện thoại đã được sử dụng',
-  'Invalid email format': 'Định dạng email không hợp lệ',
-  'Password too weak': 'Mật khẩu quá yếu. Hãy sử dụng ít nhất 6 ký tự.',
+export function mapAuthError(error: unknown): string {
+  // We don't have a t() function here (no React context), so we use a
+  // minimal inline fallback that covers the most common auth codes.
+  // Components that have access to useTranslation should prefer useApiError().resolve().
+  const fallbackT = (key: string): string => INLINE_TRANSLATIONS[key] ?? key;
 
-  // OTP
-  'Invalid OTP': 'Mã OTP không chính xác',
-  'OTP expired': 'Mã OTP đã hết hạn. Vui lòng gửi lại.',
-  'OTP already verified': 'Mã OTP đã được xác thực trước đó.',
-  'Too many OTP requests': 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.',
-
-  // Token
-  'Token expired': 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
-  'Invalid refresh token': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
-
-  // Generic
-  'Internal server error': 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.',
-  'Service unavailable': 'Dịch vụ tạm thời không khả dụng.'
+  return resolveErrorMessage(error, fallbackT as TFunction);
 }
 
-const FALLBACK_MESSAGE = 'Đã xảy ra lỗi. Vui lòng thử lại.'
-
-/**
- * Map a backend error (Error or string) to a Vietnamese UI message.
- */
-export function mapAuthError (error: unknown): string {
-  if (error instanceof Error) {
-    // Try exact match first
-    if (ERROR_MAP[error.message]) {
-      return ERROR_MAP[error.message]
-    }
-
-    // Try partial match (backend might return "Invalid credentials: ...")
-    for (const [key, value] of Object.entries(ERROR_MAP)) {
-      if (error.message.toLowerCase().includes(key.toLowerCase())) {
-        return value
-      }
-    }
-
-    // If the backend already sends Vietnamese, pass it through
-    if (/[\u00C0-\u024F\u1E00-\u1EFF]/.test(error.message)) {
-      return error.message
-    }
-
-    return FALLBACK_MESSAGE
-  }
-
-  if (typeof error === 'string') {
-    return ERROR_MAP[error] || FALLBACK_MESSAGE
-  }
-
-  return FALLBACK_MESSAGE
-}
+// Inline translations for the most common auth-related error codes.
+// These mirror the keys added to vi.ts so the mapper works outside React context.
+const INLINE_TRANSLATIONS: Record<string, string> = {
+  "errors.auth.unauthenticated": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "errors.auth.unauthorized": "Bạn không có quyền thực hiện thao tác này.",
+  "errors.auth.jwtInvalid": "Token không hợp lệ. Vui lòng đăng nhập lại.",
+  "errors.auth.jwtExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "errors.auth.jwtSignatureInvalid": "Token không hợp lệ. Vui lòng đăng nhập lại.",
+  "errors.auth.invalidCredentials": "Email hoặc mật khẩu không chính xác.",
+  "errors.auth.deviceIdRequired": "Thiết bị không được nhận dạng. Vui lòng thử lại.",
+  "errors.auth.deviceMismatch": "Thiết bị không khớp. Vui lòng đăng nhập lại.",
+  "errors.auth.sessionKicked": "Phiên đăng nhập đã bị đăng xuất từ xa.",
+  "errors.auth.tokenRevoked": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
+  "errors.auth.tokenReplay": "Phát hiện yêu cầu trùng lặp. Vui lòng đăng nhập lại.",
+  "errors.auth.rateLimitExceeded": "Quá nhiều yêu cầu. Vui lòng thử lại sau.",
+  "errors.auth.refreshTokenNotFound": "Phiên đăng nhập không tồn tại. Vui lòng đăng nhập lại.",
+  "errors.auth.refreshTokenInvalid": "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+  "errors.auth.tokenFamilyRevoked": "Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại.",
+  "errors.acc.phoneAlreadyUsed": "Số điện thoại đã được sử dụng.",
+  "errors.acc.emailAlreadyUsed": "Email đã được sử dụng.",
+  "errors.acc.notFound": "Tài khoản không tồn tại.",
+  "errors.acc.invalidOtp": "Mã OTP không chính xác.",
+  "errors.acc.wrongPassword": "Mật khẩu không đúng.",
+  "errors.otp.cooldown": "Vui lòng chờ trước khi gửi lại mã OTP.",
+  "errors.otp.maxAttempts": "Đã vượt quá số lần thử OTP. Vui lòng thử lại sau.",
+  "errors.otp.expired": "Mã OTP đã hết hạn. Vui lòng gửi lại.",
+  "errors.otp.invalid": "Mã OTP không chính xác.",
+  "errors.otp.registrationExpired": "Dữ liệu đăng ký đã hết hạn. Vui lòng thử lại.",
+  "errors.sys.uncategorized": "Đã xảy ra lỗi. Vui lòng thử lại.",
+};

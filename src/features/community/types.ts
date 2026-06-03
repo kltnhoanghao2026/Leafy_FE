@@ -1,4 +1,4 @@
-export type CommunityPostType = "FEED" | "SHARE" | "PLAN_SHARE";
+export type CommunityPostType = "FEED" | "GENERAL" | "QUESTION" | "PLAN_SHARE";
 export type CommunityVisibility = "FOLLOWER" | "ALL" | "ONLY_ME";
 export type CommunityVoteType = "UPVOTE" | "DOWNVOTE";
 export type CommunityVoteTargetType = "POST" | "COMMENT";

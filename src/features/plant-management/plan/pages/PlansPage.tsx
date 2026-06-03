@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarDays, Check, ClipboardList, Sparkles,
-  Globe, Layers, Loader2, Lock, Minus, Play, Plus, RefreshCw, Search,
+  Globe, Layers, Loader2, Lock, Minus, Play, Plus, Search,
   Trash2, Users, X,
 } from "lucide-react";
 import { ConfirmDeleteDialog } from "../../../farm-management/components/ConfirmDeleteDialog";
@@ -31,6 +31,7 @@ import { CancelApplyDialog } from "../components/CancelApplyDialog";
 import { useSearchPlans } from "../../../search/queries";
 import type { ApplyToAllFarmsRequest, PlanApplyRequest, PlanResponse, PlanSourceType, PublicPlanListParams, RagPlanResponse, TreatmentStatus } from "../../shared/types";
 import { Select } from "../../../../components/ui/Select";
+import { PageErrorState } from "../../../../components/ui/PageErrorState";
 import { BulkApplyPlanDialog } from "../components/BulkApplyPlanDialog";
 import { BulkApplyCustomDialog } from "../components/BulkApplyCustomDialog";
 import { ApplyPlanDialog } from "../components/ApplyPlanDialog";
@@ -119,7 +120,6 @@ export function PlansPage() {
         failedApplyCount: (item as unknown as { failedApplyCount?: number }).failedApplyCount ?? null,
         applies: [],
         isPublic: item.isPublic ?? true,
-        isConsulted: false,
         sourceType: item.sourceType as PlanSourceType ?? 'USER_CREATED',
         ownerInfo: null,
         creatorInfo: item.creatorInfo ? {
@@ -583,14 +583,7 @@ export function PlansPage() {
 
       {/* ── Error state ── */}
       {activeQuery.isError && (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-bold text-red-700">Không tải được danh sách.</p>
-            <button type="button" onClick={() => void activeQuery.refetch()} className="inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white">
-              <RefreshCw className="mr-2 h-4 w-4" />Tải lại
-            </button>
-          </div>
-        </div>
+        <PageErrorState onRetry={() => void activeQuery.refetch()} />
       )}
 
       {/* ── Empty state ── */}

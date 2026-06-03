@@ -4,7 +4,17 @@ import { EventCalendarEditor } from './EventCalendarEditor';
 import { Select } from '../../../components/ui/Select';
 import type { EventTaskRequest, PlantEventCreateRequest, PlantEventType } from '../../plant-management/shared/types';
 import { EVENT_TYPE_LABELS } from '../../plant-management/shared/components/displayUtils';
-import { Field, inputCls } from './FormField';
+import { Field, inputCls, errorInputCls } from './FormField';
+
+// ── Per-event field-level errors (mirrors backend EmbeddedPlanEventRequest / EventTaskRequest validation) ──
+
+export interface EventFieldErrors {
+  eventType?: string;
+  note?: string;
+  daysFromStart?: string;
+  durationDays?: string;
+  tasks?: Record<number, { title?: string }>;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -40,6 +50,8 @@ interface EventRowProps {
   index: number;
   total: number;
   event: PlantEventCreateRequest;
+  errors?: EventFieldErrors;
+  onErrorsChange?: (index: number, err: EventFieldErrors) => void;
   isExpanded: boolean;
   onToggleExpand: (index: number) => void;
   onChange: UpdateEventFn;
@@ -54,6 +66,8 @@ function EventRow({
   index,
   total,
   event,
+  errors,
+  onErrorsChange,
   isExpanded,
   onToggleExpand,
   onChange,
@@ -165,21 +179,33 @@ function EventRow({
         <div className="grid gap-3 border-t border-slate-100 bg-slate-50/50 p-4 sm:grid-cols-2">
           <Field label="Loại sự kiện" required>
             <Select
-              className="mt-2"
+              className={`mt-2 ${errors?.eventType ? 'border-red-400' : ''}`}
               value={event.eventType ?? ''}
-              onChange={(v) => onChange(index, 'eventType', v as PlantEventType)}
+              onChange={(v) => {
+                onChange(index, 'eventType', v as PlantEventType);
+                onErrorsChange?.(index, { ...errors, eventType: undefined });
+              }}
               options={EVENT_TYPE_OPTIONS}
               placeholder="-- Chọn loại --"
             />
+            {errors?.eventType && (
+              <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.eventType}</p>
+            )}
           </Field>
 
           <Field label="Ghi chú" required>
             <input
-              className={inputCls}
+              className={errors?.note ? errorInputCls : inputCls}
               value={event.note ?? ''}
-              onChange={(e) => onChange(index, 'note', e.target.value)}
+              onChange={(e) => {
+                onChange(index, 'note', e.target.value);
+                onErrorsChange?.(index, { ...errors, note: undefined });
+              }}
               placeholder="VD: Phun thuốc gốc đồng..."
             />
+            {errors?.note && (
+              <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.note}</p>
+            )}
           </Field>
 
           <Field label="Mô tả chi tiết (tuỳ chọn)" className="sm:col-span-2">
@@ -196,34 +222,40 @@ function EventRow({
             <input
               type="number"
               min={0}
-              className={inputCls}
+              className={errors?.daysFromStart ? errorInputCls : inputCls}
               value={event.daysFromStart ?? ''}
-              onChange={(e) =>
-                onChange(
-                  index,
-                  'daysFromStart',
-                  e.target.value === '' ? undefined : Number(e.target.value),
-                )
-              }
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : Number(e.target.value);
+                onChange(index, 'daysFromStart', val);
+                if (val !== undefined && val >= 0) {
+                  onErrorsChange?.(index, { ...errors, daysFromStart: undefined });
+                }
+              }}
               placeholder="VD: 3"
             />
+            {errors?.daysFromStart && (
+              <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.daysFromStart}</p>
+            )}
           </Field>
 
           <Field label="Thời lượng (ngày)">
             <input
               type="number"
               min={1}
-              className={inputCls}
+              className={errors?.durationDays ? errorInputCls : inputCls}
               value={event.durationDays ?? ''}
-              onChange={(e) =>
-                onChange(
-                  index,
-                  'durationDays',
-                  e.target.value === '' ? undefined : Number(e.target.value),
-                )
-              }
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : Number(e.target.value);
+                onChange(index, 'durationDays', val);
+                if (val !== undefined && val >= 0) {
+                  onErrorsChange?.(index, { ...errors, durationDays: undefined });
+                }
+              }}
               placeholder="VD: 7"
             />
+            {errors?.durationDays && (
+              <p className="mt-1 text-[11px] font-semibold text-red-500">{errors.durationDays}</p>
+            )}
           </Field>
 
           <Field label="Chi phí ước tính (tuỳ chọn)" className="sm:col-span-2">
@@ -337,12 +369,22 @@ function EventRow({
                             j === ti ? { ...t, title: e.target.value } : t,
                           );
                           onUpdate(index, { ...event, tasks });
+                          // Clear per-task title error on change
+                          if (e.target.value.trim()) {
+                            onErrorsChange?.(index, {
+                              ...errors,
+                              tasks: { ...errors?.tasks, [ti]: { ...errors?.tasks?.[ti], title: undefined } },
+                            });
+                          }
                         }}
                         placeholder="Tiêu đề công việc *"
                         className={`${inputCls} py-1.5 text-[11px] ${
                           task.completed ? 'text-slate-400 line-through' : ''
-                        }`}
+                        } ${errors?.tasks?.[ti]?.title ? 'border-red-400' : ''}`}
                       />
+                      {errors?.tasks?.[ti]?.title && (
+                        <p className="mt-1 text-[10px] font-semibold text-red-500">{errors.tasks[ti].title}</p>
+                      )}
                       <input
                         value={task.description ?? ''}
                         onChange={(e) => {
@@ -394,6 +436,8 @@ function EventRow({
 
 interface EventScheduleSectionProps {
   events: PlantEventCreateRequest[];
+  errors?: EventFieldErrors[];
+  onErrorsChange?: (errors: EventFieldErrors[]) => void;
   onAdd: () => void;
   onChange: UpdateEventFn;
   onRemove: (index: number) => void;
@@ -405,6 +449,8 @@ interface EventScheduleSectionProps {
 
 export function EventScheduleSection({
   events,
+  errors,
+  onErrorsChange,
   onAdd,
   onChange,
   onRemove,
@@ -543,6 +589,12 @@ export function EventScheduleSection({
               index={i}
               total={events.length}
               event={evt}
+              errors={errors?.[i]}
+              onErrorsChange={(idx, err) => {
+                const next = [...(errors ?? [])];
+                next[idx] = err;
+                onErrorsChange?.(next);
+              }}
               isExpanded={expandedList[i] ?? false}
               onToggleExpand={toggleExpanded}
               onChange={onChange}
