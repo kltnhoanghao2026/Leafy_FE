@@ -187,6 +187,7 @@ export function PushNotificationsBootstrap() {
       toast(title, {
         id: `push-${payload.messageId ?? title}`,
         duration: 5000,
+        position: "bottom-right",
       });
 
       if (body) {
