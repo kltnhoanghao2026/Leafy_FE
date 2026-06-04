@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -15,181 +15,196 @@ import {
   LoaderCircle,
   Save,
   ShieldAlert,
-  Webhook,
 } from "lucide-react";
+import { PlanPreviewCalendar } from "../../../consulting/components/PlanPreviewCalendar";
 import { ROUTES } from "../../../../lib/routes";
 import { useRagPlan } from "../queries/rag-plan.queries";
-import { useCreatePlan } from "../queries/plan.queries";
+import { useCreatePlan } from "../..";
 import type {
+  EmbeddedPlanEventResponse,
   PlantEventCreateRequest,
   PlanCreateRequest,
-  RagPlanScheduleEvent,
+  RagPlanResponse,
   RagPlanSourceDocument,
-  RagPlanWebSearchResult,
+  SourceDocument,
 } from "../../shared/types";
-import { formatDate } from "../shared/utils/planUtils";
-import { DatePicker } from "../../../../components/ui/DatePicker";
+import { formatDate } from "../../shared/components/displayUtils";
+import { EmbeddedEventList } from "../components/EmbeddedEventList";
+import { SourceDocumentModal } from "../components/SourceDocumentModal";
 import { PageErrorState } from "../../../../components/ui/PageErrorState";
 import { getTodayDateOnly } from "../../shared/utils/dateOnly";
-import { PlanPreviewCalendar } from "../../../consulting/components/PlanPreviewCalendar";
 
-const SEVERITY_STYLES: Record<string, string> = {
-  LOW:      "text-green-600 bg-green-50 border-green-200",
-  MEDIUM:   "text-amber-600 bg-amber-50 border-amber-200",
-  HIGH:     "text-orange-600 bg-orange-50 border-orange-200",
-  CRITICAL: "text-red-600 bg-red-50 border-red-200",
+const SEVERITY_COLOR: Record<string, string> = {
+  LOW: "text-green-600 bg-green-50",
+  MEDIUM: "text-amber-600 bg-amber-50",
+  HIGH: "text-orange-600 bg-orange-50",
+  CRITICAL: "text-red-600 bg-red-50",
 };
 
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  IRRIGATION: "bg-blue-100 text-blue-700",
-  NUTRITION: "bg-lime-100 text-lime-700",
-  WEED_CONTROL: "bg-yellow-100 text-yellow-700",
-  PRUNING: "bg-orange-100 text-orange-700",
-  SCOUTING: "bg-teal-100 text-teal-700",
-  DISEASE_DETECTED: "bg-red-100 text-red-700",
-  TREATMENT_APPLICATION: "bg-purple-100 text-purple-700",
-  QUARANTINE: "bg-rose-100 text-rose-700",
-  HEALTH_RECOVERY: "bg-emerald-100 text-emerald-700",
-  PHENOLOGY: "bg-indigo-100 text-indigo-700",
-  REPOT: "bg-cyan-100 text-cyan-700",
-  HARVEST: "bg-amber-100 text-amber-700",
-};
-
-function getSeverityStyle(level: string | null) {
-  const key = (level ?? "").toUpperCase();
-  return SEVERITY_STYLES[key] ?? "text-slate-600 bg-slate-50 border-slate-200";
+interface RagPlanDetailViewModel {
+  planId: string;
+  plantManagementPlanId: string | null;
+  planName: string | null;
+  diseaseName: string | null;
+  confidenceScore: number | null;
+  severityLevel: string | null;
+  estimatedCost: string | null;
+  requiredInputs: string[];
+  safetyWarnings: string[];
+  successIndicators: string | null;
+  schedule: NonNullable<RagPlanResponse["plan"]>["schedule"] extends infer T
+    ? T extends Array<infer Item>
+      ? Item[]
+      : []
+    : [];
+  sourceDocuments: RagPlanSourceDocument[];
+  webSearchResults: NonNullable<RagPlanResponse["webSearchResults"]>;
+  source: string | null;
+  createdAt: string | null;
+  lastModifiedAt: string | null;
 }
 
-function getEventColor(type: string) {
-  return EVENT_TYPE_COLORS[type] ?? "bg-slate-100 text-slate-600";
+function toViewModel(data: RagPlanResponse): RagPlanDetailViewModel {
+  const nestedPlan = data.plan;
+  return {
+    planId: data.planId,
+    plantManagementPlanId: data.plantManagementPlanId,
+    planName: nestedPlan?.planName ?? null,
+    diseaseName: nestedPlan?.diseaseName ?? data.diseaseName ?? null,
+    confidenceScore: nestedPlan?.confidenceScore ?? null,
+    severityLevel: nestedPlan?.severityLevel ?? data.severityLevel ?? null,
+    estimatedCost: nestedPlan?.estimatedCost ?? null,
+    requiredInputs: nestedPlan?.requiredInputs ?? [],
+    safetyWarnings: nestedPlan?.safetyWarnings ?? [],
+    successIndicators: nestedPlan?.successIndicators ?? null,
+    schedule: nestedPlan?.schedule ?? [],
+    sourceDocuments: data.sourceDocuments ?? [],
+    webSearchResults: data.webSearchResults ?? [],
+    source: nestedPlan?.source ?? data.source ?? null,
+    createdAt: data.createdAt,
+    lastModifiedAt: data.lastModifiedAt,
+  };
 }
 
-function ScheduleEventRow({ event }: { event: RagPlanScheduleEvent }) {
+function mapScheduleToPreviewEvents(
+  schedule: RagPlanDetailViewModel["schedule"],
+): PlantEventCreateRequest[] {
+  return schedule.map((event) => ({
+    eventType: event.eventType as PlantEventCreateRequest["eventType"],
+    note: event.note ?? "",
+    description: event.description ?? undefined,
+    daysFromStart: event.daysFromStart ?? 0,
+    durationDays: event.durationDays ?? undefined,
+    phiDays: event.phiDays ?? undefined,
+    ppeRequired: event.ppeRequired ?? undefined,
+    mrlNote: event.mrlNote ?? undefined,
+    estimatedCost: event.estimatedCost ?? undefined,
+  }));
+}
+
+function mapScheduleToEmbeddedEvents(
+  schedule: RagPlanDetailViewModel["schedule"],
+): EmbeddedPlanEventResponse[] {
+  return schedule.map((event) => {
+    const tasks: EmbeddedPlanEventResponse["tasks"] = event.tasks
+      ? event.tasks.map((task) => ({
+          title: task.title,
+          description: task.description,
+          order: task.order,
+          estimatedCost: task.estimatedCost,
+          completed: Boolean(task.completed),
+        }))
+      : null;
+
+    return {
+      eventType: event.eventType as EmbeddedPlanEventResponse["eventType"],
+      targetType: (event.targetType as EmbeddedPlanEventResponse["targetType"]) ?? null,
+      note: event.note,
+      description: event.description,
+      daysFromStart: event.daysFromStart,
+      durationDays: event.durationDays,
+      phiDays: event.phiDays,
+      ppeRequired: event.ppeRequired,
+      mrlNote: event.mrlNote,
+      estimatedCost: event.estimatedCost,
+      tasks,
+    };
+  });
+}
+
+function SourceDocRow({ doc, onClick }: { doc: RagPlanSourceDocument; onClick: () => void }) {
+  const previewContent = doc.content ?? doc.pageContent;
+
   return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${getEventColor(event.eventType)}`}>
-          {event.eventType.replace(/_/g, " ")}
-        </span>
-        <h4 className="font-bold text-slate-800">{event.note || event.eventType}</h4>
-        {event.daysFromStart != null && (
-          <span className="ml-auto text-sm font-medium text-slate-500 bg-white px-2 py-1 rounded-lg border border-slate-200">
-            Ngày {event.daysFromStart}
-          </span>
-        )}
-      </div>
-      {event.description && <p className="text-sm text-slate-600 mb-3">{event.description}</p>}
-      {(event.phiDays != null || event.ppeRequired || event.estimatedCost) && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          {event.phiDays != null && (
-            <span className="rounded-lg bg-amber-50 border border-amber-200 px-2 py-1 text-amber-700 font-semibold">
-              PHI: {event.phiDays} ngày
-            </span>
-          )}
-          {event.ppeRequired && (
-            <span className="rounded-lg bg-white border border-slate-200 px-2 py-1 text-slate-600">
-              Bảo hộ: {event.ppeRequired}
-            </span>
-          )}
-          {event.estimatedCost && (
-            <span className="rounded-lg bg-emerald-50 border border-emerald-200 px-2 py-1 text-emerald-700 font-semibold">
-              Chi phí: {event.estimatedCost}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SourceDocRow({ doc }: { doc: RagPlanSourceDocument }) {
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 hover:border-[#245A34]/40 hover:bg-green-50/40 transition-all">
-      <p className="font-bold text-slate-800 text-sm mb-1">{doc.title || "Tài liệu"}</p>
-      {doc.content && (
-        <p className="text-xs text-slate-500 line-clamp-2">{doc.content}</p>
-      )}
-      {doc.url && (
-        <p className="text-[10px] text-slate-400 mt-2 truncate font-mono">{doc.url}</p>
-      )}
-    </div>
-  );
-}
-
-function WebSearchRow({ result }: { result: RagPlanWebSearchResult }) {
-  return (
-    <a
-      href={result.url ?? "#"}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 hover:bg-indigo-50 hover:border-indigo-100 transition-colors group"
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full cursor-pointer rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-left transition-all hover:border-[#245A34]/40 hover:bg-green-50/40"
     >
-      <div className="flex items-start justify-between gap-2 mb-1">
-        <p className="font-bold text-indigo-900 text-sm group-hover:underline">{result.title || "Kết quả tìm kiếm"}</p>
-        <ExternalLink className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-      </div>
-      {result.content && (
-        <p className="text-xs text-slate-500 line-clamp-2">{result.content}</p>
+      <p className="mb-1 text-sm font-bold text-slate-800">{doc.title || "Tài liệu"}</p>
+      {previewContent ? (
+        <p className="line-clamp-2 text-xs text-slate-500">{previewContent}</p>
+      ) : (
+        <p className="line-clamp-2 text-xs italic text-slate-400">Bấm để xem chi tiết nội dung</p>
       )}
-      {result.url && (
-        <p className="text-[10px] text-slate-400 mt-2 truncate font-mono">{result.url}</p>
-      )}
-    </a>
+      {doc.url && <p className="mt-2 truncate font-mono text-[10px] text-slate-400">{doc.url}</p>}
+    </button>
   );
 }
 
 export function RagPlanDetailPage() {
   const { planId = "" } = useParams();
   const navigate = useNavigate();
-  const planQuery = useRagPlan(planId);
-  const plan = planQuery.data;
 
+  const planQuery = useRagPlan(planId);
+  const ragPlan = planQuery.data;
+
+  const [selectedDoc, setSelectedDoc] = useState<RagPlanSourceDocument | null>(null);
   const [startDate, setStartDate] = useState<string>(getTodayDateOnly());
   const { mutateAsync: savePlan, isPending: isSaving } = useCreatePlan();
 
-  const previewEvents = useMemo((): PlantEventCreateRequest[] => {
-    if (!plan?.schedule) return [];
-    return plan.schedule.map((ev) => ({
-      eventType: ev.eventType,
-      note: ev.note ?? "",
-      description: ev.description ?? undefined,
-      daysFromStart: ev.daysFromStart ?? 0,
-      durationDays: ev.durationDays ?? undefined,
-      phiDays: ev.phiDays ?? undefined,
-      ppeRequired: ev.ppeRequired ?? undefined,
-      mrlNote: ev.mrlNote ?? undefined,
-      estimatedCost: ev.estimatedCost ?? undefined,
-    }));
-  }, [plan?.schedule]);
+  const detail = useMemo(() => (ragPlan ? toViewModel(ragPlan) : null), [ragPlan]);
+
+  const previewDraftEvents = useMemo(
+    () => (detail ? mapScheduleToPreviewEvents(detail.schedule) : []),
+    [detail],
+  );
+
+  const embeddedEvents = useMemo(
+    () => (detail ? mapScheduleToEmbeddedEvents(detail.schedule) : []),
+    [detail],
+  );
 
   const handleSaveToMyPlans = async () => {
-    if (!plan) return;
+    if (!detail) return;
     const payload: PlanCreateRequest = {
-      diseaseName: plan.diseaseName ?? "",
-      planName: plan.planName ?? undefined,
-      source: "documents",
+      diseaseName: detail.diseaseName ?? "",
+      planName: detail.planName ?? undefined,
+      source: detail.source === "websearch" ? "websearch" : "documents",
       sourceType: "RAG_GEN",
-      confidenceScore: plan.confidenceScore ?? undefined,
-      severityLevel: plan.severityLevel ?? undefined,
-      requiredInputs: plan.requiredInputs ?? undefined,
-      safetyWarnings: plan.safetyWarnings ?? undefined,
-      successIndicators: plan.successIndicators ?? undefined,
-      estimatedCost: plan.estimatedCost ?? undefined,
+      confidenceScore: detail.confidenceScore ?? undefined,
+      severityLevel: detail.severityLevel ?? undefined,
+      requiredInputs: detail.requiredInputs.length > 0 ? detail.requiredInputs : undefined,
+      safetyWarnings: detail.safetyWarnings.length > 0 ? detail.safetyWarnings : undefined,
+      successIndicators: detail.successIndicators ?? undefined,
+      estimatedCost: detail.estimatedCost ?? undefined,
       isPublic: false,
-      sourceDocuments: plan.sourceDocuments?.map((d) => ({
-        title: d.title,
-        pageContent: d.content ?? "",
-        url: d.url,
-        score: d.score,
+      sourceDocuments: detail.sourceDocuments.map((doc): SourceDocument => ({
+        title: doc.title,
+        pageContent: doc.pageContent ?? doc.content ?? "",
+        url: doc.url,
+        pointId: doc.pointId,
+        metadata: doc.metadata,
       })),
-      webSearchResults: plan.webSearchResults?.map((w) => ({
-        title: w.title ?? "",
-        url: w.url ?? "",
-        content: w.content ?? "",
-        score: w.score ?? 0,
+      webSearchResults: detail.webSearchResults.map((result) => ({
+        title: result.title ?? "",
+        url: result.url ?? "",
+        content: result.content ?? "",
+        score: result.score ?? 0,
       })),
-      schedule: previewEvents,
+      schedule: previewDraftEvents,
     };
+
     try {
       const created = await savePlan(payload);
       if (created?.id) {
@@ -202,44 +217,30 @@ export function RagPlanDetailPage() {
 
   if (planQuery.isLoading) {
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col gap-6">
-        <header className="flex items-center gap-4">
-          <Link to={ROUTES.DASHBOARD.PLANS} className="inline-flex items-center text-sm font-bold text-[#245A34] hover:underline">
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Quay lại danh sách
-          </Link>
-        </header>
-        <div className="rounded-[2rem] border border-slate-100 bg-white p-8">
-          <p className="text-sm font-bold text-slate-500">Đang tải chi tiết kế hoạch AI...</p>
-        </div>
+      <div className="rounded-4xl border border-slate-100 bg-white p-8 text-sm font-bold text-slate-500">
+        Đang tải chi tiết kế hoạch AI...
       </div>
     );
   }
 
-  if (planQuery.isError || !plan) {
+  if (planQuery.isError || !detail) {
     return (
-      <div className="flex min-h-0 w-full flex-1 flex-col gap-6">
-        <header className="flex items-center gap-4">
-          <Link to={ROUTES.DASHBOARD.PLANS} className="inline-flex items-center text-sm font-bold text-[#245A34] hover:underline">
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Quay lại danh sách
-          </Link>
-        </header>
-        <PageErrorState
-          title="Không tải được chi tiết kế hoạch AI."
-          onRetry={() => void planQuery.refetch()}
-        />
-      </div>
+      <PageErrorState
+        title="Không tải được chi tiết kế hoạch AI."
+        onRetry={() => void planQuery.refetch()}
+      />
     );
   }
 
-  const confidence = plan.confidenceScore != null ? Math.round(plan.confidenceScore * 100) : null;
+  const severityStyle = detail.severityLevel
+    ? SEVERITY_COLOR[detail.severityLevel.toUpperCase()] ?? "text-slate-600 bg-slate-50"
+    : "";
+  const confidencePct = detail.confidenceScore != null ? Math.round(detail.confidenceScore * 100) : null;
 
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col gap-6">
-      {/* ── Header ── */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <Link to={ROUTES.DASHBOARD.PLANS} className="inline-flex items-center text-sm font-bold text-[#245A34] hover:underline">
             <ArrowLeft className="mr-1.5 h-4 w-4" />
             Quay lại danh sách
@@ -249,250 +250,224 @@ export function RagPlanDetailPage() {
               <Bot className="h-5 w-5 text-purple-700" />
             </div>
             <h1 className="text-[28px] font-black tracking-tight text-slate-900">
-              {plan.planName || plan.diseaseName || "Kế hoạch AI"}
+              {detail.planName || detail.diseaseName || "Kế hoạch AI"}
             </h1>
           </div>
-          {plan.diseaseName && plan.planName && plan.diseaseName !== plan.planName && (
-            <p className="mt-1 text-sm font-semibold text-slate-500 flex items-center gap-1.5">
-              <FlaskConical className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} />
-              Bệnh: {plan.diseaseName}
+          {detail.diseaseName && detail.planName && detail.diseaseName !== detail.planName && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-500">
+              <FlaskConical className="h-3.5 w-3.5 text-slate-400" strokeWidth={2} />
+              Bệnh: {detail.diseaseName}
             </p>
           )}
           <p className="mt-2 text-xs font-semibold text-slate-400">
-            Tạo lúc {formatDate(plan.createdAt)}
-            {plan.lastModifiedAt && plan.lastModifiedAt !== plan.createdAt && (
-              <> · Cập nhật {formatDate(plan.lastModifiedAt)}</>
+            Tạo lúc {formatDate(detail.createdAt)}
+            {detail.lastModifiedAt && detail.lastModifiedAt !== detail.createdAt && (
+              <> · Cập nhật {formatDate(detail.lastModifiedAt)}</>
             )}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <span className="inline-flex items-center rounded-2xl border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-bold text-purple-700">
             <Bot className="mr-2 h-4 w-4" />
             Kế hoạch AI
           </span>
-          {plan.plantManagementPlanId && (
+          {detail.plantManagementPlanId && (
             <span className="inline-flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-600">
-              PM ID: {plan.plantManagementPlanId.slice(0, 8)}...
+              PM ID: {detail.plantManagementPlanId.slice(0, 8)}...
             </span>
           )}
         </div>
       </header>
 
-      {/* ── Start date + Save toolbar ── */}
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-100 bg-white px-5 py-4 shadow-sm">
-        <span className="text-sm font-bold text-slate-500">Bat dau tu:</span>
+        <span className="text-sm font-bold text-slate-500">Bắt đầu từ:</span>
         <div className="w-48">
-          <DatePicker
+          <input
+            type="date"
             value={startDate}
-            onChange={setStartDate}
-            minDate={getTodayDateOnly()}
+            min={getTodayDateOnly()}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 focus:border-[#245A34] focus:outline-none focus:ring-2 focus:ring-[#245A34]/20"
           />
         </div>
         <button
           type="button"
           onClick={() => void handleSaveToMyPlans()}
-          disabled={isSaving || !plan.schedule || plan.schedule.length === 0}
-          className="inline-flex items-center gap-2 rounded-2xl bg-[#245A34] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#1b432a] disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={isSaving || detail.schedule.length === 0}
+          className="inline-flex items-center gap-2 rounded-2xl bg-[#245A34] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#1b432a] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSaving ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          Luu vao ke hoach cua toi
+          {isSaving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Lưu vào kế hoạch của tôi
         </button>
       </div>
 
-      {/* ── Main 2-col grid ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-
-        {/* Left col (2/3) */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-
-          {/* Key metrics */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4">Thông tin chính</h2>
+            <h2 className="mb-4 text-base font-black text-slate-900">Thông tin chính</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {confidence != null && (
+              {confidencePct != null && (
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Độ tin cậy AI</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Độ tin cậy</p>
                   <div className="mt-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-black text-slate-800">{confidence}%</span>
+                    <div className="mb-1 flex items-center justify-between">
+                      <span className="text-sm font-black text-slate-800">{confidencePct}%</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-200">
-                      <div className="h-1.5 rounded-full bg-purple-500" style={{ width: `${confidence}%` }} />
+                      <div className="h-1.5 rounded-full bg-purple-500" style={{ width: `${confidencePct}%` }} />
                     </div>
                   </div>
                 </div>
               )}
-              {plan.severityLevel && (
-                <div className={`rounded-2xl p-4 border ${getSeverityStyle(plan.severityLevel)}`}>
+              {detail.severityLevel && (
+                <div className={`rounded-2xl p-4 ${severityStyle}`}>
                   <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Mức độ nghiêm trọng</p>
-                  <p className="mt-1 text-sm font-black">{plan.severityLevel}</p>
+                  <p className="mt-1 text-sm font-black">{detail.severityLevel}</p>
                 </div>
               )}
-              {plan.estimatedCost && (
+              {detail.estimatedCost && (
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1"><DollarSign className="w-3 h-3" strokeWidth={2.5} />Chi phí</p>
-                  <p className="mt-1 text-sm font-bold text-slate-800">{plan.estimatedCost}</p>
+                  <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <DollarSign className="h-3 w-3" strokeWidth={2.5} />Chi phí
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">{detail.estimatedCost}</p>
                 </div>
               )}
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Số sự kiện</p>
-                <p className="mt-1 text-sm font-black text-slate-800">{plan.schedule?.length ?? 0}</p>
+                <p className="mt-1 text-sm font-black text-slate-800">{detail.schedule.length}</p>
               </div>
             </div>
           </section>
 
-          {/* Schedule */}
-          {plan.schedule && plan.schedule.length > 0 && (
-            <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-                <CalendarDays className="w-4 h-4 text-slate-400" strokeWidth={2} />
-                Lịch trình ({plan.schedule.length})
-              </h2>
-              <div className="space-y-3">
-                {plan.schedule.map((event, idx) => (
-                  <ScheduleEventRow key={idx} event={event} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Calendar preview */}
-          {plan.schedule && plan.schedule.length > 0 && (
-            <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-slate-900 mb-1">
-                Xem trước lịch (từ ngày {startDate})
-              </h2>
-              <p className="mb-4 text-sm font-semibold text-slate-400">
-                Lịch trình được tính từ ngày bạn chọn bên trên
-              </p>
-              <PlanPreviewCalendar draftEvents={previewEvents} baseDate={new Date(startDate)} />
-            </section>
-          )}
-
-          {/* Safety / inputs / success */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4">Vật tư & An toàn</h2>
+            <h2 className="mb-4 text-base font-black text-slate-900">Vật tư & An toàn</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <FlaskConical className="w-3.5 h-3.5 text-slate-400" strokeWidth={2.5} />
+                <div className="mb-2 flex items-center gap-1.5">
+                  <FlaskConical className="h-3.5 w-3.5 text-slate-400" strokeWidth={2.5} />
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vật tư cần có</p>
                 </div>
-                {plan.requiredInputs?.length ? (
+                {detail.requiredInputs.length > 0 ? (
                   <ul className="space-y-1">
-                    {plan.requiredInputs.map((inp, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-sm font-semibold text-slate-700">
-                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#245A34] shrink-0" />
-                        {inp}
+                    {detail.requiredInputs.map((input, index) => (
+                      <li key={`${input}-${index}`} className="flex items-start gap-1.5 text-sm font-semibold text-slate-700">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#245A34]" />
+                        {input}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm font-semibold text-slate-400 italic">Chưa cập nhật</p>
+                  <p className="text-sm italic font-semibold text-slate-400">Chưa cập nhật</p>
                 )}
               </div>
 
               <div className="rounded-2xl bg-red-50 p-4">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <ShieldAlert className="w-3.5 h-3.5 text-red-400" strokeWidth={2.5} />
+                <div className="mb-2 flex items-center gap-1.5">
+                  <ShieldAlert className="h-3.5 w-3.5 text-red-400" strokeWidth={2.5} />
                   <p className="text-[10px] font-black uppercase tracking-widest text-red-500">Cảnh báo an toàn</p>
                 </div>
-                {plan.safetyWarnings?.length ? (
+                {detail.safetyWarnings.length > 0 ? (
                   <ul className="space-y-1">
-                    {plan.safetyWarnings.map((w, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-sm font-semibold text-red-700">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={2.5} />
-                        {w}
+                    {detail.safetyWarnings.map((warning, index) => (
+                      <li key={`${warning}-${index}`} className="flex items-start gap-1.5 text-sm font-semibold text-red-700">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2.5} />
+                        {warning}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm font-semibold text-red-400 italic">Không có cảnh báo</p>
+                  <p className="text-sm italic font-semibold text-red-400">Kiểm tra thực tế trước khi áp dụng.</p>
                 )}
               </div>
 
               <div className="rounded-2xl bg-green-50 p-4">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" strokeWidth={2.5} />
+                <div className="mb-2 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500" strokeWidth={2.5} />
                   <p className="text-[10px] font-black uppercase tracking-widest text-green-600">Dấu hiệu thành công</p>
                 </div>
                 <p className="text-sm font-semibold text-green-800">
-                  {plan.successIndicators || <span className="italic text-green-400">Chưa cập nhật</span>}
+                  {detail.successIndicators || <span className="italic text-green-400">Chưa cập nhật</span>}
                 </p>
               </div>
             </div>
           </section>
         </div>
 
-        {/* Right col (1/3) */}
         <div className="flex flex-col gap-6">
-
-          {/* AI source */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Bot className="w-4 h-4 text-slate-400" strokeWidth={2} />
-              Tài liệu & Nguồn tham khảo
+            <h2 className="mb-4 flex items-center gap-2 text-base font-black text-slate-900">
+              <Bot className="h-4 w-4 text-slate-400" strokeWidth={2} />
+              Tài liệu & Nguồn tham khảo AI
             </h2>
             <div className="space-y-4 text-sm">
-              {plan.sourceDocuments && plan.sourceDocuments.length > 0 && (
+              {detail.sourceDocuments.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-slate-400" />
-                    Tài liệu chuyên môn ({plan.sourceDocuments.length})
+                  <h3 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                    <FileText className="h-3.5 w-3.5 text-slate-400" />
+                    Tài liệu chuyên môn ({detail.sourceDocuments.length})
                   </h3>
                   <div className="space-y-2">
-                    {plan.sourceDocuments.map((doc, idx) => (
-                      <SourceDocRow key={idx} doc={doc} />
+                    {detail.sourceDocuments.map((doc, idx) => (
+                      <SourceDocRow key={doc.pointId ?? `${doc.title}-${idx}`} doc={doc} onClick={() => setSelectedDoc(doc)} />
                     ))}
                   </div>
                 </div>
               )}
 
-              {plan.webSearchResults && plan.webSearchResults.length > 0 && (
+              {detail.webSearchResults.length > 0 && (
                 <div>
-                  <h3 className="text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5 mt-4">
-                    <Globe className="w-3.5 h-3.5 text-slate-400" />
-                    Tìm kiếm Web ({plan.webSearchResults.length})
+                  <h3 className="mt-4 mb-2 flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                    <Globe className="h-3.5 w-3.5 text-slate-400" />
+                    Tìm kiếm Web ({detail.webSearchResults.length})
                   </h3>
                   <div className="space-y-2">
-                    {plan.webSearchResults.map((result, idx) => (
-                      <WebSearchRow key={idx} result={result} />
+                    {detail.webSearchResults.map((result, idx) => (
+                      <a
+                        key={`${result.url ?? result.title ?? "web"}-${idx}`}
+                        href={result.url ?? "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group block rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 transition-colors hover:border-indigo-100 hover:bg-indigo-50"
+                      >
+                        <div className="mb-1 flex items-start justify-between gap-2">
+                          <p className="text-sm font-bold text-indigo-900 group-hover:underline">{result.title || "Kết quả tìm kiếm"}</p>
+                          <ExternalLink className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                        </div>
+                        {result.content && <p className="line-clamp-2 text-xs text-slate-500">{result.content}</p>}
+                        {result.url && <p className="mt-2 truncate font-mono text-[10px] text-slate-400">{result.url}</p>}
+                      </a>
                     ))}
                   </div>
                 </div>
               )}
 
-              {(!plan.sourceDocuments || plan.sourceDocuments.length === 0) && (!plan.webSearchResults || plan.webSearchResults.length === 0) && (
+              {detail.sourceDocuments.length === 0 && detail.webSearchResults.length === 0 && (
                 <div className="rounded-2xl bg-slate-50 px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nguồn nội bộ</p>
-                  <p className="font-bold text-slate-700">{plan.source || <span className="italic text-slate-400">Không rõ</span>}</p>
+                  <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Nguồn nội bộ</p>
+                  <p className="font-bold text-slate-700">{detail.source || <span className="italic text-slate-400">Không rõ</span>}</p>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Audit */}
           <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
-            <h2 className="text-base font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-400" strokeWidth={2} />
+            <h2 className="mb-4 flex items-center gap-2 text-base font-black text-slate-900">
+              <Clock className="h-4 w-4 text-slate-400" strokeWidth={2} />
               Thông tin hệ thống
             </h2>
             <div className="space-y-2 text-sm">
               {[
-                { label: "RAG Plan ID", value: plan.planId },
-                { label: "Plant Mgmt ID", value: plan.plantManagementPlanId },
-                { label: "Ngày tạo", value: formatDate(plan.createdAt) },
-                { label: "Cập nhật lần cuối", value: formatDate(plan.lastModifiedAt) },
+                { label: "RAG Plan ID", value: detail.planId },
+                { label: "Plant Mgmt ID", value: detail.plantManagementPlanId },
+                { label: "Ngày tạo", value: formatDate(detail.createdAt) },
+                { label: "Cập nhật lần cuối", value: formatDate(detail.lastModifiedAt) },
               ].map(({ label, value }) =>
                 value ? (
                   <div key={label} className="flex justify-between gap-2">
-                    <span className="text-slate-400 font-semibold shrink-0">{label}</span>
-                    <span className="font-bold text-slate-700 text-right truncate text-xs">{value}</span>
+                    <span className="shrink-0 font-semibold text-slate-400">{label}</span>
+                    <span className="truncate text-right text-xs font-bold text-slate-700">{value}</span>
                   </div>
                 ) : null,
               )}
@@ -500,8 +475,44 @@ export function RagPlanDetailPage() {
           </section>
         </div>
       </div>
+
+      <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+        <h2 className="mb-1 text-base font-black text-slate-900">Lịch trình (Bản mẫu) ({detail.schedule.length})</h2>
+        <p className="mb-5 text-sm font-semibold text-slate-400">Các sự kiện mẫu được định nghĩa sẵn trong kế hoạch này</p>
+        <EmbeddedEventList events={embeddedEvents} />
+      </section>
+
+      {previewDraftEvents.length > 0 && (
+        <section className="rounded-[1.75rem] border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-black text-slate-900">
+                <CalendarDays className="h-4 w-4 text-slate-400" strokeWidth={2} />
+                Xem lịch kế hoạch
+              </h2>
+              <p className="mt-0.5 text-sm font-semibold text-slate-400">
+                Hiển thị các sự kiện của kế hoạch với ngày khởi điểm là ngày bạn chọn
+              </p>
+            </div>
+          </div>
+          <div className="h-[540px]">
+            <PlanPreviewCalendar draftEvents={previewDraftEvents} baseDate={new Date(startDate)} />
+          </div>
+        </section>
+      )}
+
+      {selectedDoc && (
+        <SourceDocumentModal
+          sourceDocument={{
+            title: selectedDoc.title,
+            pageContent: selectedDoc.pageContent ?? selectedDoc.content ?? "",
+            url: selectedDoc.url,
+            pointId: selectedDoc.pointId,
+            metadata: selectedDoc.metadata,
+          }}
+          onClose={() => setSelectedDoc(null)}
+        />
+      )}
     </div>
   );
 }
-
-export default RagPlanDetailPage;

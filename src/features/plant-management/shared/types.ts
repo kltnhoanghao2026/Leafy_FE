@@ -553,8 +553,11 @@ export interface PlanResponse {
 export interface RagPlanSourceDocument {
   title?: string;
   content?: string;
+  pageContent?: string;
   url?: string;
   score?: number;
+  pointId?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface RagPlanWebSearchResult {
@@ -564,36 +567,17 @@ export interface RagPlanWebSearchResult {
   score?: number;
 }
 
-export interface RagPlanResponse {
-  planId: string;
-  planName: string | null;
-  diseaseName: string | null;
-  confidenceScore: number | null;
-  severityLevel: string | null;
-  requiredInputs: string[] | null;
-  safetyWarnings: string[] | null;
-  successIndicators: string | null;
+export interface RagPlanTask {
+  title: string;
+  description: string | null;
+  order: number | null;
   estimatedCost: string | null;
-  sourceType: string | null;
-  source: string | null;
-  sourceDocuments: RagPlanSourceDocument[] | null;
-  webSearchResults: RagPlanWebSearchResult[] | null;
-  plantId: string | null;
-  farmPlotId: string | null;
-  farmZoneId: string | null;
-  schedule: RagPlanScheduleEvent[] | null;
-  isPublic: boolean | null;
-  active: boolean | null;
-  creatorId: string | null;
-  ownerId: string | null;
-  userId: string | null;
-  plantManagementPlanId: string | null;
-  createdAt: string | null;
-  lastModifiedAt: string | null;
+  completed: boolean | null;
 }
 
 export interface RagPlanScheduleEvent {
   eventType: string;
+  targetType: string | null;
   note: string | null;
   description: string | null;
   daysFromStart: number | null;
@@ -602,6 +586,42 @@ export interface RagPlanScheduleEvent {
   ppeRequired: string | null;
   mrlNote: string | null;
   estimatedCost: string | null;
+  tasks: RagPlanTask[] | null;
+}
+
+export interface RagPlanContent {
+  plantId: string | null;
+  planName: string | null;
+  diseaseName: string | null;
+  confidenceScore: number | null;
+  severityLevel: string | null;
+  source: string | null;
+  farmPlotId: string | null;
+  farmZoneId: string | null;
+  schedule: RagPlanScheduleEvent[] | null;
+  requiredInputs: string[] | null;
+  safetyWarnings: string[] | null;
+  successIndicators: string | null;
+  estimatedCost: string | null;
+  urgency: string | null;
+}
+
+export interface RagPlanResponse {
+  planId: string;
+  userId: string | null;
+  question: string | null;
+  plantId: string | null;
+  diseaseName: string | null;
+  severityLevel: string | null;
+  urgency: string | null;
+  source: string | null;
+  sourceType: string | null;
+  plan: RagPlanContent | null;
+  sourceDocuments: RagPlanSourceDocument[] | null;
+  webSearchResults: RagPlanWebSearchResult[] | null;
+  plantManagementPlanId: string | null;
+  createdAt: string | null;
+  lastModifiedAt: string | null;
 }
 
 export interface RagPlanListParams {
