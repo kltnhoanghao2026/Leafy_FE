@@ -277,7 +277,7 @@ export function RagInfoPanel({
                   key={`plan-${index}`}
                   onClick={() => {
                     if (savedPlanId) {
-                      navigate(ROUTES.DASHBOARD.RAG_PLAN(savedPlanId));
+                      navigate(ROUTES.DASHBOARD.PLAN_RAG_DETAIL(savedPlanId));
                     }
                   }}
                   className={`rounded-2xl border border-violet-200 bg-violet-50 p-4 transition-all ${

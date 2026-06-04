@@ -646,7 +646,7 @@ export function PlansPage() {
         <PagedGrid
           viewMode={viewMode}
           page={page}
-          totalPages={Math.ceil((ragPlansQuery.data?.length ?? 0) / pageSize)}
+          totalPages={1}
           totalElements={ragPlansQuery.data?.length ?? 0}
           itemLabel="kế hoạch AI"
           onPageChange={setPage}

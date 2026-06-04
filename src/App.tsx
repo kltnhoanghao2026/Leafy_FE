@@ -82,7 +82,7 @@ const DiseaseDiagnosisPage = lazy(() =>
 );
 const PlantDetailPage = lazy(() =>
   import("./features/plant-management/plant/pages/PlantDetailPage").then((module) => ({
-    default: module.PlantDetailPage,
+    default: module.default,
   })),
 );
 const PlantListPage = lazy(() =>
@@ -103,11 +103,6 @@ const PlanDetailPage = lazy(() =>
 const PlanApplyDetailPage = lazy(() =>
   import("./features/plant-management/plan/pages/PlanApplyDetailPage").then((module) => ({
     default: module.PlanApplyDetailPage,
-  })),
-);
-const RagPlanDetailPageForRagTab = lazy(() =>
-  import("./features/plant-management/plan/pages/RagPlanDetailPage").then((module) => ({
-    default: module.RagPlanDetailPage,
   })),
 );
 const PlansPage = lazy(() =>
@@ -136,7 +131,7 @@ const RagChatPage = lazy(() =>
   })),
 );
 const RagPlanDetailPage = lazy(() =>
-  import("./features/rag-chat/pages/RagPlanDetailPage").then((module) => ({
+  import("./features/plant-management/plan/pages/RagPlanDetailPage").then((module) => ({
     default: module.RagPlanDetailPage,
   })),
 );
@@ -464,7 +459,7 @@ function App() {
                 path="plans/rag/:planId"
                 element={
                   <Suspense fallback={<PageLoader />}>
-                    <RagPlanDetailPageForRagTab />
+                    <RagPlanDetailPage />
                   </Suspense>
                 }
               />
