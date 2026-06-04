@@ -208,6 +208,7 @@ export const API_ENDPOINTS = {
   FILES: {
     UPLOAD: "/files/upload",
     PRESIGNED_URL: (fileId: string) => `/files/presigned-url/${fileId}`,
+    BY_S3_KEY: (s3Key: string) => `/files/s3-key/${encodeURIComponent(s3Key)}`,
     PRESIGNED_UPLOAD_URL: "/files/presigned-upload-url",
     CREATE: "/files",
   },

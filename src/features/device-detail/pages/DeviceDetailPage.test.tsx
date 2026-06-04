@@ -151,6 +151,7 @@ function setupHandlers(options: HandlerOptions = {}) {
   let createSchedulePayload: unknown = null;
   let detectPayload: unknown = null;
   const requestedFileIds: string[] = [];
+  const requestedS3Keys: string[] = [];
   const latestReadingZoneIds: Array<string | null> = [];
   const chartZoneIds: Array<string | null> = [];
   const mediaZoneIds: Array<string | null> = [];
@@ -195,6 +196,25 @@ function setupHandlers(options: HandlerOptions = {}) {
         data: `https://files.example.test/${String(params.fileId)}.jpg`,
       });
     }),
+    http.get("*/api/files/s3-key/:s3Key", ({ params }) => {
+      requestedS3Keys.push(String(params.s3Key));
+      return HttpResponse.json({
+        code: 1000,
+        message: "ok",
+        data: {
+          id: "legacy-file-1",
+          s3Key: String(params.s3Key),
+          originalFileName: "leafy-capture.jpg",
+          contentType: "image/jpeg",
+          fileType: "IMAGE",
+          fileSize: 12345,
+          uploadedBy: "system",
+          active: true,
+          createdAt: "2026-05-19T08:30:00Z",
+          lastModifiedAt: "2026-05-19T08:30:00Z",
+        },
+      });
+    }),
     http.post(`*/api/iot/devices/${deviceUid}/camera/capture-schedule`, async ({ request }) => {
       createSchedulePayload = await request.json();
       return HttpResponse.json(schedule);
@@ -214,6 +234,7 @@ function setupHandlers(options: HandlerOptions = {}) {
     getCreateSchedulePayload: () => createSchedulePayload,
     getDetectPayload: () => detectPayload,
     getRequestedFileIds: () => requestedFileIds,
+    getRequestedS3Keys: () => requestedS3Keys,
     getLatestReadingZoneIds: () => latestReadingZoneIds,
     getChartZoneIds: () => chartZoneIds,
     getMediaZoneIds: () => mediaZoneIds,
@@ -299,6 +320,33 @@ describe("DeviceDetailPage camera media panel", () => {
     expect(screen.getAllByText(/coffee-rust/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Quan trọng/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Đã tạo cảnh báo").length).toBeGreaterThan(0);
+  });
+
+  it("resolves legacy internal file-service media URLs through public presigned URLs", async () => {
+    const legacyS3Key = "075ac62d-2b51-4fa6-9540-e0a2dbb3f359-leafy-capture.jpg";
+    const handlers = setupHandlers({
+      mediaEvents: [
+        {
+          ...media,
+          analysis: {
+            ...analysis,
+            fileUrl: `http://file-service/internal/files/download/s3-key?s3Key=${legacyS3Key}`,
+          },
+        },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Leafy Camera")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(handlers.getRequestedS3Keys()).toContain(legacyS3Key);
+      expect(handlers.getRequestedFileIds()).toContain("legacy-file-1");
+    });
+
+    const images = await screen.findAllByRole("img");
+    expect(images.some((image) => image.getAttribute("src") === "https://files.example.test/legacy-file-1.jpg")).toBe(true);
+    expect(images.some((image) => image.getAttribute("src")?.includes("file-service/internal"))).toBe(false);
   });
 
   it("creates a client camera schedule through the device scoped endpoint", async () => {

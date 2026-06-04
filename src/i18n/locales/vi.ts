@@ -903,6 +903,8 @@ export const vi = {
         showLessHistory: "Thu gọn",
         noEvents: "Chưa có lần chụp nào.",
         noCurrentZoneMedia: "Chưa có ảnh hoặc chẩn đoán nào trong khu vực hiện tại.",
+        deleteHistory: "Xóa ảnh khỏi lịch sử",
+        deleteConfirm: "Xóa ảnh này khỏi lịch sử? Cảnh báo và sự kiện cây trồng liên quan vẫn được giữ lại.",
         waitingForUpload: "Đang chờ upload",
         mediaDetail: "Chi tiết ảnh",
         capturedAt: "Thời điểm chụp",

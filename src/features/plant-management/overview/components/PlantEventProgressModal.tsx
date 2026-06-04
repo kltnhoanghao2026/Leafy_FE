@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Leaf,
   Clock,
-  LayoutGrid,
+  ShieldAlert,
   ChevronDown,
   ChevronUp,
   GitBranch,
@@ -33,6 +33,7 @@ import {
 } from "../../shared/components/displayUtils";
 import { useTranslation } from "../../../../i18n";
 import type { TFunction } from "../../../../i18n/context";
+import { formatPlantEventAlertDetails } from "../../calendarview/utils/alertEventDetails";
 
 interface PlantEventProgressModalProps {
   event: PlantEventResponse;
@@ -120,6 +121,43 @@ function CircleProgress({
   );
 }
 
+function AlertDetailsCard({ alertDetails }: { alertDetails: NonNullable<ReturnType<typeof formatPlantEventAlertDetails>> }) {
+  const toneClass = {
+    danger: "border-red-100 bg-red-50 text-red-700",
+    warning: "border-amber-100 bg-amber-50 text-amber-700",
+    info: "border-sky-100 bg-sky-50 text-sky-700",
+  };
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-red-100 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-red-100 bg-red-50 px-3 py-2">
+        <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+        <p className="text-[11px] font-bold text-red-700">{alertDetails.title}</p>
+      </div>
+      <div className="space-y-2 px-3 py-2.5">
+        {alertDetails.message && (
+          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-xs font-medium leading-relaxed text-slate-700">
+            {alertDetails.message}
+          </p>
+        )}
+        {alertDetails.fields.length > 0 && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {alertDetails.fields.map(field => (
+              <div
+                key={`${field.label}:${field.value}`}
+                className={`rounded-lg border px-2.5 py-2 ${toneClass[field.tone ?? "info"]}`}
+              >
+                <p className="text-[10px] font-semibold opacity-75">{field.label}</p>
+                <p className="mt-0.5 break-words text-xs font-bold">{field.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── ChildEventTree ────────────────────────────────────────────────────────────
 
 function ChildEventNode({
@@ -148,6 +186,8 @@ function ChildEventNode({
   const [tasksExpanded, setTasksExpanded] = useState(false);
   const hasChildren = event.children && event.children.length > 0;
   const Icon = EVENT_TYPE_ICONS[event.eventType] ?? Sprout;
+  const alertDetails = formatPlantEventAlertDetails(t, event.eventType, event.description);
+  const subtitle = alertDetails?.message || event.note || event.description;
 
   const tasks = event.tasks ?? [];
   const taskDone = tasks.filter((t) => t.completed).length;
@@ -238,8 +278,8 @@ function ChildEventNode({
           </div>
 
           {/* Note / description */}
-          {(event.note || event.description) && (
-            <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{event.note || event.description}</p>
+          {subtitle && (
+            <p className="mt-0.5 text-xs text-slate-400 line-clamp-1">{subtitle}</p>
           )}
 
           {/* Meta badges */}
@@ -521,12 +561,11 @@ export function PlantEventProgressModal({
   // Always fetch live data so toggling reflects immediately
   const { data: liveEvent } = usePlantEvent(initialEvent.id, true);
   const event = liveEvent ?? initialEvent;
+  const alertDetails = formatPlantEventAlertDetails(t, event.eventType, event.description);
 
   const category = EVENT_CATEGORY_MAP[event.eventType] ?? "ROUTINE_CARE";
   const dotColor = CATEGORY_DOT_COLORS[category];
   const dotColorRgb = hexToRgb(dotColor);
-
-  const hasFarmScope = !!(event.farmZoneId || event.farmPlotId);
 
   // Mutations
   const toggleTask = useToggleTaskMutation();
@@ -585,9 +624,13 @@ export function PlantEventProgressModal({
                   {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
                 </span>
                 <h3 className="mt-2 text-xl font-black text-slate-900 leading-tight">
-                  {event.note ?? t('plantManagement.overview.eventDetailsTitle')}
+                  {alertDetails?.title ?? event.note ?? t('plantManagement.overview.eventDetailsTitle')}
                 </h3>
-                {event.description && (
+                {alertDetails ? (
+                  <div className="mt-3">
+                    <AlertDetailsCard alertDetails={alertDetails} />
+                  </div>
+                ) : event.description && (
                   <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">{event.description}</p>
                 )}
               </div>

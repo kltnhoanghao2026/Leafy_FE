@@ -109,3 +109,22 @@ export const useCaptureDeviceImage = (deviceId: string) => {
     },
   });
 };
+
+export const useDeleteDeviceMediaMutation = (deviceId: string, zoneId?: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (mediaEventId: string) =>
+      collectorApi.deleteDeviceMedia(mediaEventId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: deviceKeys.media(deviceId, zoneId) }),
+        queryClient.invalidateQueries({ queryKey: deviceKeys.detail(deviceId) }),
+        queryClient.invalidateQueries({ queryKey: metricsKeys.all() }),
+      ]);
+    },
+    meta: {
+      successMessage: "Image history item deleted.",
+    },
+  });
+};

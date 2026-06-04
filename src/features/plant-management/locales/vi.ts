@@ -314,6 +314,13 @@ export const plantManagementVi = {
     // EventRow
     detailLabel: 'Chi tiết',
     eventDetailTitle: 'Chi tiết sự kiện',
+    alertDetailsTitle: 'Cảnh báo cảm biến',
+    alertTypeLabel: 'Loại cảnh báo',
+    alertSeverityLabel: 'Mức độ',
+    alertSensorLabel: 'Cảm biến',
+    alertMeasuredValueLabel: 'Giá trị ghi nhận',
+    alertSafeRangeLabel: 'Ngưỡng an toàn',
+    alertDeviceLabel: 'Thiết bị',
     startLabel: 'Bắt đầu',
     endLabel: 'Kết thúc',
     durationLabel: 'Thời lượng',

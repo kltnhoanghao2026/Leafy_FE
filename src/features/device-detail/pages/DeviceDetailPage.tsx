@@ -18,6 +18,7 @@ import {
   Settings2,
   Sun,
   Thermometer,
+  Trash2,
   WifiOff,
   Wind,
 } from "lucide-react";
@@ -36,6 +37,7 @@ import { formatDateTime, formatNumber } from "../../metrics-view/utils/format";
 import { useTranslation } from "../../../i18n";
 import type { TFunction } from "../../../i18n/context";
 import { useFarmPlots, useFarmZones } from "../../farm-management/queries";
+import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
 import { useMyProfile } from "../../settings/queries";
 import {
   formatCameraQualityLabel,
@@ -71,6 +73,7 @@ import {
   useDeviceLatestReadings,
   useDeviceMedia,
   useCaptureDeviceImage,
+  useDeleteDeviceMediaMutation,
   usePushDeviceConfig,
   useReleaseDeviceMutation,
   useUpdateDeviceMutation,
@@ -439,6 +442,7 @@ interface DeviceMediaPanelProps {
   isRunningSchedule: boolean;
   isCreatingSchedule: boolean;
   isDetectingDisease: boolean;
+  isDeletingMedia: boolean;
   onCapture: () => Promise<void>;
   onRunScheduleNow: () => Promise<void>;
   onRunSchedule: (schedule: DisplayCameraSchedule) => Promise<void>;
@@ -461,6 +465,7 @@ interface DeviceMediaPanelProps {
     },
   ) => Promise<void>;
   onDeleteSchedule: (schedule: DisplayCameraSchedule) => Promise<void>;
+  onDeleteMedia: (media: DisplayDeviceMediaEvent) => Promise<void>;
   onDetectLatest: (media: DisplayDeviceMediaEvent) => Promise<void>;
 }
 
@@ -475,12 +480,14 @@ function DeviceMediaPanel({
   isRunningSchedule,
   isCreatingSchedule,
   isDetectingDisease,
+  isDeletingMedia,
   onCapture,
   onRunScheduleNow,
   onRunSchedule,
   onCreateSchedule,
   onUpdateSchedule,
   onDeleteSchedule,
+  onDeleteMedia,
   onDetectLatest,
 }: DeviceMediaPanelProps) {
   const { t } = useTranslation();
@@ -491,6 +498,7 @@ function DeviceMediaPanel({
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
   const [showAllMediaHistory, setShowAllMediaHistory] = useState(false);
+  const [deleteMediaTarget, setDeleteMediaTarget] = useState<DisplayDeviceMediaEvent | null>(null);
   const latestMedia = mediaEvents[0];
   const latestUploaded = mediaEvents.find(
     (event) => event.status === "UPLOADED" && event.fileId,
@@ -515,6 +523,13 @@ function DeviceMediaPanel({
     ? mediaEvents
     : mediaEvents.slice(0, compactHistoryLimit);
   const hiddenMediaCount = Math.max(mediaEvents.length - compactHistoryLimit, 0);
+
+  const confirmDeleteMedia = () => {
+    if (!deleteMediaTarget) return;
+    void onDeleteMedia(deleteMediaTarget)
+      .then(() => setDeleteMediaTarget(null))
+      .catch(() => undefined);
+  };
 
   useEffect(() => {
     if (selectedMediaId && !mediaEvents.some((event) => event.id === selectedMediaId)) {
@@ -571,6 +586,7 @@ function DeviceMediaPanel({
   };
 
   return (
+    <>
     <section className="rounded-[2rem] border border-slate-100 bg-white p-6 lg:p-8 shadow-sm">
       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-5">
         <div>
@@ -924,64 +940,89 @@ function DeviceMediaPanel({
           ) : null}
           <div className={`space-y-2 ${showAllMediaHistory ? "max-h-[520px] overflow-y-auto pr-1" : ""}`}>
             {visibleMediaEvents.map((event) => (
-              <button
+              <div
                 key={event.id}
-                type="button"
-                onClick={() => setSelectedMediaId(event.id)}
-                className={`w-full rounded-2xl border px-3 py-2.5 text-left transition hover:border-[#245A34]/40 hover:bg-white hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#245A34]/30 ${
+                className={`flex w-full items-center gap-2 rounded-2xl border bg-white px-3 py-2.5 transition hover:border-[#245A34]/40 hover:shadow-sm ${
                   selectedMedia?.id === event.id
-                    ? "border-[#245A34]/50 bg-white shadow-sm"
-                    : "border-slate-100 bg-white"
+                    ? "border-[#245A34]/50 shadow-sm"
+                    : "border-slate-100"
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                    {event.fileId || event.analysis?.fileUrl ? (
-                      <MediaImage
-                        source={event.analysis?.fileUrl ?? event.fileId ?? ""}
-                        alt={t("iot.devices.media.latestImageAlt")}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-400">
-                        <ImageOff className="h-5 w-5" strokeWidth={2.5} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className={badgeClass(statusTone(event.status))}>
-                        {formatMediaStatusLabel(t, event.status)}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-bold text-slate-500">
-                        {formatDateTime(event.uploadedAt || event.capturedAt || event.requestedAt)}
-                      </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMediaId(event.id)}
+                  className="min-w-0 flex-1 text-left focus:outline-none focus:ring-2 focus:ring-[#245A34]/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-14 w-16 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                      {event.fileId || event.analysis?.fileUrl ? (
+                        <MediaImage
+                          source={event.analysis?.fileUrl ?? event.fileId ?? ""}
+                          alt={t("iot.devices.media.latestImageAlt")}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-400">
+                          <ImageOff className="h-5 w-5" strokeWidth={2.5} />
+                        </div>
+                      )}
                     </div>
-                    <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">
-                      {event.fileId ? event.display.size : event.display.fallbackMessage}
-                    </p>
-                    {event.analysis ? (
-                      <div className={`mt-1 line-clamp-1 text-xs font-black ${event.analysis.error || event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
-                        {event.analysis.error
-                          ? t("iot.devices.media.analysis.failedFriendly")
-                          : event.display.analysis?.summary}
-                        {event.analysis.alertEventId ? (
-                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
-                            {t("iot.devices.media.analysis.alertCreated")}
-                          </span>
-                        ) : null}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className={badgeClass(statusTone(event.status))}>
+                          {formatMediaStatusLabel(t, event.status)}
+                        </span>
+                        <span className="shrink-0 text-[11px] font-bold text-slate-500">
+                          {formatDateTime(event.uploadedAt || event.capturedAt || event.requestedAt)}
+                        </span>
                       </div>
-                    ) : (
-                      <p className="mt-1 text-xs font-black text-slate-400">{t("iot.devices.media.analysis.notAnalyzed")}</p>
-                    )}
+                      <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">
+                        {event.fileId ? event.display.size : event.display.fallbackMessage}
+                      </p>
+                      {event.analysis ? (
+                        <div className={`mt-1 line-clamp-1 text-xs font-black ${event.analysis.error || event.analysis.diseaseDetected ? "text-red-600" : "text-emerald-700"}`}>
+                          {event.analysis.error
+                            ? t("iot.devices.media.analysis.failedFriendly")
+                            : event.display.analysis?.summary}
+                          {event.analysis.alertEventId ? (
+                            <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">
+                              {t("iot.devices.media.analysis.alertCreated")}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs font-black text-slate-400">{t("iot.devices.media.analysis.notAnalyzed")}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                <button
+                  type="button"
+                  title={t("iot.devices.media.deleteHistory")}
+                  aria-label={t("iot.devices.media.deleteHistory")}
+                  disabled={isDeletingMedia}
+                  onClick={() => setDeleteMediaTarget(event)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" strokeWidth={2.5} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
       </div>
     </section>
+    {deleteMediaTarget ? (
+      <ConfirmDeleteDialog
+        title={t("iot.devices.media.deleteHistory")}
+        description={t("iot.devices.media.deleteConfirm")}
+        confirmLabel={t("common.delete")}
+        isDeleting={isDeletingMedia}
+        onCancel={() => setDeleteMediaTarget(null)}
+        onConfirm={confirmDeleteMedia}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -1165,6 +1206,7 @@ export function DeviceDetailPage() {
   const releaseDeviceMutation = useReleaseDeviceMutation();
   const pushConfigMutation = usePushDeviceConfig(resolvedDeviceId);
   const captureImageMutation = useCaptureDeviceImage(resolvedDeviceId);
+  const deleteMediaMutation = useDeleteDeviceMediaMutation(resolvedDeviceId, currentZoneId);
   const runScheduleNowMutation = useRunScheduledCameraMutation(deviceUid);
   const createScheduleMutation = useCreateDeviceCameraScheduleMutation();
   const updateScheduleMutation = useUpdateDeviceScheduleMutation(deviceUid);
@@ -1447,6 +1489,12 @@ export function DeviceDetailPage() {
       deviceUid,
     });
     await cameraSchedulesQuery.refetch();
+  };
+
+  const handleDeleteMedia = async (media: DeviceMediaEventResponse) => {
+    await deleteMediaMutation.mutateAsync(media.id);
+    await mediaQuery.refetch();
+    await deviceDetailQuery.refetch();
   };
 
   const handleDetectLatestMedia = async (media: DeviceMediaEventResponse) => {
@@ -1815,12 +1863,14 @@ export function DeviceDetailPage() {
             isRunningSchedule={runScheduleNowMutation.isPending}
             isCreatingSchedule={createScheduleMutation.isPending}
             isDetectingDisease={detectDiseaseMutation.isPending}
+            isDeletingMedia={deleteMediaMutation.isPending}
             onCapture={handleCaptureImage}
             onRunScheduleNow={handleRunScheduleNow}
             onRunSchedule={handleRunSchedule}
             onCreateSchedule={handleCreateCameraSchedule}
             onUpdateSchedule={handleUpdateCameraSchedule}
             onDeleteSchedule={handleDeleteCameraSchedule}
+            onDeleteMedia={handleDeleteMedia}
             onDetectLatest={handleDetectLatestMedia}
           />
 

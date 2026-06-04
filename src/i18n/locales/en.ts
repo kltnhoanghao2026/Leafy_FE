@@ -907,6 +907,8 @@ export const en: TranslationDict = {
         showLessHistory: "Collapse",
         noEvents: "No capture events yet.",
         noCurrentZoneMedia: "No images or diagnoses have been captured in the current zone yet.",
+        deleteHistory: "Delete image history item",
+        deleteConfirm: "Delete this image history item? Alerts and plant events will be kept.",
         waitingForUpload: "Waiting for upload",
         mediaDetail: "Media detail",
         capturedAt: "Captured",

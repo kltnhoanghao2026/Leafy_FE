@@ -68,6 +68,7 @@ export function PlantEventsCalendarPage() {
   const calendarQuery = usePlantEventsCalendar({
     startDate:    dateRange.startDate,
     endDate:      dateRange.endDate,
+    profileId:    ownerProfileId      || undefined,
     farmPlotId:   farmPlotId         || undefined,
     farmZoneId:   farmZoneId         || undefined,
     plantId:      plantId            || undefined,
