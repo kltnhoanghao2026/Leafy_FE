@@ -12,6 +12,13 @@ import { useMyPlants } from "../..";
 import { unwrapPageContent } from "../../shared/api/apiUtils";
 import type { BulkApplyCustomRequest, PlanApplyItemRequest, PlanResponse } from "../../shared/types";
 
+// ── Per-row validation errors ────────────────────────────────────────────────────
+
+interface PlanRowFieldErrors {
+  startDate?: string;
+  farmPlotId?: string;
+}
+
 // ── Per-plan row state ────────────────────────────────────────────────────────
 
 interface PlanRowConfig {
@@ -21,6 +28,7 @@ interface PlanRowConfig {
   plantId: string;
   excludedPlantIds: string[];
   excludedFarmZoneIds: string[];
+  errors?: PlanRowFieldErrors;
 }
 
 const defaultRowConfig = (): PlanRowConfig => ({
@@ -30,6 +38,7 @@ const defaultRowConfig = (): PlanRowConfig => ({
   plantId: "",
   excludedPlantIds: [],
   excludedFarmZoneIds: [],
+  errors: {},
 });
 
 // ── Sub-component: one plan's configuration row ───────────────────────────────
@@ -134,11 +143,14 @@ function PlanRow({ plan, config, onUpdate, plotOptions }: PlanRowProps) {
               </label>
               <DatePicker
                 value={config.startDate}
-                onChange={(v) => onUpdate({ ...config, startDate: v })}
+                onChange={(v) => onUpdate({ ...config, startDate: v, errors: { ...config.errors, startDate: undefined } })}
                 type="date"
                 minDate={today}
                 placeholder="Chọn ngày..."
               />
+              {config.errors?.startDate && (
+                <p className="mt-1 text-[11px] font-semibold text-red-500">{config.errors.startDate}</p>
+              )}
             </div>
             <div>
               <label className="mb-1.5 flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500">
@@ -154,6 +166,7 @@ function PlanRow({ plan, config, onUpdate, plotOptions }: PlanRowProps) {
                     plantId: "",
                     excludedPlantIds: [],
                     excludedFarmZoneIds: [],
+                    errors: { ...config.errors, farmPlotId: undefined },
                   })
                 }
                 options={plotOptions}
@@ -200,10 +213,16 @@ function PlanRow({ plan, config, onUpdate, plotOptions }: PlanRowProps) {
           )}
 
           {/* No plot selected warning */}
-          {!config.farmPlotId && (
+          {!config.farmPlotId && !config.errors?.farmPlotId && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
               <AlertCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
               Chọn ít nhất một vườn để áp dụng kế hoạch này.
+            </div>
+          )}
+          {config.errors?.farmPlotId && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-500" />
+              {config.errors.farmPlotId}
             </div>
           )}
 
@@ -367,12 +386,40 @@ export function BulkApplyCustomDialog({
 
   const readyCount = plans.filter((p) => {
     const c = configs[p.id];
-    return !!c?.startDate && (!!c.farmPlotId || !!c.plantId || !!c.farmZoneId);
+    if (!c) return false;
+    // A row is "ready" only if it has no field-level errors AND is fully configured
+    if (c.errors?.startDate || c.errors?.farmPlotId) return false;
+    return !!c.startDate && (!!c.farmPlotId || !!c.plantId || !!c.farmZoneId);
   }).length;
 
   const canSubmit = readyCount > 0;
 
   const handleSubmit = () => {
+    // Validate all rows: each item needs planId (always present), startDate, and at least one scope field
+    const newConfigs: Record<string, PlanRowConfig> = {};
+    let hasError = false;
+
+    for (const plan of plans) {
+      const c = configs[plan.id] ?? defaultRowConfig();
+      const errors: PlanRowFieldErrors = {};
+
+      if (!c.startDate) {
+        errors.startDate = 'Ngày bắt đầu là bắt buộc.';
+        hasError = true;
+      }
+      if (!c.farmPlotId && !c.plantId && !c.farmZoneId) {
+        errors.farmPlotId = 'Phải chọn ít nhất một vườn, khu vực, hoặc cây.';
+        hasError = true;
+      }
+
+      newConfigs[plan.id] = { ...c, errors };
+    }
+
+    if (hasError) {
+      setConfigs(newConfigs);
+      return;
+    }
+
     const items: PlanApplyItemRequest[] = plans
       .map((p) => {
         const c = configs[p.id];
@@ -381,11 +428,9 @@ export function BulkApplyCustomDialog({
         return {
           planId:   p.id,
           startDate: c.startDate,
-          // If a specific plant is chosen, plant scope wins; farm context is dropped
           plantId:     c.plantId || undefined,
           farmPlotId:  c.farmPlotId && !c.plantId ? c.farmPlotId  : undefined,
           farmZoneId:  c.farmZoneId && !c.plantId ? c.farmZoneId  : undefined,
-          // Excludes only make sense when not targeting a single plant
           excludedPlantIds:    !c.plantId && c.excludedPlantIds.length    > 0 ? c.excludedPlantIds    : undefined,
           excludedFarmZoneIds: !c.plantId && c.excludedFarmZoneIds.length > 0 ? c.excludedFarmZoneIds : undefined,
         } satisfies PlanApplyItemRequest;

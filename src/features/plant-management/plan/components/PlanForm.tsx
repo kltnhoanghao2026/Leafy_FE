@@ -103,6 +103,7 @@ export function PlanForm({
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [planErrors, setPlanErrors] = useState<PlanInfoErrors>({});
+  const [eventErrors, setEventErrors] = useState<EventFieldErrors[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'events' | 'preview'>('info');
 
   // Persist draft in localStorage (create mode only)
@@ -153,6 +154,77 @@ export function PlanForm({
     value: string | number | boolean | undefined,
   ) => setEvents((prev) => prev.map((evt, i) => (i === index ? { ...evt, [field]: value } : evt)));
 
+  // ── Backend error mapping ────────────────────────────────────────────────────
+
+  /**
+   * Extract the `errors` map from a backend validation error response.
+   * Backend GlobalExceptionHandler returns { code, message, data, errors }.
+   * Backend field names: diseaseName, eventType, daysFromStart, durationDays,
+   * schedule[0].eventType, schedule[0].tasks[0].title, etc.
+   */
+  function parseBackendErrors(err: unknown): Record<string, string> | null {
+    if (!err || typeof err !== 'object') return null;
+    const e = err as Partial<AxiosError<ApiEnvelope<null>>>;
+    const data = e.response?.data;
+    if (!data || typeof data !== 'object') return null;
+    if ('errors' in data && data.errors && typeof data.errors === 'object') {
+      return data.errors as Record<string, string>;
+    }
+    return null;
+  }
+
+  /**
+   * Map backend field-path errors to local field-level error states.
+   * Backend paths like "schedule[0].eventType" map to eventErrors[0].eventType.
+   * Backend paths like "schedule[0].tasks[0].title" map to eventErrors[0].tasks[0].title.
+   * Top-level paths like "diseaseName" map to planErrors.diseaseName.
+   */
+  function applyBackendErrorsToFields(beErrors: Record<string, string> | null): boolean {
+    if (!beErrors) return false;
+
+    const planErrors: PlanInfoErrors = {};
+    const newEventErrors: EventFieldErrors[] = eventErrors.map(() => ({}));
+
+    for (const [fieldPath, message] of Object.entries(beErrors)) {
+      if (fieldPath === 'diseaseName') {
+        planErrors.diseaseName = message;
+        continue;
+      }
+
+      const scheduleMatch = fieldPath.match(/^schedule\[(\d+)\](?:\.tasks\[(\d+)\])?\.(.+)$/);
+      if (scheduleMatch) {
+        const [, eventIdxStr, taskIdxStr, field] = scheduleMatch;
+        const eventIdx = parseInt(eventIdxStr, 10);
+        if (isNaN(eventIdx) || eventIdx >= newEventErrors.length) continue;
+
+        if (taskIdxStr !== undefined) {
+          const taskIdx = parseInt(taskIdxStr, 10);
+          if (isNaN(taskIdx)) continue;
+          newEventErrors[eventIdx] ??= {};
+          newEventErrors[eventIdx].tasks ??= {};
+          newEventErrors[eventIdx].tasks![taskIdx] ??= {};
+          (newEventErrors[eventIdx].tasks![taskIdx] as Record<string, string>)[field] = message;
+        } else {
+          (newEventErrors[eventIdx] as Record<string, string>)[field] = message;
+        }
+        continue;
+      }
+
+      (planErrors as Record<string, string>)[fieldPath] = message;
+    }
+
+    const hasEventErrors = newEventErrors.some(
+      (e) => Object.keys(e).length > 0 || (e.tasks && Object.keys(e.tasks).length > 0),
+    );
+
+    setPlanErrors(planErrors);
+    setEventErrors(newEventErrors);
+    if (hasEventErrors) setActiveTab('events');
+    else setActiveTab('info');
+
+    return true;
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -170,18 +242,44 @@ export function PlanForm({
 
     if (!isEditMode) {
       // ── Create mode validation ──────────────────────────────────────────
+      const newEventErrors: EventFieldErrors[] = events.map(() => ({}));
+      let hasEventError = false;
+
       for (const [i, evt] of events.entries()) {
         if (!evt.eventType) {
-          setSubmitError(`Sự kiện #${i + 1}: Vui lòng chọn loại sự kiện.`);
-          setActiveTab('events');
-          return;
+          newEventErrors[i].eventType = 'Vui lòng chọn loại sự kiện.';
+          hasEventError = true;
         }
         if (!evt.note?.trim()) {
-          setSubmitError(`Sự kiện #${i + 1}: Vui lòng nhập ghi chú.`);
-          setActiveTab('events');
-          return;
+          newEventErrors[i].note = 'Vui lòng nhập ghi chú.';
+          hasEventError = true;
+        }
+        if (evt.daysFromStart !== undefined && evt.daysFromStart < 0) {
+          newEventErrors[i].daysFromStart = 'Phải bằng hoặc lớn hơn 0.';
+          hasEventError = true;
+        }
+        if (evt.durationDays !== undefined && evt.durationDays < 0) {
+          newEventErrors[i].durationDays = 'Phải bằng hoặc lớn hơn 0.';
+          hasEventError = true;
+        }
+        // Task title required validation (matches backend EventTaskRequest @NotBlank)
+        if (evt.tasks && evt.tasks.length > 0) {
+          newEventErrors[i].tasks = {};
+          for (const [ti, task] of evt.tasks.entries()) {
+            if (!task.title?.trim()) {
+              newEventErrors[i].tasks![ti] = { title: 'Tiêu đề công việc là bắt buộc.' };
+              hasEventError = true;
+            }
+          }
         }
       }
+
+      if (hasEventError) {
+        setEventErrors(newEventErrors);
+        setActiveTab('events');
+        return;
+      }
+      setEventErrors([]);
 
       const cleanedEvents: EmbeddedPlanEventRequest[] = events.map((evt) => ({
         eventType: evt.eventType,
@@ -228,11 +326,52 @@ export function PlanForm({
         navigate(createSuccessNavigateTo ?? ROUTES.DASHBOARD.PLANS);
       } catch (err) {
         console.error('[PlanForm] handleSubmit (create) error:', err);
-        setSubmitError('Có lỗi xảy ra khi tạo kế hoạch. Vui lòng thử lại.');
+        const beErrors = parseBackendErrors(err);
+        const applied = applyBackendErrorsToFields(beErrors);
+        if (!applied) {
+          setSubmitError('Có lỗi xảy ra khi tạo kế hoạch. Vui lòng thử lại.');
+        }
       }
     } else {
       // ── Edit mode validation ────────────────────────────────────────────
       const editForm = form as PlanFormStateEdit;
+      const newEventErrors: EventFieldErrors[] = events.map(() => ({}));
+      let hasEventError = false;
+
+      for (const [i, evt] of events.entries()) {
+        if (!evt.eventType) {
+          newEventErrors[i].eventType = 'Vui lòng chọn loại sự kiện.';
+          hasEventError = true;
+        }
+        if (!evt.note?.trim()) {
+          newEventErrors[i].note = 'Vui lòng nhập ghi chú.';
+          hasEventError = true;
+        }
+        if (evt.daysFromStart !== undefined && evt.daysFromStart < 0) {
+          newEventErrors[i].daysFromStart = 'Phải bằng hoặc lớn hơn 0.';
+          hasEventError = true;
+        }
+        if (evt.durationDays !== undefined && evt.durationDays < 0) {
+          newEventErrors[i].durationDays = 'Phải bằng hoặc lớn hơn 0.';
+          hasEventError = true;
+        }
+        if (evt.tasks && evt.tasks.length > 0) {
+          newEventErrors[i].tasks = {};
+          for (const [ti, task] of evt.tasks.entries()) {
+            if (!task.title?.trim()) {
+              newEventErrors[i].tasks![ti] = { title: 'Tiêu đề công việc là bắt buộc.' };
+              hasEventError = true;
+            }
+          }
+        }
+      }
+
+      if (hasEventError) {
+        setEventErrors(newEventErrors);
+        setActiveTab('events');
+        return;
+      }
+      setEventErrors([]);
 
       // Clean events similar to create mode
       const cleanedEvents: EmbeddedPlanEventRequest[] = events.map((evt) => ({
@@ -271,7 +410,11 @@ export function PlanForm({
         await (onUpdate?.(payload) ?? Promise.resolve());
       } catch (err) {
         console.error('[PlanForm] handleSubmit (edit) error:', err);
-        setSubmitError('Có lỗi xảy ra khi cập nhật kế hoạch. Vui lòng thử lại.');
+        const beErrors = parseBackendErrors(err);
+        const applied = applyBackendErrorsToFields(beErrors);
+        if (!applied) {
+          setSubmitError('Có lỗi xảy ra khi cập nhật kế hoạch. Vui lòng thử lại.');
+        }
       }
     }
   };
@@ -361,6 +504,8 @@ export function PlanForm({
           <div className={`h-full min-h-0 overflow-y-auto ${activeTab === 'events' ? 'flex flex-col' : 'hidden'}`}>
             <EventScheduleSection
               events={events}
+              errors={eventErrors}
+              onErrorsChange={setEventErrors}
               onAdd={addEvent}
               onChange={updateEvent}
               onRemove={removeEvent}
