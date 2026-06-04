@@ -39,9 +39,15 @@ export function CreatePlanDialog({ farmerProfileId, plantId, onClose }: CreatePl
     urgency: '',
   });
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.diseaseName.trim()) return;
+    setSubmitError(null);
+    if (!form.diseaseName.trim()) {
+      setSubmitError('Vui lòng nhập tên bệnh / vấn đề.');
+      return;
+    }
     const payload: PlanCreateRequest = {
       plantId: plantId || undefined,
       diseaseName: form.diseaseName.trim(),
@@ -49,12 +55,17 @@ export function CreatePlanDialog({ farmerProfileId, plantId, onClose }: CreatePl
       severityLevel: form.severityLevel.trim() || undefined,
       urgency: form.urgency.trim() || undefined,
     };
-    if (farmerProfileId) {
-      await consultingMutation.mutateAsync({ farmerProfileId, payload });
-    } else {
-      await ownMutation.mutateAsync(payload);
+    try {
+      if (farmerProfileId) {
+        await consultingMutation.mutateAsync({ farmerProfileId, payload });
+      } else {
+        await ownMutation.mutateAsync(payload);
+      }
+      onClose();
+    } catch (err) {
+      console.error('[CreatePlanDialog] submit error:', err);
+      setSubmitError('Có lỗi xảy ra. Vui lòng thử lại.');
     }
-    onClose();
   };
 
   const inputCls =
@@ -122,6 +133,11 @@ export function CreatePlanDialog({ farmerProfileId, plantId, onClose }: CreatePl
             />
           </div>
 
+          {submitError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-700">
+              {submitError}
+            </div>
+          )}
           <div className="flex gap-2 pt-1">
             <button
               type="button"
