@@ -863,10 +863,16 @@ function PlanList({ plans, keyword }: { plans: SearchPlanItem[]; keyword: string
                   )}
                 </div>
                 <div className="flex flex-wrap gap-3 text-[11px] text-slate-400 font-medium">
-                  <span className="flex items-center gap-1">
-                    <Avatar src={avatar} name={name} alt={name} size="xs" className="border border-slate-200" />
-                    {name}
-                    {plan.creatorInfo?.isVerified && <BadgeCheck className="w-3 h-3 text-[#245A34]" strokeWidth={2.5} />}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Avatar
+                      src={avatar}
+                      name={name}
+                      alt={name}
+                      size="sm"
+                      className="h-5 w-5 border border-slate-200 text-[9px]"
+                    />
+                    <span className="truncate">{name}</span>
+                    {plan.creatorInfo?.isVerified && <BadgeCheck className="w-3 h-3 shrink-0 text-[#245A34]" strokeWidth={2.5} />}
                   </span>
                   {plan.eventCount != null && plan.eventCount > 0 && (
                     <span className="flex items-center gap-1">

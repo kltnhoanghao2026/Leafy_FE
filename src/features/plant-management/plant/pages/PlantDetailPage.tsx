@@ -38,6 +38,7 @@ import {
   isHealthyDisease,
 } from '../../../disease-diagnosis/utils/diseaseLabels';
 import { useFilePreviewUrl } from '../../../settings/queries';
+import type { DiagnoseRequest, DiagnoseResult } from '../../../disease-diagnosis/types';
 import type { PlantCreateRequest, PlantUpdateRequest } from '../../shared/types';
 import type { PlantEventResponse } from "../../shared/types";
 import { PageErrorState } from '../../../../components/ui/PageErrorState';
@@ -70,7 +71,15 @@ function DiagnosisImage({ fileId, alt }: { fileId: string; alt: string }) {
   );
 }
 
-export function PlantDetailPage() {
+export interface DiagnosisHistoryEntry {
+  request: DiagnoseRequest;
+  result: DiagnoseResult | null;
+  topPrediction: DiagnoseResult["result"][number] | null;
+  requestTimestampMs: number;
+  resultTimestampMs: number;
+}
+
+function PlantDetailPage() {
   const { plantId = "" } = useParams();
   const navigate = useNavigate();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -105,35 +114,51 @@ export function PlantDetailPage() {
   const allResultsQuery = useDiagnoseResults({ page: 0, size: 100 });
 
   const plant = plantQuery.data;
+  const currentPlantId = plant?.id;
+  const speciesId = plant?.speciesId;
+  const farmPlotId = plant?.farmPlotId;
+
   const species = useMemo(
-    () => speciesQuery.data?.find((item) => item.id === plant?.speciesId),
-    [plant?.speciesId, speciesQuery.data],
+    () => speciesQuery.data?.find((item) => item.id === speciesId),
+    [speciesId, speciesQuery.data],
   );
   const farmPlot = useMemo(
-    () => farmPlots.find((item) => item.id === plant?.farmPlotId),
-    [farmPlots, plant?.farmPlotId],
+    () => farmPlots.find((item) => item.id === farmPlotId),
+    [farmPlotId, farmPlots],
   );
 
   // Filter diagnosis history for this specific plant
-  const diagnosisHistory = useMemo(() => {
+  const diagnosisHistory = useMemo<DiagnosisHistoryEntry[]>(() => {
     const requests = allRequestsQuery.data?.content ?? [];
-    const results = new Map(
-      (allResultsQuery.data?.content ?? []).map((r) => [r.diagnoseRequestId, r]),
+    const requestResults = allResultsQuery.data?.content ?? [];
+    const resultsByRequestId = new Map(
+      requestResults.map((result) => [result.diagnoseRequestId, result] as const),
     );
 
-    // Filter requests for this plant and combine with results
     return requests
-      .filter((req) => req.plantId === plantId)
-      .map((req) => ({
-        request: req,
-        result: results.get(req.diagnoseRequestId),
-      }))
+      .filter((request) => request.plantId === currentPlantId)
+      .map((request) => {
+        const result = resultsByRequestId.get(request.diagnoseRequestId) ?? null;
+        const topPrediction = result?.result?.[0] ?? null;
+        const requestTimestampMs = Date.parse(request.timeStamp);
+        const resultTimestampMs = result?.timeStamp ? Date.parse(result.timeStamp) : Number.NaN;
+
+        return {
+          request,
+          result,
+          topPrediction,
+          requestTimestampMs: Number.isNaN(requestTimestampMs) ? 0 : requestTimestampMs,
+          resultTimestampMs: Number.isNaN(resultTimestampMs) ? 0 : resultTimestampMs,
+        };
+      })
       .sort((a, b) => {
-        const dateA = new Date(a.request.timeStamp).getTime();
-        const dateB = new Date(b.request.timeStamp).getTime();
-        return dateB - dateA; // newest first
+        if (b.requestTimestampMs !== a.requestTimestampMs) {
+          return b.requestTimestampMs - a.requestTimestampMs;
+        }
+
+        return b.resultTimestampMs - a.resultTimestampMs;
       });
-  }, [allRequestsQuery.data, allResultsQuery.data, plantId]);
+  }, [allRequestsQuery.data, allResultsQuery.data, currentPlantId]);
 
   const handleUpdatePlant = async (
     payload: PlantCreateRequest | PlantUpdateRequest,
@@ -377,10 +402,11 @@ export function PlantDetailPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {diagnosisHistory.map(({ request, result }) => {
-              const topPrediction = result?.result?.[0];
-              const isHealthy = !topPrediction || isHealthyDisease(topPrediction.diseaseName);
-              const Icon = isHealthy ? CheckCircle2 : AlertTriangle;
+            {diagnosisHistory.map(({ request, result, topPrediction }) => {
+              const hasResult = Boolean(result);
+              const hasPredictions = Boolean(result?.result?.length);
+              const isHealthy = hasPredictions ? isHealthyDisease(topPrediction?.diseaseName ?? "") : false;
+              const Icon = !hasResult ? Microscope : isHealthy ? CheckCircle2 : AlertTriangle;
 
               return (
                 <div
@@ -404,9 +430,11 @@ export function PlantDetailPage() {
                         <div className="mt-2 flex items-center gap-3">
                           <span
                             className={`rounded-2xl p-2 ${
-                              isHealthy
-                                ? "bg-emerald-50 text-emerald-700"
-                                : "bg-amber-50 text-amber-700"
+                              !hasResult
+                                ? "bg-slate-100 text-slate-600"
+                                : isHealthy
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-amber-50 text-amber-700"
                             }`}
                           >
                             <Icon className="h-5 w-5" strokeWidth={2.5} />
@@ -415,27 +443,36 @@ export function PlantDetailPage() {
                             <h4 className="text-lg font-black text-slate-900">
                               {topPrediction
                                 ? getDiseaseLabel(topPrediction.diseaseName)
-                                : isHealthy
-                                ? "Khỏe mạnh"
-                                : "Chưa tải kết quả"}
+                                : !hasResult
+                                  ? "Đang chờ kết quả chẩn đoán"
+                                  : "Chưa có dữ liệu dự đoán"}
                             </h4>
                             {topPrediction && (
                               <p className="text-sm font-semibold text-slate-500">
                                 Độ tin cậy: {formatConfidence(topPrediction.confidenceScore)}
                               </p>
                             )}
+                            {!topPrediction && result?.timeStamp && (
+                              <p className="text-sm font-semibold text-slate-500">
+                                Kết quả cập nhật: {formatDate(result.timeStamp)}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <p
                           className={`mt-3 rounded-xl px-3 py-2 text-xs font-bold ${
-                            isHealthy
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-amber-50 text-amber-800"
+                            !hasResult
+                              ? "bg-slate-100 text-slate-600"
+                              : isHealthy
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-amber-50 text-amber-800"
                           }`}
                         >
-                          {isHealthy
-                            ? "Lá cây có dấu hiệu khỏe mạnh."
-                            : "Phát hiện dấu hiệu bệnh. Kết quả chỉ mang tính hỗ trợ."}
+                          {!hasResult
+                            ? "Yêu cầu chẩn đoán đã được gửi và đang chờ hệ thống trả kết quả."
+                            : isHealthy
+                              ? "Lá cây có dấu hiệu khỏe mạnh."
+                              : "Phát hiện dấu hiệu bệnh. Kết quả chỉ mang tính hỗ trợ."}
                         </p>
                       </div>
                     </div>
