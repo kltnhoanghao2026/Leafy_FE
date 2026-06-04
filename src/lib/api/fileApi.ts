@@ -4,10 +4,31 @@ import apiClient from "../apiClient";
 import { API_ENDPOINTS } from "../routes";
 
 const ABSOLUTE_OR_BROWSER_URL_PATTERN = /^(https?:|data:|blob:|\/)/i;
+const INTERNAL_FILE_DOWNLOAD_PATTERN = /\/internal\/files\/download\/s3-key(?:\?|$)/i;
 
 export const isFileServiceReference = (
   value: string | null | undefined,
-): value is string => Boolean(value && !ABSOLUTE_OR_BROWSER_URL_PATTERN.test(value));
+): value is string =>
+  Boolean(value && (!ABSOLUTE_OR_BROWSER_URL_PATTERN.test(value) || isInternalFileDownloadUrl(value)));
+
+const isInternalFileDownloadUrl = (value: string) =>
+  INTERNAL_FILE_DOWNLOAD_PATTERN.test(value);
+
+const extractInternalDownloadS3Key = (value: string): string | null => {
+  if (!isInternalFileDownloadUrl(value)) {
+    return null;
+  }
+
+  try {
+    const url = value.startsWith("http")
+      ? new URL(value)
+      : new URL(value, window.location.origin);
+    return url.searchParams.get("s3Key");
+  } catch {
+    const [, query = ""] = value.split("?");
+    return new URLSearchParams(query).get("s3Key");
+  }
+};
 
 export const fileApi = {
   async uploadFile(file: File): Promise<FileResponse> {
@@ -29,7 +50,22 @@ export const fileApi = {
     return response.data.data;
   },
 
-  async getPresignedUrl(fileId: string): Promise<string> {
+  async getPresignedUrl(fileReference: string): Promise<string> {
+    const internalS3Key = extractInternalDownloadS3Key(fileReference);
+    let fileId = fileReference;
+
+    if (internalS3Key) {
+      const fileResponse = await apiClient.get<ApiEnvelope<FileResponse>>(
+        API_ENDPOINTS.FILES.BY_S3_KEY(internalS3Key),
+      );
+
+      if (!fileResponse.data.data?.id) {
+        throw new Error(fileResponse.data.message || "File metadata is unavailable");
+      }
+
+      fileId = fileResponse.data.data.id;
+    }
+
     const response = await apiClient.get<ApiEnvelope<string>>(
       API_ENDPOINTS.FILES.PRESIGNED_URL(fileId),
     );

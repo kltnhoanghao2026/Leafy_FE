@@ -8,6 +8,7 @@ export {
 } from "./queries";
 export {
   useCaptureDeviceImage,
+  useDeleteDeviceMediaMutation,
   usePushDeviceConfig,
   useReleaseDeviceMutation,
   useUpdateDeviceMutation,

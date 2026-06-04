@@ -118,6 +118,27 @@ const buildPayload = (form: RuleFormState): CreateAlertRuleRequest => ({
   enabled: form.enabled,
 });
 
+const buildUpdatePayload = (
+  form: RuleFormState,
+  editingRule: AlertRuleResponse,
+): CreateAlertRuleRequest => {
+  const payload = buildPayload(form);
+  const scopeUnchanged =
+    payload.deviceId === (editingRule.deviceId ?? null) &&
+    payload.zoneId === (editingRule.zoneId ?? null) &&
+    payload.farmPlotId === (editingRule.farmPlotId ?? null);
+
+  if (!scopeUnchanged) {
+    return payload;
+  }
+
+  const updatePayload = { ...payload };
+  delete updatePayload.deviceId;
+  delete updatePayload.zoneId;
+  delete updatePayload.farmPlotId;
+  return updatePayload;
+};
+
 const validatePayload = (
   payload: CreateAlertRuleRequest,
   t: TFunction,
@@ -256,16 +277,22 @@ function RuleFormDialog({
   const hasSelectedSensorOption = sensorOptions.some(
     (option) => option.id === form.sensorTypeId,
   );
+  const preserveEditingDevice =
+    Boolean(editingRule?.deviceId) &&
+    form.deviceId === editingRule?.deviceId &&
+    form.zoneId === (editingRule?.zoneId ?? "") &&
+    form.farmPlotId === (editingRule?.farmPlotId ?? "");
 
   useEffect(() => {
     if (
+      !preserveEditingDevice &&
       form.deviceId &&
       devices.length > 0 &&
       !devices.some((device) => device.id === form.deviceId)
     ) {
       onFormChange((current) => ({ ...current, deviceId: "" }));
     }
-  }, [devices, form.deviceId, onFormChange]);
+  }, [devices, form.deviceId, onFormChange, preserveEditingDevice]);
 
   return (
     <ModalShell
@@ -714,7 +741,10 @@ export function AlertRulesPage() {
 
     try {
       if (editingRule) {
-        await updateRule.mutateAsync({ ruleId: editingRule.id, payload });
+        await updateRule.mutateAsync({
+          ruleId: editingRule.id,
+          payload: buildUpdatePayload(form, editingRule),
+        });
       } else {
         await createRule.mutateAsync(payload);
       }

@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import type { PlantEventResponse, PlantEventType } from '../../shared/types';
 import { EVENT_TYPE_LABELS, EVENT_CATEGORY_MAP, CATEGORY_DOT_COLORS } from '../../shared/components/displayUtils';
+import { useTranslation } from '../../../../i18n';
+import { getPlantEventDisplayText } from '../../calendarview/utils/alertEventDetails';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const EVENT_ICONS: Record<PlantEventType, React.ComponentType<{ className?: string }>> = {
@@ -30,6 +32,7 @@ function EventCard({
   event: PlantEventResponse;
   onSelectEvent?: (event: PlantEventResponse) => void;
 }) {
+  const { t } = useTranslation();
   const Icon = EVENT_ICONS[event.eventType] ?? Droplets;
   const category = EVENT_CATEGORY_MAP[event.eventType] ?? 'ROUTINE_CARE';
   const dotColor = CATEGORY_DOT_COLORS[category];
@@ -46,6 +49,7 @@ function EventCard({
   const childrenCompleted = children.filter(c => c.completed).length;
   const childrenPct = childrenTotal > 0 ? Math.round((childrenCompleted / childrenTotal) * 100) : 0;
   const allChildrenDone = childrenTotal > 0 && childrenCompleted === childrenTotal;
+  const { subtitle } = getPlantEventDisplayText(t, event);
 
   return (
     <div
@@ -75,8 +79,8 @@ function EventCard({
             )}
           </div>
 
-          {event.note && (
-            <p className="mt-0.5 text-xs font-medium text-slate-500">{event.note}</p>
+          {subtitle && (
+            <p className="mt-0.5 text-xs font-medium text-slate-500">{subtitle}</p>
           )}
 
           {/* Task progress bar */}

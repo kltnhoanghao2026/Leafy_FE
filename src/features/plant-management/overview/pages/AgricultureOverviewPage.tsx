@@ -4,6 +4,7 @@ import { useTranslation } from '../../../../i18n';
 import { usePlantEventsCalendar } from '../..';
 import { useAgricultureStats } from '../queries/stats.queries';
 import type { PlantEventResponse } from '../../shared/types';
+import { useMyProfile } from '../../../settings/queries';
 import { PlantEventProgressModal } from '../components/PlantEventProgressModal';
 import { StatsGrid } from '../components/StatsGrid';
 import { EventCompletionCard } from '../components/EventCompletionCard';
@@ -27,9 +28,12 @@ export function AgricultureOverviewPage() {
   const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
 
   const statsQuery = useAgricultureStats();
+  const profileQuery = useMyProfile();
+  const ownerProfileId = profileQuery.data?.id ?? '';
   const todayEventsQuery = usePlantEventsCalendar({
     startDate: todayString,
     endDate: todayString,
+    profileId: ownerProfileId || undefined,
   });
 
   const stats = statsQuery.data;

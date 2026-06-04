@@ -3,6 +3,9 @@ import { plantEventApi } from "../api/plant-event.api";
 import type { PlantEventsCalendarParams, PlantEventUpdateRequest, PlantEventCreateRequest } from '../../shared/types';
 import { plantManagementKeys } from '../../shared/queries/keys';
 
+const hasCalendarScope = (params: PlantEventsCalendarParams) =>
+  Boolean(params.profileId || params.farmPlotId || params.farmZoneId || params.plantId || params.planApplyId);
+
 export const usePlantEvent = (eventId: string, enabled = true) =>
   useQuery({
     queryKey: plantManagementKeys.plantEvent(eventId),
@@ -37,7 +40,7 @@ export const usePlantEventsCalendar = (params: PlantEventsCalendarParams) =>
   useQuery({
     queryKey: plantManagementKeys.plantEventsCalendar(params),
     queryFn: () => plantEventApi.getPlantEventsCalendar(params),
-    enabled: Boolean(params.startDate && params.endDate),
+    enabled: Boolean(params.startDate && params.endDate && hasCalendarScope(params)),
   });
 
 export const useUpdatePlantEventMutation = () => {

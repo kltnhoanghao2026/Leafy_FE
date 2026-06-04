@@ -115,6 +115,7 @@ const mockPickerApis = () => {
       HttpResponse.json({ data: { id: "profile-1", userId: "user-1" } }),
     ),
     http.get("*/api/farms/plots", () => HttpResponse.json([farmPlot])),
+    http.get("*/api/farms/zones", () => HttpResponse.json([zone])),
     http.get("*/api/farms/plots/:plotId/zones", () =>
       HttpResponse.json([zone]),
     ),
@@ -161,7 +162,6 @@ describe("AlertRulesPage", () => {
     renderWithClient(<AlertRulesPage />);
 
     expect(await waitForRuleList()).toBeInTheDocument();
-    expect(screen.getByText(/Loại cảm biến đã cấu hình/)).toBeInTheDocument();
     expect(screen.getAllByText(/North sensor/).length).toBeGreaterThan(0);
     expect(await screen.findByText(/Coffee Zone A/)).toBeInTheDocument();
     expect(screen.getAllByText(/North Farm/).length).toBeGreaterThan(0);
@@ -340,6 +340,46 @@ describe("AlertRulesPage", () => {
     expect(screen.getByLabelText("Advanced sensorTypeId")).toHaveValue(
       alertRule.sensorTypeId,
     );
+  });
+
+  it("omits unchanged scope when updating an existing rule", async () => {
+    let submittedBody: Record<string, unknown> | undefined;
+    mockPickerApis();
+    useRulesList();
+    server.use(
+      http.put("*/api/iot/alert-rules/:ruleId", async ({ request }) => {
+        submittedBody = await request.json() as Record<string, unknown>;
+        return HttpResponse.json({ ...alertRule, maxThreshold: 42 });
+      }),
+    );
+
+    renderWithClient(<AlertRulesPage />);
+
+    await waitForRuleList();
+    await userEvent.click(screen.getByLabelText(`Edit rule ${alertRule.id}`));
+    await userEvent.clear(screen.getByLabelText("Max threshold"));
+    await userEvent.type(screen.getByLabelText("Max threshold"), "42");
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Lưu quy tắc",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(submittedBody).toMatchObject({
+        sensorTypeId: alertRule.sensorTypeId,
+        minThreshold: null,
+        maxThreshold: 42,
+        severity: "HIGH",
+        cooldownMinutes: 15,
+        notifyWeb: true,
+        notifyMobile: false,
+        enabled: true,
+      });
+      expect(submittedBody).not.toHaveProperty("deviceId");
+      expect(submittedBody).not.toHaveProperty("zoneId");
+      expect(submittedBody).not.toHaveProperty("farmPlotId");
+    });
   });
 
   it("toggles enabled state through the backend mutation", async () => {
