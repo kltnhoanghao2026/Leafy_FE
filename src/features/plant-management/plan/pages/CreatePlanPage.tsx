@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, ClipboardList, CalendarClock, Eye } from 'lucide-react';
+import type { AxiosError } from 'axios';
 import { PlanPreviewCalendar } from '../../../consulting/components/PlanPreviewCalendar';
 import { ROUTES } from '../../../../lib/routes';
 import { useCreatePlan } from '../queries/plan.queries';
@@ -10,7 +11,8 @@ import type { PlanCreateRequest, PlantEventCreateRequest } from '../../shared/ty
 import { PlanInfoSection, emptyForm, type PlanFormStateCreate } from '../components/PlanInfoSection';
 import type { PlanInfoErrors } from '../components/PlanInfoSection';
 import { emptyEvent } from '../../../consulting/utils/planFormHelpers';
-import { EventScheduleSection } from '../../../consulting/components/EventScheduleSection';
+import { EventScheduleSection, type EventFieldErrors } from '../../../consulting/components/EventScheduleSection';
+import type { ApiEnvelope } from '../../../../shared/types/api';
 
 const DRAFT_KEY = 'plan_create_draft';
 
@@ -46,6 +48,7 @@ export function CreatePlanPage() {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [planErrors, setPlanErrors] = useState<PlanInfoErrors>({});
+  const [eventErrors, setEventErrors] = useState<EventFieldErrors[]>([]);
   const [activeTab, setActiveTab] = useState<'info' | 'events' | 'preview'>('info');
 
   useEffect(() => {
@@ -107,18 +110,43 @@ export function CreatePlanPage() {
     }
     setPlanErrors({});
 
+    const newEventErrors: EventFieldErrors[] = events.map(() => ({}));
+    let hasEventError = false;
+
     for (const [i, evt] of events.entries()) {
       if (!evt.eventType) {
-        setSubmitError(`Sự kiện #${i + 1}: Vui lòng chọn loại sự kiện.`);
-        setActiveTab('events');
-        return;
+        newEventErrors[i].eventType = 'Vui lòng chọn loại sự kiện.';
+        hasEventError = true;
       }
       if (!evt.note?.trim()) {
-        setSubmitError(`Sự kiện #${i + 1}: Vui lòng nhập ghi chú.`);
-        setActiveTab('events');
-        return;
+        newEventErrors[i].note = 'Vui lòng nhập ghi chú.';
+        hasEventError = true;
+      }
+      if (evt.daysFromStart !== undefined && evt.daysFromStart < 0) {
+        newEventErrors[i].daysFromStart = 'Phải bằng hoặc lớn hơn 0.';
+        hasEventError = true;
+      }
+      if (evt.durationDays !== undefined && evt.durationDays < 0) {
+        newEventErrors[i].durationDays = 'Phải bằng hoặc lớn hơn 0.';
+        hasEventError = true;
+      }
+      if (evt.tasks && evt.tasks.length > 0) {
+        newEventErrors[i].tasks = {};
+        for (const [ti, task] of evt.tasks.entries()) {
+          if (!task.title?.trim()) {
+            newEventErrors[i].tasks![ti] = { title: 'Tiêu đề công việc là bắt buộc.' };
+            hasEventError = true;
+          }
+        }
       }
     }
+
+    if (hasEventError) {
+      setEventErrors(newEventErrors);
+      setActiveTab('events');
+      return;
+    }
+    setEventErrors([]);
 
     const cleanedEvents: PlantEventCreateRequest[] = events.map((evt) => ({
       eventType: evt.eventType,
@@ -160,20 +188,75 @@ export function CreatePlanPage() {
     try {
       const created = await mutateAsync(payload);
       localStorage.removeItem(DRAFT_KEY);
-      // created is PlanResponse; guard against unexpected null/missing id
       const planId = created?.id;
       if (planId) {
         navigate(ROUTES.DASHBOARD.PLAN_DETAIL(planId));
       } else {
-        // Plan was created but id is missing — navigate to plans list
         console.warn('[CreatePlanPage] Created plan has no id:', created);
         navigate(ROUTES.DASHBOARD.PLANS);
       }
     } catch (err) {
       console.error('[CreatePlanPage] handleSubmit error:', err);
-      setSubmitError('Có lỗi xảy ra khi tạo kế hoạch. Vui lòng thử lại.');
+      const beErrors = parseBackendErrors(err);
+      if (!applyBackendErrors(beErrors)) {
+        setSubmitError('Có lỗi xảy ra khi tạo kế hoạch. Vui lòng thử lại.');
+      }
     }
   };
+
+  function parseBackendErrors(err: unknown): Record<string, string> | null {
+    if (!err || typeof err !== 'object') return null;
+    const e = err as Partial<AxiosError<ApiEnvelope<null>>>;
+    const data = e.response?.data;
+    if (!data || typeof data !== 'object') return null;
+    if ('errors' in data && data.errors && typeof data.errors === 'object') {
+      return data.errors as Record<string, string>;
+    }
+    return null;
+  }
+
+  function applyBackendErrors(beErrors: Record<string, string> | null): boolean {
+    if (!beErrors) return false;
+
+    const planErrors: PlanInfoErrors = {};
+    const newEventErrors: EventFieldErrors[] = events.map(() => ({}));
+
+    for (const [fieldPath, message] of Object.entries(beErrors)) {
+      if (fieldPath === 'diseaseName') {
+        planErrors.diseaseName = message;
+        continue;
+      }
+      const scheduleMatch = fieldPath.match(/^schedule\[(\d+)\](?:\.tasks\[(\d+)\])?\.(.+)$/);
+      if (scheduleMatch) {
+        const [, eventIdxStr, taskIdxStr, field] = scheduleMatch;
+        const eventIdx = parseInt(eventIdxStr, 10);
+        if (isNaN(eventIdx) || eventIdx >= newEventErrors.length) continue;
+        if (taskIdxStr !== undefined) {
+          const taskIdx = parseInt(taskIdxStr, 10);
+          if (isNaN(taskIdx)) continue;
+          newEventErrors[eventIdx] ??= {};
+          newEventErrors[eventIdx].tasks ??= {};
+          newEventErrors[eventIdx].tasks![taskIdx] ??= {};
+          (newEventErrors[eventIdx].tasks![taskIdx] as Record<string, string>)[field] = message;
+        } else {
+          (newEventErrors[eventIdx] as Record<string, string>)[field] = message;
+        }
+        continue;
+      }
+      (planErrors as Record<string, string>)[fieldPath] = message;
+    }
+
+    const hasEventErrors = newEventErrors.some(
+      (e) => Object.keys(e).length > 0 || (e.tasks && Object.keys(e.tasks).length > 0),
+    );
+
+    setPlanErrors(planErrors);
+    setEventErrors(newEventErrors);
+    if (hasEventErrors) setActiveTab('events');
+    else setActiveTab('info');
+
+    return true;
+  }
 
   return (
     <div className="flex h-full flex-col gap-4 min-h-0 w-full overflow-hidden">
@@ -247,6 +330,8 @@ export function CreatePlanPage() {
           <div className={`h-full min-h-0 overflow-y-auto ${activeTab === 'events' ? 'flex flex-col' : 'hidden'}`}>
             <EventScheduleSection
               events={events}
+              errors={eventErrors}
+              onErrorsChange={setEventErrors}
               onAdd={addEvent}
               onChange={updateEvent}
               onRemove={removeEvent}

@@ -1,6 +1,7 @@
 import apiClient from "../../../lib/apiClient";
 import { getOrCreateDeviceId } from "../../../lib/clientDevice";
 import { API_ENDPOINTS } from "../../../lib/routes";
+import type { ApiEnvelope } from "../../../shared/types/api";
 import { useAuthStore } from "../../../store/authStore";
 import type {
   RagChatRequest,
@@ -26,17 +27,7 @@ interface RagChatResultRaw {
   savedPlanId?: string;
 }
 
-interface RagChatApiResponse {
-  code: number;
-  message: string;
-  result: RagChatResultRaw | null;
-}
-
-interface ApiResponseEnvelope<T> {
-  code: number;
-  message: string;
-  result: T | null;
-}
+type RagChatApiResponse = ApiEnvelope<RagChatResultRaw>;
 
 type JsonRecord = Record<string, unknown>;
 
@@ -180,11 +171,11 @@ export async function askRagQuestion(
 
   const payload = response.data;
 
-  if (payload.code !== 200 || !payload.result) {
+  if (!payload.data) {
     throw new Error(payload.message || "RAG request failed");
   }
 
-  return mapChatResult(payload.result);
+  return mapChatResult(payload.data);
 }
 
 export async function streamRagChat(
@@ -338,23 +329,23 @@ export async function listRagConversations(): Promise<
   RagConversationSummary[]
 > {
   const response = await apiClient.get<
-    ApiResponseEnvelope<RagConversationSummary[]>
+    ApiEnvelope<RagConversationSummary[]>
   >(API_ENDPOINTS.RAG.CONVERSATIONS);
-  return response.data.result ?? [];
+  return response.data.data ?? [];
 }
 
 export async function getRagConversation(
   conversationId: string,
 ): Promise<RagConversationDetail> {
   const response = await apiClient.get<
-    ApiResponseEnvelope<RagConversationDetail>
+    ApiEnvelope<RagConversationDetail>
   >(API_ENDPOINTS.RAG.CONVERSATION(conversationId));
 
-  if (!response.data.result) {
+  if (!response.data.data) {
     throw new Error("Conversation payload is empty");
   }
 
-  return response.data.result;
+  return response.data.data;
 }
 
 export async function renameRagConversation(
@@ -362,20 +353,20 @@ export async function renameRagConversation(
   title: string,
 ): Promise<RagConversationDetail> {
   const response = await apiClient.patch<
-    ApiResponseEnvelope<RagConversationDetail>
+    ApiEnvelope<RagConversationDetail>
   >(API_ENDPOINTS.RAG.CONVERSATION(conversationId), { title });
 
-  if (!response.data.result) {
+  if (!response.data.data) {
     throw new Error("Conversation payload is empty");
   }
 
-  return response.data.result;
+  return response.data.data;
 }
 
 export async function deleteRagConversation(
   conversationId: string,
 ): Promise<void> {
-  await apiClient.delete<ApiResponseEnvelope<null>>(
+  await apiClient.delete<ApiEnvelope<null>>(
     API_ENDPOINTS.RAG.CONVERSATION(conversationId),
   );
 }
@@ -384,13 +375,13 @@ export async function getRagTreatmentPlan(planId: string) {
   const response = await apiClient.get(
     API_ENDPOINTS.RAG.PLAN(planId),
   );
-  if (!response.data || !response.data.result) {
+  if (!response.data || !response.data.data) {
     throw new Error("Invalid response format");
   }
-  return response.data.result;
+  return response.data.data;
 }
 
 export async function getRagPlan(planId: string) {
   const response = await apiClient.get(API_ENDPOINTS.RAG.PLAN(planId));
-  return response.data.result;
+  return response.data.data;
 }
