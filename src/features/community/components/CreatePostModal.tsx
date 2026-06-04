@@ -14,14 +14,6 @@ interface CreatePostModalProps {
   onClose: () => void;
 }
 
-const LOCATIONS = [
-  "Di Linh, Lam Dong",
-  "Buon Ma Thuot",
-  "Da Lat",
-  "Bao Loc",
-  "Gia Nghia",
-];
-
 const VISIBILITY_OPTIONS = [
   { value: "ALL" as CommunityVisibility, label: "Công khai" },
   { value: "FOLLOWER" as CommunityVisibility, label: "Người theo dõi" },
@@ -33,13 +25,13 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
   const uploadFile = useUploadFileMutation();
   const currentUser = useCommunityCurrentUser();
   const [content, setContent] = useState("");
-  const [location, setLocation] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [postType, setPostType] = useState<"FEED" | "PLAN_SHARE">("FEED");
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<CommunityVisibility>("ALL");
+  const [location, setLocation] = useState<"PICKING" | string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const myPlansQuery = useMyPlans();
@@ -69,7 +61,6 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
 
   const resetForm = () => {
     setContent("");
-    setLocation("");
     setSelectedFile(null);
     if (previewImage) URL.revokeObjectURL(previewImage);
     setPreviewImage(null);
@@ -90,7 +81,8 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!content.trim()) return;
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
     setMediaError(null);
 
     try {
@@ -105,7 +97,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
 
       await createPost.mutateAsync({
         content: {
-          caption: content.trim(),
+          caption: trimmedContent,
           hashtags: [],
         },
         media: uploadedMedia
@@ -117,8 +109,7 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
             ]
           : [],
         postType,
-        location:
-          location && location !== "PICKING" ? { name: location } : null,
+        location: location && location !== "PICKING" ? { name: location } : null,
         visibility: visibility,
         planId: postType === "PLAN_SHARE" ? selectedPlanId : null,
       });
@@ -165,11 +156,6 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                 <p className="text-[15px] font-bold text-gray-900">
                   {currentUser.name}
                 </p>
-                {location && location !== "PICKING" ? (
-                  <p className="text-[12px] font-semibold text-[#245A34] flex items-center gap-1">
-                    <MapPin className="w-3 h-3" /> {location}
-                  </p>
-                ) : null}
               </div>
             </div>
 
@@ -238,38 +224,6 @@ export function CreatePostModal({ isOpen, onClose }: CreatePostModalProps) {
                 )}
               </div>
             ) : null}
-
-            {location === "PICKING" ? (              <div className="mt-3 bg-slate-50 rounded-2xl p-3 border border-slate-200 animate-in slide-in-from-top-2 duration-150">
-                <p className="text-[12px] font-bold text-slate-500 mb-2 uppercase tracking-wider">
-                  Choose location
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {LOCATIONS.map((loc) => (
-                    <button
-                      key={loc}
-                      type="button"
-                      onClick={() => setLocation(loc)}
-                      className="px-3 py-1.5 text-[13px] font-bold rounded-full bg-white border border-slate-200 text-slate-700 hover:border-[#245A34] hover:text-[#245A34] transition-colors"
-                    >
-                      {loc}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-4 flex items-center gap-3">
-              {location && location !== "PICKING" ? (
-                <button
-                  type="button"
-                  onClick={() => setLocation("")}
-                  className="text-[13px] font-semibold text-slate-400 hover:text-red-400 transition-colors"
-                >
-                  Clear location
-                </button>
-              ) : null}
-            </div>
-
             {mediaError || createPost.isError || uploadFile.isError ? (
               <p role="alert" className="mt-4 text-sm font-bold text-red-600">
                 {mediaError ||

@@ -1,5 +1,6 @@
 import { Leaf, Droplets, Sun, CalendarDays, Wheat, Loader2 } from "lucide-react";
 import { useSpecies } from "../queries/species.queries";
+import { PageErrorState } from "../../../../components/ui/PageErrorState";
 
 function SpeciesCard({ species }: { species: { id: string; commonName: string | null; cultivarName: string | null; lightRequirements: string | null; waterFrequencyDays: number | null; daysToMaturity: number | null; expectedYieldKg: number | null; plantingSeason: string | null; commonDiseaseIds: string[] | null; idealEnv: Record<string, unknown> | null } }) {
   return (
@@ -113,15 +114,10 @@ export function SpeciesPage() {
           <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
         </div>
       ) : isError ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-red-100 bg-red-50 p-8 text-center">
-          <p className="text-sm font-bold text-red-700">Không tải được danh sách giống cây.</p>
-          <button
-            onClick={() => void refetch()}
-            className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700"
-          >
-            Thử lại
-          </button>
-        </div>
+        <PageErrorState
+          title="Không tải được danh sách giống cây."
+          onRetry={() => void refetch()}
+        />
       ) : speciesList?.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 p-8 text-center">
           <Leaf className="h-10 w-10 text-slate-200" strokeWidth={1.5} />

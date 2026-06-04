@@ -17,6 +17,7 @@ import type { PlantEventResponse } from '../../shared/types';
 import { FileThumbnail } from './FileThumbnail';
 import type { EventAccentStyle } from '../../schemas/eventAccent';
 import { useTranslation } from '../../../../i18n';
+import { formatPlantEventAlertDetails } from '../utils/alertEventDetails';
 
 interface EventExpandedDetailsProps {
   event: PlantEventResponse;
@@ -43,10 +44,14 @@ export function EventExpandedDetails({
   endLabel,
 }: EventExpandedDetailsProps) {
   const { t } = useTranslation();
+  const alertDetails = formatPlantEventAlertDetails(t, event.eventType, event.description);
+
   return (
     <div className="space-y-2.5 bg-slate-50/60 px-3 py-3">
       {/* Description */}
-      {event.description && (
+      {alertDetails ? (
+        <AlertDetailsCard alertDetails={alertDetails} />
+      ) : event.description && (
         <p className="text-xs leading-relaxed text-slate-600">{event.description}</p>
       )}
 
@@ -260,6 +265,45 @@ export function EventExpandedDetails({
 }
 
 // ── EntityCard ──────────────────────────────────────────────────────────────────
+
+function AlertDetailsCard({ alertDetails }: { alertDetails: ReturnType<typeof formatPlantEventAlertDetails> }) {
+  if (!alertDetails) return null;
+
+  const toneClass = {
+    danger: 'border-red-100 bg-red-50 text-red-700',
+    warning: 'border-amber-100 bg-amber-50 text-amber-700',
+    info: 'border-sky-100 bg-sky-50 text-sky-700',
+  };
+
+  return (
+    <div className="rounded-xl border border-red-100 bg-white shadow-sm">
+      <div className="flex items-center gap-2 rounded-t-xl border-b border-red-100 bg-red-50 px-3 py-2">
+        <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+        <p className="text-[11px] font-bold text-red-700">{alertDetails.title}</p>
+      </div>
+      <div className="space-y-2 px-3 py-2.5">
+        {alertDetails.message && (
+          <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-xs font-medium leading-relaxed text-slate-700">
+            {alertDetails.message}
+          </p>
+        )}
+        {alertDetails.fields.length > 0 && (
+          <div className="grid grid-cols-2 gap-1.5">
+            {alertDetails.fields.map(field => (
+              <div
+                key={`${field.label}:${field.value}`}
+                className={`rounded-lg border px-2.5 py-2 ${toneClass[field.tone ?? 'info']}`}
+              >
+                <p className="text-[10px] font-semibold opacity-75">{field.label}</p>
+                <p className="mt-0.5 break-words text-xs font-bold">{field.value}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface EntityCardProps {
   icon: React.ReactNode;

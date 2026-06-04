@@ -27,6 +27,7 @@ import { useSpecies } from '../../plant-management';
 import { toLocalDateOnly } from '../../plant-management/shared/utils/dateOnly';
 import type { PlantEventType, PlantStatus, PlantEventResponse } from '../../plant-management/shared/types';
 import type { CalendarDateRange } from '../../plant-management/calendarview/schemas/calendar.types';
+import { PageErrorState } from '../../../components/ui/PageErrorState';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -146,20 +147,11 @@ export function ConsultingPlantPage() {
   if (plantError || !plant) {
     return (
       <div className="flex min-h-0 w-full flex-1 flex-col gap-5">
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-6 text-red-700">
-          <p className="font-black">Không thể tải thông tin cây trồng.</p>
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            Cây không tồn tại hoặc bạn không có quyền truy cập.
-          </p>
-          <button
-            type="button"
-            onClick={() => void refetchPlant()}
-            className="mt-3 inline-flex items-center rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-            Tải lại
-          </button>
-        </div>
+        <PageErrorState
+          title="Không thể tải thông tin cây trồng."
+          description="Cây không tồn tại hoặc bạn không có quyền truy cập."
+          onRetry={() => void refetchPlant()}
+        />
       </div>
     );
   }

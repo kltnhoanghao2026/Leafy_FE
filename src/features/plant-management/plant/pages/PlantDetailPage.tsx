@@ -40,6 +40,7 @@ import {
 import { useFilePreviewUrl } from '../../../settings/queries';
 import type { PlantCreateRequest, PlantUpdateRequest } from '../../shared/types';
 import type { PlantEventResponse } from "../../shared/types";
+import { PageErrorState } from '../../../../components/ui/PageErrorState';
 
 // Image component for diagnosis requests
 function DiagnosisImage({ fileId, alt }: { fileId: string; alt: string }) {
@@ -168,22 +169,11 @@ export function PlantDetailPage() {
 
   if (plantQuery.isError || !plant) {
     return (
-      <div className="rounded-[2rem] border border-red-100 bg-red-50 p-8 shadow-sm">
-        <h3 className="text-lg font-black text-red-700">
-          Không tải được chi tiết cây trồng
-        </h3>
-        <p className="mt-1 text-sm font-semibold text-red-600">
-          Cây không tồn tại hoặc plant-management-service chưa phản hồi.
-        </p>
-        <button
-          type="button"
-          onClick={() => void plantQuery.refetch()}
-          className="mt-4 inline-flex items-center rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-700"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Tải lại
-        </button>
-      </div>
+      <PageErrorState
+        title="Không tải được chi tiết cây trồng"
+        description="Cây không tồn tại hoặc plant-management-service chưa phản hồi."
+        onRetry={() => void plantQuery.refetch()}
+      />
     );
   }
 

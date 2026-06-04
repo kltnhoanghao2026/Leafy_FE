@@ -13,6 +13,7 @@ import { notificationKeys } from '../queries/keys';
 import { ROUTES } from '../../../lib/routes';
 import type { UserNotificationResponse } from '../types';
 import { useTranslation } from '../../../i18n';
+import { PageErrorState } from '../../../components/ui/PageErrorState';
 
 // ─── Routing map — all NotificationType values ────────────────────────────────
 
@@ -222,7 +223,7 @@ export function NotificationsPage() {
       </div>
 
       {/* ── Content Card ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-[2rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100/50 min-h-[400px]">
+      <div className="bg-white rounded-4xl p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100/50 min-h-[400px]">
         {/* Loading skeletons */}
         {isLoading && (
           <div className="space-y-4">
@@ -232,27 +233,22 @@ export function NotificationsPage() {
 
         {/* Error state */}
         {isError && !isLoading && (
-          <div className="py-24 flex flex-col items-center gap-4 text-center">
-            <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center">
-              <BellRing className="w-8 h-8 text-red-400" strokeWidth={1.5} />
-            </div>
-            <div>
-              <p className="text-base text-red-600 font-bold">{t('notifications.pageLoadError')}</p>
-              <p className="text-sm text-slate-500 mt-1">{t('notifications.pageLoadErrorDetail')}</p>
-            </div>
-            <button
-              onClick={() => queryClient.invalidateQueries({ queryKey: notificationKeys.history() })}
-              className="mt-2 px-6 py-2.5 bg-red-100 text-red-700 text-[14px] font-bold rounded-xl hover:bg-red-200 transition-colors"
-            >
-              {t('notifications.pageTryAgain')}
-            </button>
-          </div>
+          <PageErrorState
+            title={t('notifications.pageLoadError')}
+            description={t('notifications.pageLoadErrorDetail')}
+            onRetry={() =>
+              queryClient.invalidateQueries({
+                queryKey: notificationKeys.history(activeTab === 'unread'),
+              })
+            }
+            className="my-10"
+          />
         )}
 
         {/* Empty state */}
         {!isLoading && !isError && notifications.length === 0 && (
           <div className="py-28 flex flex-col items-center gap-5 text-center px-6">
-            <div className="w-20 h-20 rounded-[2rem] bg-[#F2FCF4] flex items-center justify-center border border-[#10B981]/10 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.15)]">
+            <div className="w-20 h-20 rounded-4xl bg-[#F2FCF4] flex items-center justify-center border border-[#10B981]/10 shadow-[0_4px_20px_-4px_rgba(16,185,129,0.15)]">
               <Inbox className="w-10 h-10 text-[#10B981]" strokeWidth={2} />
             </div>
             <div>

@@ -9,6 +9,8 @@ import {
 } from '../../shared/components/displayUtils';
 import { ROUTES } from '../../../../lib/routes';
 import { EventCardTasks } from './EventCardTasks';
+import { useTranslation } from '../../../../i18n';
+import { getPlantEventDisplayText } from '../utils/alertEventDetails';
 
 interface EventCardProps {
   event: PlantEventResponse;
@@ -17,10 +19,12 @@ interface EventCardProps {
 
 export function EventCard({ event, onToggleTask }: EventCardProps) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const category = getEventCategory(event.eventType);
   const stripColor = CATEGORY_DOT_COLORS[category];
   const tasks = event.tasks ?? [];
   const tasksDone = tasks.filter(t => t.completed).length;
+  const { subtitle } = getPlantEventDisplayText(t, event);
 
   return (
     <article className="flex overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
@@ -62,9 +66,9 @@ export function EventCard({ event, onToggleTask }: EventCardProps) {
         </div>
 
         {/* Description */}
-        {(event.description || event.note) && (
+        {subtitle && (
           <p className="line-clamp-1 text-xs text-slate-500">
-            {event.description || event.note}
+            {subtitle}
           </p>
         )}
 

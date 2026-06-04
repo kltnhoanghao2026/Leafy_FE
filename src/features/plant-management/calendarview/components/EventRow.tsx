@@ -27,6 +27,7 @@ import { EventBadgeRow } from './EventBadgeRow';
 import type { EventAccentStyle } from '../schemas/eventAccent';
 import { useTranslation } from '../../../../i18n';
 import { usePlantEvent } from '../..';
+import { getPlantEventDisplayText } from '../utils/alertEventDetails';
 
 // ── Icon map ──────────────────────────────────────────────────────────────────
 const EVENT_TYPE_ICONS: Record<PlantEventType, React.ComponentType<{ className?: string; size?: number }>> = {
@@ -79,6 +80,7 @@ export function EventRow({
   // Always fetch live data so task/child progress reflects server state
   const { data: liveEvent } = usePlantEvent(event.id, true);
   const displayEvent = liveEvent ?? event;
+  const { subtitle } = getPlantEventDisplayText(t, event);
 
   const startLabel = fmtShortDate(event.calculatedStartDate);
   const endLabel = fmtShortDate(event.calculatedEndDate);
@@ -170,9 +172,9 @@ export function EventRow({
               {EVENT_TYPE_LABELS[event.eventType] ?? event.eventType}
             </p>
 
-            {(event.note || event.description) && (
+            {subtitle && (
               <p className="mt-0.5 truncate text-xs text-slate-400">
-                {event.note || event.description}
+                {subtitle}
               </p>
             )}
 

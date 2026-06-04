@@ -173,6 +173,11 @@ export const collectorApi = {
       { params: cleanParams({ zoneId }) },
     ),
 
+  deleteDeviceMedia: (mediaEventId: string) =>
+    apiClient.delete<void>(API_ENDPOINTS.IOT.MEDIA_EVENT(mediaEventId), {
+      headers: currentUserHeaders(),
+    }),
+
   getCameraSchedules: () =>
     apiClient.get<DeviceCameraScheduleResponse[]>(
       API_ENDPOINTS.IOT.CAMERA_SCHEDULES,

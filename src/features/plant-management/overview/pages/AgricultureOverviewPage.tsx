@@ -4,6 +4,7 @@ import { useTranslation } from '../../../../i18n';
 import { usePlantEventsCalendar } from '../..';
 import { useAgricultureStats } from '../queries/stats.queries';
 import type { PlantEventResponse } from '../../shared/types';
+import { useMyProfile } from '../../../settings/queries';
 import { PlantEventProgressModal } from '../components/PlantEventProgressModal';
 import { StatsGrid } from '../components/StatsGrid';
 import { EventCompletionCard } from '../components/EventCompletionCard';
@@ -17,6 +18,7 @@ import {
   useToggleTaskMutation,
 } from '../../calendarview/queries';
 import { toLocalDateOnly } from '../../shared/utils/dateOnly';
+import { PageErrorState } from '../../../../components/ui/PageErrorState';
 
 export function AgricultureOverviewPage() {
   const { t } = useTranslation();
@@ -26,9 +28,12 @@ export function AgricultureOverviewPage() {
   const [deleteEventTarget, setDeleteEventTarget] = useState<PlantEventResponse | null>(null);
 
   const statsQuery = useAgricultureStats();
+  const profileQuery = useMyProfile();
+  const ownerProfileId = profileQuery.data?.id ?? '';
   const todayEventsQuery = usePlantEventsCalendar({
     startDate: todayString,
     endDate: todayString,
+    profileId: ownerProfileId || undefined,
   });
 
   const stats = statsQuery.data;
@@ -155,37 +160,10 @@ export function AgricultureOverviewPage() {
         )}
 
         {statsQuery.isError && (
-          <div style={{
-            flexShrink: 0,
-            borderRadius: '14px',
-            border: '1px solid #fecaca',
-            background: '#fef2f2',
-            padding: '12px 16px',
-            fontSize: '13px',
-            fontWeight: 700,
-            color: '#b91c1c',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}>
-            {t('plantManagement.overview.statsLoadError')}
-            <button
-              type="button"
-              onClick={() => void statsQuery.refetch()}
-              style={{
-                borderRadius: '8px',
-                background: '#fecaca',
-                border: 'none',
-                padding: '4px 12px',
-                fontSize: '11px',
-                fontWeight: 800,
-                color: '#b91c1c',
-                cursor: 'pointer',
-              }}
-            >
-              Retry
-            </button>
-          </div>
+          <PageErrorState
+            title={t('plantManagement.overview.statsLoadError')}
+            onRetry={() => void statsQuery.refetch()}
+          />
         )}
 
         {stats && (
@@ -261,9 +239,10 @@ export function AgricultureOverviewPage() {
                         ))}
                       </div>
                     ) : todayEventsQuery.isError ? (
-                      <div style={{ borderRadius: '12px', border: '1px solid #fecaca', background: '#fef2f2', padding: '16px', fontSize: '12px', fontWeight: 700, color: '#b91c1c' }}>
-                        {t('plantManagement.overview.todayTasksError')}
-                      </div>
+                      <PageErrorState
+                        title={t('plantManagement.overview.todayTasksError')}
+                        onRetry={() => void todayEventsQuery.refetch()}
+                      />
                     ) : (
                       <GroupedEventList
                         hideHeader

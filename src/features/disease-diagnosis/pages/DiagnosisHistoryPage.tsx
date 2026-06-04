@@ -5,6 +5,7 @@ import { ROUTES } from "../../../lib/routes";
 import { ConfirmDeleteDialog } from "../../farm-management/components/ConfirmDeleteDialog";
 import { DiagnosisHistoryList } from "../components/DiagnosisHistoryList";
 import { DiagnosisRequestDetailDialog } from "../components/DiagnosisRequestDetailDialog";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 import {
   useDeleteDiagnoseRequestMutation,
   useDiagnoseRequests,
@@ -90,14 +91,11 @@ export function DiagnosisHistoryPage() {
       ) : null}
 
       {requestsQuery.isError ? (
-        <div className="rounded-[2rem] border border-red-100 bg-red-50 p-6 shadow-sm">
-          <h3 className="text-lg font-black text-red-700">
-            Không tải được lịch sử chẩn đoán
-          </h3>
-          <p className="mt-1 text-sm font-semibold text-red-600">
-            Kiểm tra quyền truy cập hoặc disease-detection-service.
-          </p>
-        </div>
+        <PageErrorState
+          title="Không tải được lịch sử chẩn đoán"
+          description="Kiểm tra quyền truy cập hoặc disease-detection-service."
+          onRetry={() => void requestsQuery.refetch()}
+        />
       ) : null}
 
       {!requestsQuery.isLoading && !requestsQuery.isError ? (

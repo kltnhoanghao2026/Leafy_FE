@@ -19,6 +19,7 @@ import { RagConversationList } from "../components/RagConversationList";
 import { RagChatArea } from "../components/RagChatArea";
 import type { ChatMessage } from "../components/RagChatArea";
 import { RagInfoPanel } from "../components/RagInfoPanel";
+import { PageErrorState } from "../../../components/ui/PageErrorState";
 
 // ── Local types ───────────────────────────────────────────────────────────────
 
@@ -436,6 +437,30 @@ export function RagChatPage() {
 
   const pipelineStateForUi = streamingAssistantMessage ?? lastAssistantMessage;
 
+  const showConversationErrorState =
+    !isLoadingConversation && !!conversationError && !!activeConversationId;
+
+  const showConversationListErrorState =
+    !isLoadingConversations && !!conversationError && !activeConversationId;
+
+  if (showConversationListErrorState) {
+    return (
+      <div
+        className={`fixed inset-0 top-16 flex overflow-auto bg-white z-10 transition-all duration-300 ${
+          sidebarCollapsed ? "lg:left-14" : "lg:left-56"
+        }`}
+      >
+        <div className="w-full max-w-3xl mx-auto p-6">
+          <PageErrorState
+            title="Không thể tải danh sách hội thoại"
+            description={conversationError ?? undefined}
+            onRetry={() => void loadConversations()}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`fixed inset-0 top-16 flex overflow-hidden bg-white z-10 transition-all duration-300 ${
@@ -452,35 +477,46 @@ export function RagChatPage() {
         onRefresh={() => void loadConversations()}
         onNewConversation={handleResetConversation}
       />
-      <RagChatArea
-        messages={messages}
-        isLoadingConversation={isLoadingConversation}
-        isSubmitting={isSubmitting}
-        question={question}
-        language={language}
-        threadId={threadId}
-        formRef={formRef}
-        textareaRef={textareaRef}
-        bottomRef={bottomRef}
-        isInfoOpen={isInfoOpen}
-        plots={plots}
-        zones={zones}
-        selectedPlotId={selectedPlotId}
-        selectedZoneId={selectedZoneId}
-        isLoadingPlots={isLoadingPlots}
-        isLoadingZones={isLoadingZones}
-        onPlotChange={handlePlotChange}
-        onZoneChange={setSelectedZoneId}
-        onSubmit={handleSubmit}
-        onQuestionChange={setQuestion}
-        onKeyDown={handleQuestionKeyDown}
-        onStopStreaming={handleStopStreaming}
-        onLanguageChange={setLanguage}
-        onResetConversation={handleResetConversation}
-        onToggleInfo={() => setIsInfoOpen((v) => !v)}
-        selectedRoute={selectedRoute}
-        onRouteChange={setSelectedRoute}
-      />
+
+      {showConversationErrorState ? (
+        <div className="flex-1 overflow-auto p-6">
+          <PageErrorState
+            title="Không thể tải hội thoại"
+            description={conversationError ?? undefined}
+            onRetry={() => void handleSelectConversation(activeConversationId)}
+          />
+        </div>
+      ) : (
+        <RagChatArea
+          messages={messages}
+          isLoadingConversation={isLoadingConversation}
+          isSubmitting={isSubmitting}
+          question={question}
+          language={language}
+          threadId={threadId}
+          formRef={formRef}
+          textareaRef={textareaRef}
+          bottomRef={bottomRef}
+          isInfoOpen={isInfoOpen}
+          plots={plots}
+          zones={zones}
+          selectedPlotId={selectedPlotId}
+          selectedZoneId={selectedZoneId}
+          isLoadingPlots={isLoadingPlots}
+          isLoadingZones={isLoadingZones}
+          onPlotChange={handlePlotChange}
+          onZoneChange={setSelectedZoneId}
+          onSubmit={handleSubmit}
+          onQuestionChange={setQuestion}
+          onKeyDown={handleQuestionKeyDown}
+          onStopStreaming={handleStopStreaming}
+          onLanguageChange={setLanguage}
+          onResetConversation={handleResetConversation}
+          onToggleInfo={() => setIsInfoOpen((v) => !v)}
+          selectedRoute={selectedRoute}
+          onRouteChange={setSelectedRoute}
+        />
+      )}
       {isInfoOpen && (
         <RagInfoPanel
           pipelineState={
